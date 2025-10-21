@@ -1,6 +1,7 @@
 // components/header/ProfileDropdown.tsx
 
 import React, { useState, useEffect, useRef } from 'react';
+import styles from './ProfileDropdown.module.css';
 
 // Basit ikonlar için SVG'ler
 const UserIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>;
@@ -20,7 +21,6 @@ interface ProfileDropdownProps {
 const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onClose, onLogout }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Dışarıya tıklandığında menüyü kapatma efekti
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -34,12 +34,12 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onClose, onLogo
   }, [onClose]);
 
   return (
-    <div className="profile-dropdown" ref={dropdownRef}>
-      <div className="dropdown-header">
+    <div className={styles.profileDropdown} ref={dropdownRef}>
+      <div className={styles.dropdownHeader}>
         <strong>{user.userName}</strong>
         <span>Yönetici Eczacı</span>
       </div>
-      <ul className="dropdown-menu">
+      <ul className={styles.dropdownMenu}>
         <li>
           <a href="/ayarlar/profil"><UserIcon /> Profilim</a>
         </li>
@@ -50,7 +50,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onClose, onLogo
           <a href="/ayarlar"><SettingsIcon /> Ayarlar</a>
         </li>
       </ul>
-      <div className="dropdown-footer">
+      <div className={styles.dropdownFooter}>
         <button onClick={onLogout}><LogoutIcon /> Çıkış Yap</button>
       </div>
     </div>

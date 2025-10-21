@@ -154,7 +154,7 @@ export default function DashboardPage() {
         show={showMessagesPanel}
         onClose={() => setShowMessagesPanel(false)}
         onMarkAllRead={markAllMessagesAsRead}
-      >/*adfasjflsjdlfasdsadf */
+      >
         {messages.length > 0 ? (
             messages.map(msg => (
                 <MessageItem key={msg.id} item={msg} onClick={handleMessageClick} />

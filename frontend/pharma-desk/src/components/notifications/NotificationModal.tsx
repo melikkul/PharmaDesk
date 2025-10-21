@@ -1,6 +1,7 @@
 // components/notifications/NotificationModal.tsx
 
 import React from 'react';
+import styles from './NotificationModal.module.css';
 
 interface Notification {
   title: string;
@@ -16,9 +17,9 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ notification, onC
     if (!notification) return null;
 
     return (
-        <div className="modal-overlay show" onClick={onClose}>
-            <div className="modal-content" onClick={e => e.stopPropagation()}>
-                <button className="modal-close" onClick={onClose}>&times;</button>
+        <div className={`${styles.modalOverlay} ${styles.show}`} onClick={onClose}>
+            <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
+                <button className={styles.modalClose} onClick={onClose}>&times;</button>
                 <h2>{notification.title}</h2>
                 <p>{notification.message}</p>
                 <p>Bu, bildirimin detaylı içeriğidir. Burada daha fazla bilgi yer alabilir.</p>

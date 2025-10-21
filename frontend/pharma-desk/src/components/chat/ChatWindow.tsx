@@ -1,6 +1,7 @@
 // components/chat/ChatWindow.tsx
 
 import React from 'react';
+import styles from './ChatWindow.module.css';
 
 interface Chat {
   sender: string;
@@ -16,20 +17,20 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ chat, onClose }) => {
     if (!chat) return null;
 
     return (
-        <div className="chat-window">
-            <div className="chat-header">
-                <div className="chat-user-info">
-                   <div className="avatar-placeholder-sm">{chat.sender.charAt(0)}</div>
+        <div className={styles.chatWindow}>
+            <div className={styles.chatHeader}>
+                <div className={styles.chatUserInfo}>
+                   <div className={styles.avatarPlaceholderSm}>{chat.sender.charAt(0)}</div>
                    <span>{chat.sender}</span>
                 </div>
                 <button onClick={onClose}>&times;</button>
             </div>
-            <div className="chat-body">
-                <div className="message received">{chat.lastMessage}</div>
-                <div className="message sent">Tabii, hemen kontrol ediyorum. Sipariş numaranızı alabilir miyim?</div>
-                <div className="message received">123-12312321</div>
+            <div className={styles.chatBody}>
+                <div className={`${styles.message} ${styles.received}`}>{chat.lastMessage}</div>
+                <div className={`${styles.message} ${styles.sent}`}>Tabii, hemen kontrol ediyorum. Sipariş numaranızı alabilir miyim?</div>
+                <div className={`${styles.message} ${styles.received}`}>123-12312321</div>
             </div>
-            <div className="chat-footer">
+            <div className={styles.chatFooter}>
                 <input type="text" placeholder="Mesajınızı yazın..." />
                 <button>Gönder</button>
             </div>
