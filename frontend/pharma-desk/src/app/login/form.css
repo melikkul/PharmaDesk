@@ -1,0 +1,211 @@
+/* --- Google Fonts'tan Montserrat Fontunu İçe Aktarma --- */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* --- Genel Stiller ve Sıfırlama --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #495057;
+}
+
+/* --- Ana Taşıyıcı --- */
+.container {
+    display: flex;
+    background-color: #fff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    max-width: 1200px;
+    width: 95%;
+    min-height: 80%;
+    overflow: hidden;
+}
+
+/* --- Form Alanı (Sol Taraf) --- */
+.form-panel {
+    /* Değeri 1'den küçülttükçe form alanı daralır. 0.8 veya 0.9 gibi bir değerle başlayabilirsiniz. */
+    flex: 0.5; 
+    justify-content: center;
+    padding: 40px 60px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-panel h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 40px;
+    color: #343a40;
+}
+
+form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 25px; /* Alanlar arasındaki boşluğu artırdık */
+}
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.input-wrapper i {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #adb5bd;
+}
+
+.input-wrapper i:first-of-type {
+    left: 20px;
+}
+
+.input-wrapper .password-toggle {
+    right: 20px;
+    cursor: pointer;
+}
+
+/* --- Input ve Yüzen Etiket Stilleri --- */
+.input-wrapper label {
+    position: absolute;
+    top: 50%;
+    left: 50px;
+    transform: translateY(-50%);
+    color: #adb5bd;
+    font-size: 15px;
+    pointer-events: none;
+    transition: all 0.2s ease-out;
+    background-color: #fff;
+    padding: 0 5px;
+}
+
+/* Yüzen etiket animasyonunu tetikleyen seçiciler */
+input:focus + label,
+input:not(:placeholder-shown) + label {
+    top: 0;
+    font-size: 15px;
+    color: #1f9a8b;
+}
+
+input[type="email"],
+input[type="password"] {
+    width: 100%;
+    padding: 15px 20px 15px 50px; /* İkon için solda boşluk */
+    border: 2px solid #CBD5E0;
+    border-radius: 30px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: transparent;
+}
+
+input::placeholder {
+    color: transparent;
+}
+
+input:focus {
+    border-color: #20c997;
+    box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.1);
+}
+
+/* --- Şifremi Unuttum Bağlantısı --- */
+.forgot-password {
+    align-self: flex-end; /* Kendisini formun sağına yaslar */
+    margin-top: -15px; /* Şifre alanıyla arasındaki boşluğu azaltır */
+    margin-bottom: 20px; /* Butonlarla arasına boşluk koyar */
+    font-size: 14px;
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.forgot-password:hover {
+    color: #343a40;
+    text-decoration: underline;
+}
+
+/* --- Yeni Buton Taşıyıcısı --- */
+.action-buttons-container {
+    display: flex;
+    gap: 20px; /* Butonlar arasına boşluk koyar */
+    width: 100%;
+}
+
+/* --- Butonlar --- */
+.btn {
+    padding: 15px 20px;
+    border: none;
+    border-radius: 30px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    flex: 1; /* Butonların eşit genişlikte olmasını sağlar */
+}
+
+.btn-primary {
+    background-color: #1f9a8b; /* Görseldeki yeşil tonu */
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1a8376;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(31, 154, 139, 0.2);
+}
+
+/* --- Görsel Alanı (Sağ Taraf) --- */
+.image-panel {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
+
+.image-panel img {
+    max-width: 140%;
+    height: auto;
+}
+
+/* --- Mobil ve Tablet İçin Duyarlılık --- */
+@media (max-width: 992px) {
+    .container {
+        flex-direction: column;
+        width: 90%;
+        max-width: 500px;
+    }
+    .image-panel {
+        display: none;
+    }
+    .form-panel {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 576px) {
+    .action-buttons-container {
+        flex-direction: column; /* Küçük ekranlarda butonları alt alta getir */
+    }
+    .form-panel {
+        padding: 30px 25px;
+    }
+    .form-panel h1 {
+        font-size: 24px;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+}

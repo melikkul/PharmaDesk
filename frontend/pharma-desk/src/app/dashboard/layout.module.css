@@ -1,0 +1,16 @@
+/* app/(dashboard)/layout.module.css */
+.dashboardContainer {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 80px 1fr;
+    grid-template-areas:
+        "sidebar header"
+        "sidebar main";
+    height: 100vh;
+}
+
+.mainContent {
+    grid-area: main;
+    padding: 40px;
+    overflow-y: auto;
+}

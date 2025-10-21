@@ -1,0 +1,222 @@
+/* --- Google Fonts'tan Montserrat Fontunu İçe Aktarma --- */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
+
+/* --- Genel Stiller ve Sıfırlama --- */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    /* İçe aktarılan Montserrat fontu burada kullanılıyor */
+    font-family: 'Montserrat', sans-serif;
+    background-color: #f8f9fa;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    color: #495057;
+}
+
+/* --- Ana Taşıyıcı --- */
+.container {
+    display: flex;
+    background-color: #fff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    max-width: 1200px;
+    width: 95%;
+    overflow: hidden;
+}
+
+/* --- Form Alanı (Sol Taraf) --- */
+.form-panel {
+    flex: 1;
+    padding: 60px 80px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-panel h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 40px;
+    color: #343a40;
+}
+
+form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.input-group-row {
+    display: flex;
+    gap: 20px;
+}
+
+.input-wrapper {
+    position: relative;
+    width: 100%;
+}
+
+.input-wrapper i {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    color: #adb5bd;
+}
+
+.input-wrapper i:first-of-type {
+    left: 20px;
+}
+
+.input-wrapper .password-toggle {
+    right: 20px;
+    cursor: pointer;
+}
+
+/* --- Input ve Yüzen Etiket Stilleri --- */
+.input-wrapper label {
+    position: absolute;
+    top: 50%;
+    left: 50px;
+    transform: translateY(-50%);
+    color: #adb5bd;
+    font-size: 15px;
+    pointer-events: none;
+    transition: all 0.2s ease-out;
+    background-color: #fff;
+    padding: 0 5px;
+}
+
+.input-wrapper label.no-icon-label {
+    left: 50px; /* İkon olmayan inputlar için etiketi sola yasla */
+}
+
+/* YENİ KURAL 1: Butonları içeren taşıyıcı */
+.bottom-buttons-container {
+    display: flex;
+    justify-content: space-between; /* Butonları iki uca yaslar */
+    align-items: center;
+    width: 100%;
+    margin-top: auto; /* Taşıyıcıyı en alta iter */
+    padding-top: 20px; /* Üstündeki elemanlarla boşluk */
+}
+
+/* Yüzen etiket animasyonunu tetikleyen seçiciler */
+input:focus + label,
+input:not(:placeholder-shown) + label {
+    top: 0;
+    font-size: 15px;
+    color: #1f9a8b;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="tel"],
+input[type="password"] {
+    width: 100%;
+    padding: 15px 20px 15px 50px; /* İkon için solda boşluk */
+    border: 2px solid #CBD5E0;
+    border-radius: 30px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: transparent; /* Placeholder'ın görünmesi için */
+}
+
+/* Placeholder'ı gizlemek için kullanılır, böylece :not(:placeholder-shown) çalışır */
+input::placeholder {
+    color: transparent;
+}
+
+input.no-icon {
+    padding-left: 50px;
+}
+
+input:focus {
+    border-color: #20c997;
+    box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.1);
+}
+
+/* --- Butonlar --- */
+.btn {
+    padding: 15px 20px;
+    border: none;
+    border-radius: 30px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary {
+    background-color: #1f9a8b; /* Görseldeki yeşil tonu */
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #1a8376;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(31, 154, 139, 0.2);
+}
+
+.btn-secondary {
+    background-color: transparent;
+    color: #6c757d;
+    border: 1px solid #ced4da;
+}
+
+.btn-secondary:hover {
+    background-color: #f1f5f9;
+    border-color: #adb5bd;
+}
+
+/* --- Görsel Alanı (Sağ Taraf) --- */
+.image-panel {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+}
+
+.image-panel img {
+    max-width: 140%;
+    height: auto;
+}
+
+/* --- Mobil ve Tablet İçin Duyarlılık --- */
+@media (max-width: 992px) {
+    .container {
+        flex-direction: column;
+        width: 90%;
+        max-width: 500px;
+    }
+    .image-panel {
+        display: none; /* Küçük ekranlarda görseli gizle */
+    }
+    .form-panel {
+        padding: 40px;
+    }
+}
+
+@media (max-width: 576px) {
+    .input-group-row {
+        flex-direction: column;
+    }
+    .form-panel {
+        padding: 30px 25px;
+    }
+    .form-panel h1 {
+        font-size: 24px;
+        text-align: center;
+        margin-bottom: 30px;
+    }
+}
