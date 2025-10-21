@@ -2,17 +2,18 @@
 
 import React from 'react';
 import DashboardCard from '../DashboardCard'; 
-import type { Offer } from '../../data/dashboardData'; // Veri tipini import ediyoruz
+import type { Offer } from '../../data/dashboardData';
+import tableStyles from './Table.module.css';
 
 interface OffersCardProps {
   data: Offer[];
-  limit: number; // YENİ: Limit prop'u eklendi
+  limit: number;
 }
 
 const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
   return (
     <DashboardCard title="TEKLİFLERİM">
-      <table>
+      <table className={tableStyles.table}>
         <thead>
           <tr>
             <th>Ürün Görseli</th>
@@ -22,10 +23,9 @@ const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
           </tr>
         </thead>
         <tbody>
-          {/* YENİ: Veri map'lenmeden önce slice ile limitleniyor */}
           {data.slice(0, limit).map(item => (
             <tr key={item.id}>
-              <td><div className="product-image-placeholder"></div></td>
+              <td><div className={tableStyles.productImagePlaceholder}></div></td>
               <td>{item.productName}</td>
               <td>{item.stock}</td>
               <td>{item.price.toFixed(2)} ₺</td>
@@ -38,3 +38,4 @@ const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
 };
 
 export default OffersCard;
+

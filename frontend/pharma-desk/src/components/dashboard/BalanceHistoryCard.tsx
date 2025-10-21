@@ -3,30 +3,30 @@
 import React from 'react';
 import DashboardCard from '../DashboardCard';
 import type { BalanceItem } from '../../data/dashboardData';
+import tableStyles from './Table.module.css';
 
 interface BalanceHistoryCardProps {
   data: BalanceItem[];
-  limit: number; // YENİ
+  limit: number;
 }
 
 const BalanceHistoryCard: React.FC<BalanceHistoryCardProps> = ({ data, limit }) => {
   return (
     <DashboardCard title="BAKİYE GEÇMİŞİ">
-      <table>
+      <table className={tableStyles.table}>
         <thead>
           <tr>
             <th>Tarih</th>
             <th>Açıklama</th>
-            <th className='text-right'>Ödeme Miktarı</th>
+            <th className={tableStyles.textRight}>Ödeme Miktarı</th>
           </tr>
         </thead>
         <tbody>
-          {/* YENİ: slice() eklendi */}
           {data.slice(0, limit).map(item => (
              <tr key={item.id}>
                 <td>{item.date}</td>
                 <td>{item.description}</td>
-                <td className={`text-right font-bold ${item.type === 'positive' ? 'text-green' : 'text-red'}`}>
+                <td className={`${tableStyles.textRight} ${tableStyles.fontBold} ${item.type === 'positive' ? tableStyles.textGreen : tableStyles.textRed}`}>
                    {item.type === 'positive' ? '+' : ''}{item.amount.toFixed(2)} ₺
                 </td>
              </tr>
@@ -38,3 +38,4 @@ const BalanceHistoryCard: React.FC<BalanceHistoryCardProps> = ({ data, limit }) 
 };
 
 export default BalanceHistoryCard;
+

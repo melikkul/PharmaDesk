@@ -3,6 +3,18 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --sidebar-bg: #34495E;
+  --main-bg: #F4F7FC;
+  --card-bg: #FFFFFF;
+  --header-bg: #FFFFFF;
+  --text-primary: #2C3E50;
+  --text-secondary: #8A97A8;
+  --border-color: #EAEFF7;
+  --active-link-bg: #1ABC9C;
+  --positive-color: #27AE60;
+  --negative-color: #E74C3C;
+  --unread-dot-color: #3498DB;
+  --font-family: 'Poppins', sans-serif;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -13,7 +25,8 @@
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--main-bg);
+  color: var(--text-primary);
+  font-family: var(--font-family), Arial, Helvetica, sans-serif;
 }
+

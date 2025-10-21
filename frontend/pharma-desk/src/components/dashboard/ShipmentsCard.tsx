@@ -3,16 +3,17 @@
 import React from 'react';
 import DashboardCard from '../DashboardCard';
 import type { ShipmentItem } from '../../data/dashboardData';
+import tableStyles from './Table.module.css';
 
 interface ShipmentsCardProps {
   data: ShipmentItem[];
-  limit: number; // YENİ
+  limit: number;
 }
 
 const ShipmentsCard: React.FC<ShipmentsCardProps> = ({ data, limit }) => {
   return (
     <DashboardCard title="KARGOLARIM">
-      <table>
+      <table className={tableStyles.table}>
         <thead>
           <tr>
             <th>Sipariş Numarası</th>
@@ -21,12 +22,11 @@ const ShipmentsCard: React.FC<ShipmentsCardProps> = ({ data, limit }) => {
           </tr>
         </thead>
         <tbody>
-          {/* YENİ: slice() eklendi */}
           {data.slice(0, limit).map(item => (
             <tr key={item.id}>
               <td>{item.orderNumber}</td>
               <td>{item.productName}</td>
-              <td>{item.trackingNumber} <i className="fa-solid fa-copy copy-icon"></i></td>
+              <td>{item.trackingNumber} <i className={`fa-solid fa-copy ${tableStyles.copyIcon}`}></i></td>
             </tr>
           ))}
         </tbody>
@@ -36,3 +36,4 @@ const ShipmentsCard: React.FC<ShipmentsCardProps> = ({ data, limit }) => {
 };
 
 export default ShipmentsCard;
+

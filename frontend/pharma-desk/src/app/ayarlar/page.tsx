@@ -2,35 +2,36 @@
 import React from 'react';
 import SettingsLayout from '../../components/settings/SettingsLayout';
 import SettingsCard from '../../components/settings/SettingsCard';
+import styles from './page.module.css';
 
 const AyarlarPage = () => {
   return (
     <SettingsLayout>
-      <h1 className="settings-page-title">Genel Ayarlar</h1>
+      <h1 className={styles.settingsPageTitle}>Genel Ayarlar</h1>
       <SettingsCard
         title="Bildirim Tercihleri"
         description="Hangi durumlarda bildirim almak istediğinizi seçin."
       >
-        <div className="toggle-list">
-          <div className="toggle-item">
+        <div className={styles.toggleList}>
+          <div className={styles.toggleItem}>
             <span>Yeni teklifler için e-posta gönder</span>
-            <label className="switch">
+            <label className={styles.switch}>
               <input type="checkbox" defaultChecked />
-              <span className="slider round"></span>
+              <span className={`${styles.slider} ${styles.round}`}></span>
             </label>
           </div>
-          <div className="toggle-item">
+          <div className={styles.toggleItem}>
             <span>Kargo durum güncellemeleri için e-posta gönder</span>
-            <label className="switch">
+            <label className={styles.switch}>
               <input type="checkbox" defaultChecked />
-              <span className="slider round"></span>
+              <span className={`${styles.slider} ${styles.round}`}></span>
             </label>
           </div>
-          <div className="toggle-item">
+          <div className={styles.toggleItem}>
             <span>Sistem ve kampanya duyuruları</span>
-            <label className="switch">
+            <label className={styles.switch}>
               <input type="checkbox" />
-              <span className="slider round"></span>
+              <span className={`${styles.slider} ${styles.round}`}></span>
             </label>
           </div>
         </div>
@@ -40,7 +41,7 @@ const AyarlarPage = () => {
         title="Hesap İşlemleri"
         description="Bu işlem geri alınamaz. Lütfen dikkatli olun."
       >
-         <button className="btn btn-danger">Hesabı Kalıcı Olarak Sil</button>
+         <button className={`${styles.btn} ${styles.btnDanger}`}>Hesabı Kalıcı Olarak Sil</button>
       </SettingsCard>
     </SettingsLayout>
   );

@@ -1,3 +1,14 @@
+/* --- ANA YAPI (GRID LAYOUT) --- */
+.dashboardContainer {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    grid-template-rows: 80px 1fr;
+    grid-template-areas:
+        "sidebar header"
+        "sidebar main";
+    height: 100vh;
+}
+
 /* --- ANA İÇERİK ALANI --- */
 .mainContent {
     grid-area: main;
@@ -16,3 +27,4 @@
     padding: 50px 20px;
     color: var(--text-secondary);
 }
+
