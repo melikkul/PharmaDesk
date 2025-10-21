@@ -1,0 +1,32 @@
+.settingsSidebar {
+    border-right: 1px solid #EAEFF7;
+    padding-right: 30px;
+}
+
+.settingsSidebar ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: sticky;
+    top: 40px;
+}
+
+.settingsSidebar a {
+    display: block;
+    padding: 12px 18px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: #8A97A8;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.settingsSidebar a:hover {
+    background-color: #F4F7FC;
+    color: #2C3E50;
+}
+
+.settingsSidebar a.active {
+    background-color: #1ABC9C;
+    color: white;
+}

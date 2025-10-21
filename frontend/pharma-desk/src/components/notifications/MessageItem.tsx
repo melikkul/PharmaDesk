@@ -1,6 +1,7 @@
 // components/notifications/MessageItem.tsx
 
 import React from 'react';
+import styles from './MessageItem.module.css';
 
 interface Message {
   id: number;
@@ -15,15 +16,15 @@ interface MessageItemProps {
 }
 
 const MessageItem: React.FC<MessageItemProps> = ({ item, onClick }) => (
-    <div className={`panel-item ${!item.read ? 'unread' : ''}`} onClick={() => onClick(item)}>
-        <div className="item-icon-wrapper">
-             <div className="avatar-placeholder-sm">{item.sender.charAt(0)}</div>
+    <div className={`${styles.panelItem} ${!item.read ? styles.unread : ''}`} onClick={() => onClick(item)}>
+        <div className={styles.itemIconWrapper}>
+             <div className={styles.avatarPlaceholderSm}>{item.sender.charAt(0)}</div>
         </div>
-        <div className="item-content">
+        <div className={styles.itemContent}>
             <strong>{item.sender}</strong>
             <p>{item.lastMessage}</p>
         </div>
-        {!item.read && <div className="unread-dot"></div>}
+        {!item.read && <div className={styles.unreadDot}></div>}
     </div>
 );
 

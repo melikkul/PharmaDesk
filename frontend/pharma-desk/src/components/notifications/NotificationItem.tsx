@@ -1,7 +1,8 @@
 // components/notifications/NotificationItem.tsx
 
 import React from 'react';
-import { NotificationIcon, ShipmentIcon } from '../ui/Icons'; // İkonları import ediyoruz
+import { NotificationIcon, ShipmentIcon } from '../ui/Icons';
+import styles from './NotificationItem.module.css';
 
 interface Notification {
   id: number;
@@ -26,13 +27,13 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ item, onClick }) =>
     };
 
     return (
-        <div className={`panel-item ${!item.read ? 'unread' : ''}`} onClick={() => onClick(item)}>
+        <div className={`${styles.panelItem} ${!item.read ? styles.unread : ''}`} onClick={() => onClick(item)}>
             {getIcon(item.type)}
-            <div className="item-content">
+            <div className={styles.itemContent}>
                 <strong>{item.title}</strong>
                 <p>{item.message}</p>
             </div>
-            {!item.read && <div className="unread-dot"></div>}
+            {!item.read && <div className={styles.unreadDot}></div>}
         </div>
     );
 };

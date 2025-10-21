@@ -4,6 +4,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import styles from './SettingsSidebar.module.css';
 
 const SettingsSidebar = () => {
   const pathname = usePathname();
@@ -14,11 +15,11 @@ const SettingsSidebar = () => {
   ];
 
   return (
-    <nav className="settings-sidebar">
+    <nav className={styles.settingsSidebar}>
       <ul>
         {navItems.map(item => (
           <li key={item.href}>
-            <Link href={item.href} className={pathname === item.href ? 'active' : ''}>
+            <Link href={item.href} className={pathname === item.href ? styles.active : ''}>
               {item.label}
             </Link>
           </li>

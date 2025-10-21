@@ -1,0 +1,46 @@
+.panelItem {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 15px 25px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    position: relative;
+}
+
+.panelItem:hover {
+    background-color: #F4F7FC;
+}
+
+.panelItem.unread {
+    font-weight: 600;
+}
+
+.itemContent strong {
+    display: block;
+    font-weight: 600;
+    font-size: 15px;
+    margin-bottom: 2px;
+    color: #2C3E50;
+}
+
+.itemContent p {
+    margin: 0;
+    font-size: 14px;
+    color: #8A97A8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 250px;
+}
+
+.unreadDot {
+    position: absolute;
+    right: 25px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 8px;
+    height: 8px;
+    background-color: #3498DB;
+    border-radius: 50%;
+}

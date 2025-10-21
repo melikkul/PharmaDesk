@@ -1,0 +1,32 @@
+.card {
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.cardTitle {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #8A97A8;
+}
+
+.viewAllLink {
+    font-size: 14px;
+    color: #3498DB;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.tableContainer {
+    width: 100%;
+    overflow-x: auto;
+}
