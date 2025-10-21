@@ -1,7 +1,8 @@
 // components/Header.tsx
 
 import React, { useState } from 'react';
-import ProfileDropdown from './header/ProfileDropdown'; // YENİ: Dropdown bileşenini import ediyoruz
+import ProfileDropdown from './header/ProfileDropdown';
+import styles from './Header.module.css';
 
 interface UserData {
   pharmacyName: string;
@@ -16,39 +17,36 @@ interface HeaderProps {
   onNotificationClick: () => void;
   unreadNotificationCount: number;
   unreadMessageCount: number;
-  onLogout: () => void; // YENİ: Logout fonksiyonu prop olarak eklendi
+  onLogout: () => void;
 }
 
 const Header: React.FC<HeaderProps> = ({ userData, onMessageClick, onNotificationClick, unreadNotificationCount, unreadMessageCount, onLogout }) => {
-  // YENİ: Dropdown'ın açık/kapalı durumunu tutan state
   const [isDropdownOpen, setDropdownOpen] = useState(false);
 
   return (
-    <header className="header">
-      <div className="search-bar">
+    <header className={styles.header}>
+      <div className={styles.searchBar}>
         <input type="text" placeholder="İlaç Adı / Sipariş Numarası / İlaç Barkod" />
       </div>
-      <div className="header-actions">
-        <span className="pharmacy-name">{userData.pharmacyName}</span>
-        <button className="icon-button has-badge" onClick={onMessageClick} data-badge={unreadMessageCount}>
-          <img src="/messageIcon.svg" alt="Mesajlar" className="icon-img" />
+      <div className={styles.headerActions}>
+        <span className={styles.pharmacyName}>{userData.pharmacyName}</span>
+        <button className={`${styles.iconButton} ${styles.hasBadge}`} onClick={onMessageClick} data-badge={unreadMessageCount}>
+          <img src="/messageIcon.svg" alt="Mesajlar" className={styles.iconImg} />
         </button>
-        <button className="icon-button has-badge" onClick={onNotificationClick} data-badge={unreadNotificationCount}>
-          <img src="/notificationIcon.svg" alt="Bildirimler" className="icon-img" />
+        <button className={`${styles.iconButton} ${styles.hasBadge}`} onClick={onNotificationClick} data-badge={unreadNotificationCount}>
+          <img src="/notificationIcon.svg" alt="Bildirimler" className={styles.iconImg} />
         </button>
         
-        {/* YENİ: Profil alanına tıklandığında dropdown'ı aç/kapa */}
-        <div className="user-profile" onClick={() => setDropdownOpen(prev => !prev)}>
-          <div className="balance-info">
+        <div className={styles.userProfile} onClick={() => setDropdownOpen(prev => !prev)}>
+          <div className={styles.balanceInfo}>
             <span>Bekleyen</span>
             <strong>{userData.balance.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</strong>
           </div>
           <div
-            className="avatar-placeholder"
+            className={styles.avatarPlaceholder}
             style={{ backgroundImage: userData.avatarUrl ? `url(${userData.avatarUrl})` : 'none' }}
           >
           </div>
-          {/* YENİ: State true ise dropdown'ı render et */}
           {isDropdownOpen && <ProfileDropdown user={userData} onClose={() => setDropdownOpen(false)} onLogout={onLogout} />}
         </div>
       </div>

@@ -1,0 +1,118 @@
+/* --- HEADER (ÜST BAR) --- */
+.header {
+    grid-area: header;
+    background-color: #FFFFFF;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 40px;
+    border-bottom: 1px solid #EAEFF7;
+}
+
+.searchBar {
+    position: relative;
+    width: 400px;
+}
+
+.searchBar input {
+    width: 100%;
+    padding: 12px 20px;
+    border: 1px solid #EAEFF7;
+    border-radius: 25px;
+    background-color: #F4F7FC;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.searchBar input:focus {
+    border-color: #1ABC9C;
+    box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+.pharmacyName {
+    font-weight: 600;
+}
+
+.iconButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.iconButton.hasBadge::after {
+    content: attr(data-badge);
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    background-color: #E74C3C;
+    color: white;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border: 2px solid #FFFFFF;
+    opacity: 0;
+    transform: scale(0.5);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.iconButton.hasBadge[data-badge="0"]::after {
+    display: none;
+}
+.iconButton.hasBadge:not([data-badge="0"])::after {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.iconImg {
+    width: 30px;
+    height: 30px;
+}
+
+.userProfile {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    position: relative;
+    cursor: pointer;
+}
+
+.balanceInfo {
+    display: flex;
+    flex-direction: column;
+    text-align: right;
+}
+
+.balanceInfo span {
+    font-size: 12px;
+    color: #8A97A8;
+}
+
+.balanceInfo strong {
+    font-size: 16px;
+    font-weight: 700;
+}
+
+.avatarPlaceholder {
+    width: 48px;
+    height: 48px;
+    background-color: #EAEFF7;
+    border-radius: 50%;
+}

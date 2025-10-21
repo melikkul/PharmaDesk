@@ -1,15 +1,12 @@
 // components/Sidebar.tsx
 
 import React from 'react';
-
-// Bileşenin kendi CSS'i varsa buraya import edilebilir, 
-// ancak şimdilik global CSS kullanıyor.
-// import './Sidebar.css'; 
+import styles from './Sidebar.module.css'; 
 
 const Sidebar = () => (
-  <aside className="sidebar">
-    <a href="./dashboard"><img src="logoBeyaz.png" alt="PharmaDesk Logo" className='sidebar-logo' /></a>
-    <nav className="sidebar-nav">
+  <aside className={styles.sidebar}>
+    <a href="./dashboard"><img src="logoBeyaz.png" alt="PharmaDesk Logo" className={styles.sidebarLogo} /></a>
+    <nav className={styles.sidebarNav}>
       <ul>
         <li><a href="#">İLAÇLAR</a></li>
         <li><a href="#">TEKLİFLERİM</a></li>
