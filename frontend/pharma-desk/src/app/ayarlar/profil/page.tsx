@@ -1,12 +1,12 @@
 // app/ayarlar/profil/page.tsx
 import React from 'react';
-import SettingsLayout from '../../../components/settings/SettingsLayout';
 import SettingsCard from '../../../components/settings/SettingsCard';
 import styles from './profil.module.css';
 
 const ProfilimPage = () => {
   return (
-    <SettingsLayout>
+    // Bu sayfanın etrafında <SettingsLayout> olmamalıdır.
+    <>
       <h1 className={styles.settingsPageTitle}>Profilim</h1>
       <SettingsCard
         title="Kişisel Bilgiler"
@@ -45,7 +45,7 @@ const ProfilimPage = () => {
           </div>
         </div>
       </SettingsCard>
-    </SettingsLayout>
+    </>
   );
 };
 

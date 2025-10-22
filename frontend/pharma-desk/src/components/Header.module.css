@@ -44,18 +44,26 @@
     background: none;
     border: none;
     cursor: pointer;
-    padding: 5px;
+    padding: 8px; /* Padding artırıldı */
+    border-radius: 50%; /* Yuvarlak yapıldı */
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
+    transition: background-color 0.2s ease; /* Geçiş eklendi */
+}
+
+/* EKLENDİ: Panel açıkken butonun aktif stili */
+.iconButton.active,
+.iconButton:hover {
+    background-color: #F4F7FC;
 }
 
 .iconButton.hasBadge::after {
     content: attr(data-badge);
     position: absolute;
-    top: -2px;
-    right: -4px;
+    top: 0px;  /* Konum ayarlandı */
+    right: 0px; /* Konum ayarlandı */
     background-color: #E74C3C;
     color: white;
     width: 18px;
@@ -76,14 +84,14 @@
 .iconButton.hasBadge[data-badge="0"]::after {
     display: none;
 }
-.iconButton.hasBadge:not([data-badge="0"])::after {
+.iconButton.hasBadge:not([data-badge="0"]):after {
     opacity: 1;
     transform: scale(1);
 }
 
 .iconImg {
-    width: 30px;
-    height: 30px;
+    width: 28px; /* Boyut ayarlandı */
+    height: 28px; /* Boyut ayarlandı */
 }
 
 .userProfile {

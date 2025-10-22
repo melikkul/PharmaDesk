@@ -1,12 +1,12 @@
 // app/ayarlar/eczane/page.tsx
 import React from 'react';
-import SettingsLayout from '../../../components/settings/SettingsLayout';
 import SettingsCard from '../../../components/settings/SettingsCard';
 import styles from './eczane.module.css';
 
 const EczaneBilgileriPage = () => {
   return (
-    <SettingsLayout>
+    // Bu sayfanın etrafında <SettingsLayout> olmamalıdır.
+    <>
       <h1 className={styles.settingsPageTitle}>Eczane Bilgileri</h1>
       <SettingsCard
         title="Genel Eczane Bilgileri"
@@ -40,7 +40,7 @@ const EczaneBilgileriPage = () => {
           </div>
         </div>
       </SettingsCard>
-    </SettingsLayout>
+    </>
   );
 };
 

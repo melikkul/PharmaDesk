@@ -1,50 +1,40 @@
-// app/ayarlar/page.tsx
-import React from 'react';
-import SettingsLayout from '../../components/settings/SettingsLayout';
-import SettingsCard from '../../components/settings/SettingsCard';
+// src/app/ayarlar/page.tsx
+'use client';
+import React, { useRef } from 'react';
+import ProfilimPage from './profil/page';
+import EczaneBilgileriPage from './eczane/page';
+import GenelAyarlarPage from './GenelAyarlar'; // Düzeltilmiş import
 import styles from './page.module.css';
 
-const AyarlarPage = () => {
+const AyarlarPageContainer = () => {
+  const profilRef = useRef<HTMLDivElement>(null);
+  const eczaneRef = useRef<HTMLDivElement>(null);
+  const genelRef = useRef<HTMLDivElement>(null);
+
+  const scrollTo = (ref: React.RefObject<HTMLDivElement>) => {
+    ref.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
-    <SettingsLayout>
-      <h1 className={styles.settingsPageTitle}>Genel Ayarlar</h1>
-      <SettingsCard
-        title="Bildirim Tercihleri"
-        description="Hangi durumlarda bildirim almak istediğinizi seçin."
-      >
-        <div className={styles.toggleList}>
-          <div className={styles.toggleItem}>
-            <span>Yeni teklifler için e-posta gönder</span>
-            <label className={styles.switch}>
-              <input type="checkbox" defaultChecked />
-              <span className={`${styles.slider} ${styles.round}`}></span>
-            </label>
-          </div>
-          <div className={styles.toggleItem}>
-            <span>Kargo durum güncellemeleri için e-posta gönder</span>
-            <label className={styles.switch}>
-              <input type="checkbox" defaultChecked />
-              <span className={`${styles.slider} ${styles.round}`}></span>
-            </label>
-          </div>
-          <div className={styles.toggleItem}>
-            <span>Sistem ve kampanya duyuruları</span>
-            <label className={styles.switch}>
-              <input type="checkbox" />
-              <span className={`${styles.slider} ${styles.round}`}></span>
-            </label>
-          </div>
+    <div className={styles.settingsContainer}>
+      <nav className={styles.settingsNav}>
+        <a onClick={() => scrollTo(profilRef)}>Profilim</a>
+        <a onClick={() => scrollTo(eczaneRef)}>Eczane Bilgileri</a>
+        <a onClick={() => scrollTo(genelRef)}>Genel Ayarlar</a>
+      </nav>
+      <div className={styles.settingsContent}>
+        <div ref={profilRef} className={styles.settingsSection}>
+          <ProfilimPage />
         </div>
-      </SettingsCard>
-      
-      <SettingsCard
-        title="Hesap İşlemleri"
-        description="Bu işlem geri alınamaz. Lütfen dikkatli olun."
-      >
-         <button className={`${styles.btn} ${styles.btnDanger}`}>Hesabı Kalıcı Olarak Sil</button>
-      </SettingsCard>
-    </SettingsLayout>
+        <div ref={eczaneRef} className={styles.settingsSection}>
+          <EczaneBilgileriPage />
+        </div>
+        <div ref={genelRef} className={styles.settingsSection}>
+          <GenelAyarlarPage />
+        </div>
+      </div>
+    </div>
   );
 };
 
-export default AyarlarPage;
+export default AyarlarPageContainer;

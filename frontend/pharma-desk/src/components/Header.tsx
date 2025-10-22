@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import ProfileDropdown from './header/ProfileDropdown';
 import styles from './Header.module.css';
+import { MessageIcon, NotificationIcon } from './ui/Icons'; // <-- İkonları import et
 
 interface UserData {
   pharmacyName: string;
@@ -30,11 +31,13 @@ const Header: React.FC<HeaderProps> = ({ userData, onMessageClick, onNotificatio
       </div>
       <div className={styles.headerActions}>
         <span className={styles.pharmacyName}>{userData.pharmacyName}</span>
+        
+        {/* DEĞİŞİKLİK: Bozuk resimler yerine fonksiyonel ikon bileşenleri kullanıldı */}
         <button className={`${styles.iconButton} ${styles.hasBadge}`} onClick={onMessageClick} data-badge={unreadMessageCount}>
-          <img src="/messageIcon.svg" alt="Mesajlar" className={styles.iconImg} />
+          <MessageIcon />
         </button>
         <button className={`${styles.iconButton} ${styles.hasBadge}`} onClick={onNotificationClick} data-badge={unreadNotificationCount}>
-          <img src="/notificationIcon.svg" alt="Bildirimler" className={styles.iconImg} />
+          <NotificationIcon />
         </button>
         
         <div className={styles.userProfile} onClick={() => setDropdownOpen(prev => !prev)}>

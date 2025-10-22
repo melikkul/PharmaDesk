@@ -5,7 +5,8 @@ import styles from './Sidebar.module.css';
 
 const Sidebar = () => (
   <aside className={styles.sidebar}>
-    <a href="./dashboard"><img src="logoBeyaz.png" alt="PharmaDesk Logo" className={styles.sidebarLogo} /></a>
+    {/* DEĞİŞİKLİK: Dosya yolu mutlak hale getirildi. */}
+    <a href="/dashboard"><img src="/logoBeyaz.png" alt="PharmaDesk Logo" className={styles.sidebarLogo} /></a>
     <nav className={styles.sidebarNav}>
       <ul>
         <li><a href="#">İLAÇLAR</a></li>
