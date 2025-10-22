@@ -205,10 +205,14 @@ export const priceHistoryData: PriceData[] = [
     { day: 'Paz', price: 47.90 },
 ];
 
-// YENİ EKLENDİ
+// GÜNCELLENDİ: Daha fazla veri eklendi
 export const warehouseOffersData: WarehouseOffer[] = [
     { id: 1, warehouseName: 'Selçuk Ecza Deposu', price: 45.50, stockInfo: 'Stok Var' },
     { id: 2, warehouseName: 'Alliance Healthcare', price: 45.75, stockInfo: 'Stok Var' },
     { id: 3, warehouseName: 'Hedef Ecza Deposu', price: 46.00, stockInfo: 'Sınırlı Stok' },
     { id: 4, warehouseName: 'Galenos Ecza Deposu', price: 46.10, stockInfo: 'Stok Var' },
+    { id: 5, warehouseName: 'Pharmetic', price: 46.25, stockInfo: 'Stok Var' },
+    { id: 6, warehouseName: 'As Ecza Deposu', price: 46.40, stockInfo: 'Stok Var' },
+    { id: 7, warehouseName: 'Eczacıbaşı', price: 46.50, stockInfo: 'Tükendi' },
+    { id: 8, warehouseName: 'Novartis Depo', price: 46.75, stockInfo: 'Sınırlı Stok' },
 ];

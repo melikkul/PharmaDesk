@@ -262,3 +262,209 @@
     -webkit-appearance: none;
     margin: 0;
 }
+
+/* YENİ EKLENEN STİLLER */
+.warehouseOffersSection {
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+.warehouseOffersSection h2 {
+    font-size: 22px;
+    margin-top: 0;
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+}
+
+/* YENİ: Kaydırma ve ok butonları için ana konteyner */
+.warehouseOffersContainer {
+    position: relative;
+}
+
+/* YENİ: Yatay kaydırılabilir liste */
+.warehouseList {
+    display: flex; /* Yatay sıralama için Flexbox */
+    gap: 20px;
+    overflow-x: scroll; /* Yatay kaydırmayı etkinleştir */
+    padding-bottom: 15px; /* Kaydırma çubuğu için boşluk */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+    scroll-behavior: smooth; /* Yumuşak kaydırma */
+}
+/* Webkit tabanlı tarayıcılarda kaydırma çubuğunu gizle */
+.warehouseList::-webkit-scrollbar {
+    display: none;
+}
+
+.warehouseItem {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #EAEFF7;
+    text-align: center;
+    transition: box-shadow 0.2s;
+    flex-shrink: 0; /* Küçülmesini engeller */
+    width: 240px; /* Her bir kartın sabit genişliği */
+}
+
+.warehouseItem:hover {
+    box-shadow: 0 4px 12px rgba(26, 188, 156, 0.2);
+}
+
+.warehouseLogoPlaceholder {
+    width: 50px;
+    height: 50px;
+    background-color: #F4F7FC;
+    border-radius: 50%;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.warehouseItem strong {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--sidebar-bg);
+    margin-bottom: 5px;
+}
+
+.warehouseItem span {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.warehousePrice {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--active-link-bg);
+    margin-top: 8px;
+}
+
+/* YENİ: Kaydırma Ok Butonları */
+.scrollButton {
+    position: absolute;
+    top: 50%;
+    transform: translateY(calc(-50% + 15px)); /* Kart yüksekliğine göre ortalama */
+    background-color: #ffffff;
+    border: 1px solid #DEE2E6;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: opacity 0.3s, background-color 0.2s;
+    color: var(--text-primary);
+}
+.scrollButton:hover {
+    background-color: #f4f7fc;
+}
+.scrollButton:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.scrollButtonLeft {
+    left: -20px;
+}
+.scrollButtonRight {
+    right: -20px;
+}
+
+
+/* İlaç Detay Başlık kısmındaki fiyat/miktar/buton düzenini görseldeki gibi yapmak için */
+.productInfoContainer {
+    /* ... (diğer stiller) ... */
+    display: flex; /* Eklendi */
+    flex-direction: column; /* Eklendi */
+    gap: 0; /* Eklendi */
+}
+
+/* Görseldeki gibi fiyat ve butonu aynı satıra alıp, fiyatı daha büyük yapmak için ana konteynır düzenleniyor */
+.mainInfoRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px; /* Altındaki bileşenle arasına boşluk */
+}
+.mainPriceDisplay {
+    font-size: 42px;
+    font-weight: 800;
+    color: var(--sidebar-bg);
+    flex-shrink: 0;
+}
+.mainBuyActionGroup {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-shrink: 0;
+}
+/* Quantity Selector'ı görseldeki gibi yapmak için yüksekliğini ayarlıyoruz */
+.quantitySelector {
+    /* ... (mevcut stiller) ... */
+    height: 50px; 
+}
+.buyButtonMain { /* Ana satın al butonu için yeni stil */
+    padding: 15px 35px;
+    font-size: 16px;
+    font-weight: 700;
+    background-color: var(--active-link-bg);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    height: 50px; /* Quantity Selector ile aynı yükseklik */
+}
+.buyButtonMain:hover {
+    background-color: #16a085;
+}
+.buyButtonMain:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.sellerAndStatsContainer {
+    /* ... (mevcut stiller) ... */
+    align-items: flex-start; /* Elemanları üste hizala */
+    flex-direction: column; /* Fiyat grafiğini ve sayacı alt alta almak için */
+    gap: 15px; /* Elemanlar arasına boşluk ekle */
+}
+.sellerAndChart {
+    /* ... (mevcut stiller) ... */
+    width: 100%; /* Tam genişlik kullan */
+}
+.offerCount {
+    /* ... (mevcut stiller) ... */
+    align-self: flex-end; /* Sayacı sağ alta it */
+    margin-top: -50px; /* Grafiğin üzerine kaydır */
+}
+/* Fiyat grafiği için ekstra stil (isteğe bağlı) */
+.priceChartWrapper {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px;
+    background-color: #fdfdfd;
+}
+/* Ecza Deposu Teklifleri Listesi İçindeki Miktar Seçici Stili (Küçük olan) */
+.secondaryQuantitySelector {
+    height: 40px; 
+}
+.secondaryQuantitySelector button {
+    width: 30px;
+    font-size: 16px;
+}
+.secondaryQuantitySelector input {
+    width: 40px;
+}
