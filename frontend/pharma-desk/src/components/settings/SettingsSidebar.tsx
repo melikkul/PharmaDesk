@@ -2,26 +2,27 @@
 'use client';
 
 import React from 'react';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
 import styles from './SettingsSidebar.module.css';
 
-const SettingsSidebar = () => {
-  const pathname = usePathname();
+interface SettingsSidebarProps {
+  onLinkClick: (section: 'profil' | 'eczane' | 'genel') => void;
+}
+
+const SettingsSidebar: React.FC<SettingsSidebarProps> = ({ onLinkClick }) => {
   const navItems = [
-    { href: '/ayarlar/profil', label: 'Profilim' },
-    { href: '/ayarlar/eczane', label: 'Eczane Bilgileri' },
-    { href: '/ayarlar', label: 'Genel Ayarlar' },
+    { id: 'profil', label: 'Profilim' },
+    { id: 'eczane', label: 'Eczane Bilgileri' },
+    { id: 'genel', label: 'Genel Ayarlar' },
   ];
 
   return (
     <nav className={styles.settingsSidebar}>
       <ul>
         {navItems.map(item => (
-          <li key={item.href}>
-            <Link href={item.href} className={pathname === item.href ? styles.active : ''}>
+          <li key={item.id}>
+            <a onClick={() => onLinkClick(item.id as 'profil' | 'eczane' | 'genel')} className={styles.active}>
               {item.label}
-            </Link>
+            </a>
           </li>
         ))}
       </ul>

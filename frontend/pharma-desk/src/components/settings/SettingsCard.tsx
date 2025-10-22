@@ -1,5 +1,6 @@
 // components/settings/SettingsCard.tsx
 import React from 'react';
+import styles from './SettingsCard.module.css';
 
 interface SettingsCardProps {
   title: string;
@@ -10,16 +11,16 @@ interface SettingsCardProps {
 
 const SettingsCard: React.FC<SettingsCardProps> = ({ title, description, children, footer }) => {
   return (
-    <div className="settings-card">
-      <div className="settings-card-header">
-        <h3 className="settings-card-title">{title}</h3>
-        <p className="settings-card-description">{description}</p>
+    <div className={styles.card}>
+      <div className={styles.header}>
+        <h3 className={styles.title}>{title}</h3>
+        <p className={styles.description}>{description}</p>
       </div>
-      <div className="settings-card-body">
+      <div className={styles.body}>
         {children}
       </div>
       {footer && (
-        <div className="settings-card-footer">
+        <div className={styles.footer}>
           {footer}
         </div>
       )}

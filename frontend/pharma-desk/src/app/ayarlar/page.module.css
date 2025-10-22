@@ -1,60 +1,24 @@
 /* --- AYARLAR SAYFASI ŞABLONU --- */
-.settingsContainer {
-    display: flex;
-    flex-direction: column;
+.settingsLayout {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    gap: 40px;
     height: 100%;
 }
 
-
-.settingsNav {
-    display: flex;
-    gap: 20px;
-    border-bottom: 1px solid #EAEFF7;
-    padding-bottom: 15px;
-    margin-bottom: 20px;
-    flex-shrink: 0;
-}
-
-
-.settingsNav a {
-    padding: 10px 20px;
-    border-radius: 8px;
-    text-decoration: none;
-    color: #8A97A8;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.2s, color 0.2s;
-}
-
-
-.settingsNav a:hover {
-    background-color: #F4F7FC;
-    color: #2C3E50;
-}
-
-
-.settingsNav a.active {
-    background-color: #1ABC9C;
-    color: white;
-}
-
-
 .settingsContent {
-    flex-grow: 1;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
-    height: calc(100vh - 200px); /* Adjust based on your header/nav height */
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+    overflow-y: auto;
+    height: calc(100vh - 120px); /* Başlık yüksekliğine göre ayarlayın */
+    padding-right: 20px;
 }
 
-
-.settingsSection {
-    scroll-snap-align: start;
-    padding-bottom: 40px;
-}
 .settingsPageTitle {
     font-size: 28px;
     font-weight: 700;
-    margin: 0 0 10px 0;
+    margin: 0 0 20px 0;
 }
 
 
@@ -72,12 +36,10 @@
     opacity: 0.85;
 }
 
-
 .btnDanger {
     background-color: #E74C3C;
     color: white;
 }
-
 
 /* --- TOGGLE SWITCH --- */
 .toggleList {

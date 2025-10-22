@@ -1,7 +1,8 @@
 // app/ayarlar/layout.tsx
 'use client';
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React from 'react';
+import { useRouter, usePathname } from 'next/navigation';
+import Link from 'next/link';
 
 // Gerekli tüm bileşenleri import ediyoruz
 import Sidebar from '../../components/Sidebar';
@@ -15,6 +16,7 @@ import ChatWindow from '../../components/chat/ChatWindow';
 // Veri ve stilleri import ediyoruz
 import { userData, initialNotifications, initialMessages } from '../../data/dashboardData';
 import '../dashboard/dashboard.css';
+import styles from './layout.module.css'; // Bu layout'a özel stiller
 
 // Tipleri tanımlıyoruz
 type Notification = typeof initialNotifications[0];
@@ -23,18 +25,37 @@ interface SelectedNotification extends Omit<Notification, 'read'> {
   detail?: string;
 }
 
-export default function AyarlarLayout({ children }: { children: React.ReactNode }) {
+// YENİ: Yatay navigasyon menüsü component'i
+const SettingsNav = () => {
+  const pathname = usePathname();
+  const navItems = [
+    { href: '/ayarlar/profil', label: 'Profilim' },
+    { href: '/ayarlar/eczane', label: 'Eczane Bilgileri' },
+    { href: '/ayarlar', label: 'Genel Ayarlar' },
+  ];
+
+  return (
+    <nav className={styles.settingsNav}>
+      {navItems.map(item => (
+        <Link key={item.href} href={item.href} className={pathname === item.href ? styles.active : ''}>
+          {item.label}
+        </Link>
+      ))}
+    </nav>
+  );
+};
+
+
+export default function AyarlarPagesLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   
-  // Dashboard'daki state ve fonksiyonları buraya taşıyoruz
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
-  const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null);
-  
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
-  const [selectedChat, setSelectedChat] = useState<Message | null>(null);
-
-  const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
-  const [showMessagesPanel, setShowMessagesPanel] = useState(false);
+  // State yönetimi ve fonksiyonlar (bildirimler, mesajlar vb.) aynı kalıyor
+  const [notifications, setNotifications] = React.useState<Notification[]>(initialNotifications);
+  const [selectedNotification, setSelectedNotification] = React.useState<SelectedNotification | null>(null);
+  const [messages, setMessages] = React.useState<Message[]>(initialMessages);
+  const [selectedChat, setSelectedChat] = React.useState<Message | null>(null);
+  const [showNotificationsPanel, setShowNotificationsPanel] = React.useState(false);
+  const [showMessagesPanel, setShowMessagesPanel] = React.useState(false);
 
   const handleLogout = () => {
     if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
@@ -88,11 +109,17 @@ export default function AyarlarLayout({ children }: { children: React.ReactNode 
         unreadMessageCount={unreadMessageCount}
         onLogout={handleLogout}
       />
+      {/* DEĞİŞİKLİK: Dikey menü yerine yatay menü ve içerik alanı */}
       <main className="main-content">
-        {children}
+        <div className={styles.settingsContainer}>
+          <SettingsNav />
+          <div className={styles.settingsPageContent}>
+            {children}
+          </div>
+        </div>
       </main>
 
-      {/* Açılır panelleri ve modalları layout'a ekliyoruz */}
+      {/* Açılır paneller ve modallar (bildirim, mesaj vb.) aynı kalıyor */}
       <SlidePanel
         title="Bildirimler"
         show={showNotificationsPanel}
@@ -104,9 +131,7 @@ export default function AyarlarLayout({ children }: { children: React.ReactNode 
                 <NotificationItem key={notif.id} item={notif} onClick={handleNotificationClick} />
             ))
         ) : (
-            <div className="panel-empty-state">
-                <p>Yeni bildiriminiz yok.</p>
-            </div>
+            <div className="panel-empty-state"><p>Yeni bildiriminiz yok.</p></div>
         )}
       </SlidePanel>
 
@@ -121,9 +146,7 @@ export default function AyarlarLayout({ children }: { children: React.ReactNode 
                 <MessageItem key={msg.id} item={msg} onClick={handleMessageClick} />
             ))
         ) : (
-            <div className="panel-empty-state">
-                <p>Yeni mesajınız yok.</p>
-            </div>
+            <div className="panel-empty-state"><p>Yeni mesajınız yok.</p></div>
         )}
       </SlidePanel>
 

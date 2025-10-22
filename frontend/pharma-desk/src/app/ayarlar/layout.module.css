@@ -1,0 +1,46 @@
+/* Ana ayarlar sayfası taşıyıcısı */
+.settingsContainer {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Yatay navigasyon menüsü */
+.settingsNav {
+    display: flex;
+    gap: 10px; /* Linkler arası boşluk */
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.settingsNav a {
+    flex: 1; /* Eşit genişlikte olmalarını sağlar */
+    text-align: center;
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    transition: background-color 0.2s, color 0.2s;
+}
+
+.settingsNav a:hover {
+    background-color: #F4F7FC;
+    color: var(--text-primary);
+}
+
+.settingsNav a.active {
+    background-color: var(--active-link-bg);
+    color: white;
+}
+
+/* Sayfa içeriğinin geldiği alan */
+.settingsPageContent {
+    flex-grow: 1;
+    overflow-y: auto;
+}

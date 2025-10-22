@@ -5,7 +5,6 @@ import styles from './profil.module.css';
 
 const ProfilimPage = () => {
   return (
-    // Bu sayfanın etrafında <SettingsLayout> olmamalıdır.
     <>
       <h1 className={styles.settingsPageTitle}>Profilim</h1>
       <SettingsCard

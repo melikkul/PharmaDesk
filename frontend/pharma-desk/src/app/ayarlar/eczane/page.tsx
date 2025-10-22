@@ -5,7 +5,6 @@ import styles from './eczane.module.css';
 
 const EczaneBilgileriPage = () => {
   return (
-    // Bu sayfanın etrafında <SettingsLayout> olmamalıdır.
     <>
       <h1 className={styles.settingsPageTitle}>Eczane Bilgileri</h1>
       <SettingsCard
