@@ -14,7 +14,8 @@ import NotificationModal from '../../components/notifications/NotificationModal'
 import ChatWindow from '../../components/chat/ChatWindow';
 
 // Veri ve stilleri import ediyoruz
-import { userData, initialNotifications, initialMessages } from '../../data/dashboardData';
+// DEĞİŞİKLİK: 'userData' yerine 'pharmacyData' import edildi
+import { pharmacyData, initialNotifications, initialMessages } from '../../data/dashboardData';
 import '../dashboard/dashboard.css';
 import styles from './layout.module.css'; // Bu layout'a özel stiller
 
@@ -25,7 +26,7 @@ interface SelectedNotification extends Omit<Notification, 'read'> {
   detail?: string;
 }
 
-// YENİ: Yatay navigasyon menüsü component'i
+// Yatay navigasyon menüsü component'i
 const SettingsNav = () => {
   const pathname = usePathname();
   const navItems = [
@@ -102,14 +103,14 @@ export default function AyarlarPagesLayout({ children }: { children: React.React
     <div className="dashboard-container">
       <Sidebar />
       <Header
-        userData={userData}
+        // DEĞİŞİKLİK: 'userData' prop'una 'pharmacyData' geçirildi
+        userData={pharmacyData}
         onMessageClick={toggleMessagesPanel}
         onNotificationClick={toggleNotificationsPanel}
         unreadNotificationCount={unreadNotificationCount}
         unreadMessageCount={unreadMessageCount}
         onLogout={handleLogout}
       />
-      {/* DEĞİŞİKLİK: Dikey menü yerine yatay menü ve içerik alanı */}
       <main className="main-content">
         <div className={styles.settingsContainer}>
           <SettingsNav />

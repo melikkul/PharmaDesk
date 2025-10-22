@@ -1,6 +1,6 @@
 'use client'; 
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import './dashboard.css';
 
@@ -22,8 +22,9 @@ import NotificationModal from '../../components/notifications/NotificationModal'
 import ChatWindow from '../../components/chat/ChatWindow';
 
 // VERİLER
+// DEĞİŞİKLİK: 'userData' yerine 'pharmacyData' import edildi
 import {
-  userData,
+  pharmacyData, 
   offersData,
   balanceHistoryData,
   transfersData,
@@ -35,10 +36,7 @@ import {
 // Tipler (Daha merkezi bir yerden de import edilebilir)
 type Notification = typeof initialNotifications[0];
 type Message = typeof initialMessages[0];
-
-interface SelectedNotification extends Omit<Notification, 'read'> {
-  detail?: string;
-}
+type SelectedNotification = Notification & { detail?: string };
 
 
 export default function DashboardPage() {
@@ -115,7 +113,8 @@ export default function DashboardPage() {
       <Sidebar />
 
       <Header
-        userData={userData}
+        // DEĞİŞİKLİK: 'userData' prop'una 'pharmacyData' geçirildi
+        userData={pharmacyData} 
         onMessageClick={toggleMessagesPanel}
         onNotificationClick={toggleNotificationsPanel}
         unreadNotificationCount={unreadNotificationCount}

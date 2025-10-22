@@ -7,6 +7,8 @@ const ProfilimPage = () => {
   return (
     <>
       <h1 className={styles.settingsPageTitle}>Profilim</h1>
+      
+      {/* Kişisel Bilgiler Kartı */}
       <SettingsCard
         title="Kişisel Bilgiler"
         description="Temel profil bilgilerinizi buradan güncelleyebilirsiniz."
@@ -24,6 +26,25 @@ const ProfilimPage = () => {
         </div>
       </SettingsCard>
 
+      {/* YENİ: Hakkında Yazısı Düzenleme Kartı */}
+      <SettingsCard
+        title="Hakkında Yazısı"
+        description="Profil sayfanızda görünecek olan biyografinizi buradan düzenleyebilirsiniz."
+        footer={<button className={`${styles.btn} ${styles.btnPrimary}`}>Biyografiyi Kaydet</button>}
+      >
+        <div className={styles.formGrid}>
+          <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+            <label htmlFor="bio">Biyografi</label>
+            <textarea 
+              id="bio" 
+              rows={5} 
+              defaultValue="Sağlık ve teknoloji tutkunu bir eczacı. İlaç takas sisteminin eczaneler arası iletişimi güçlendirdiğine inanıyorum."
+            ></textarea>
+          </div>
+        </div>
+      </SettingsCard>
+
+      {/* Şifre Değiştirme Kartı */}
       <SettingsCard
         title="Şifre Değiştir"
         description="Güvenliğiniz için belirli aralıklarla şifrenizi değiştirmeniz önerilir."

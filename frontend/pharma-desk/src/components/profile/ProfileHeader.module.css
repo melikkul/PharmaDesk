@@ -1,0 +1,86 @@
+.profileHeader {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    position: relative;
+}
+
+.coverPhoto {
+    height: 220px;
+    background-size: cover;
+    background-position: center;
+    background-color: #e9ecef;
+}
+
+.headerContent {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 30px 20px 30px;
+    position: relative;
+    margin-top: -80px;
+}
+
+.avatarContainer {
+    position: relative;
+    z-index: 2;
+    flex-shrink: 0;
+}
+
+.avatar {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    background-color: var(--sidebar-bg);
+    border: 5px solid var(--card-bg);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 60px;
+    font-weight: 700;
+}
+
+.userInfo {
+    margin-left: 25px;
+    margin-bottom: 15px;
+}
+
+.userInfo h1 {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 5px 0;
+    color: var(--text-primary);
+}
+
+.userInfo p {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.editProfileButton {
+    margin-left: auto;
+    margin-bottom: 15px;
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    border: 1px solid #dee2e6;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s, box-shadow 0.2s;
+    text-decoration: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.editProfileButton:hover {
+    background-color: #f8f9fa;
+    border-color: #ced4da;
+}

@@ -7,9 +7,10 @@ const EczaneBilgileriPage = () => {
   return (
     <>
       <h1 className={styles.settingsPageTitle}>Eczane Bilgileri</h1>
+      
       <SettingsCard
         title="Genel Eczane Bilgileri"
-        description="Sistemde görünecek olan resmi eczane bilgilerinizi yönetin."
+        description="Sistemde ve profil sayfanızda görünecek olan resmi bilgilerinizi yönetin."
         footer={<button className={`${styles.btn} ${styles.btnPrimary}`}>Bilgileri Kaydet</button>}
       >
         <div className={styles.formGrid}>
@@ -19,7 +20,7 @@ const EczaneBilgileriPage = () => {
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="licenseNo">Ruhsat Numarası</label>
-            <input type="text" id="licenseNo" defaultValue="123456789" />
+            <input type="text" id="licenseNo" defaultValue="12345/06" />
           </div>
            <div className={styles.formGroup}>
             <label htmlFor="taxNo">Vergi Numarası</label>
@@ -27,15 +28,24 @@ const EczaneBilgileriPage = () => {
           </div>
            <div className={`${styles.formGroup} ${styles.fullWidth}`}>
             <label htmlFor="address">Adres</label>
-            <textarea id="address" rows={3} defaultValue="Örnek Mah. Atatürk Cad. No: 123/A"></textarea>
+            <textarea id="address" rows={3} defaultValue="Örnek Mah. Atatürk Cad. No: 123/A, Çankaya, Ankara"></textarea>
           </div>
-           <div className={styles.formGroup}>
-            <label htmlFor="city">Şehir</label>
-            <input type="text" id="city" defaultValue="Ankara" />
-          </div>
-           <div className={styles.formGroup}>
-            <label htmlFor="district">İlçe</label>
-            <input type="text" id="district" defaultValue="Çankaya" />
+        </div>
+      </SettingsCard>
+
+      <SettingsCard
+        title="Eczane Profili Hakkında"
+        description="Profil sayfanızda görünecek olan tanıtım yazınızı buradan düzenleyebilirsiniz."
+        footer={<button className={`${styles.btn} ${styles.btnPrimary}`}>Hakkında Yazısını Kaydet</button>}
+      >
+        <div className={styles.formGrid}>
+          <div className={`${styles.formGroup} ${styles.fullWidth}`}>
+            <label htmlFor="about">Hakkında Yazısı</label>
+            <textarea 
+              id="about" 
+              rows={5} 
+              defaultValue="Ankara'nın merkezinde 20 yıldır kesintisiz hizmet veren, hasta odaklı ve yenilikçi bir eczaneyiz. İlaç takas sistemi ile meslektaşlarımızla dayanışma içinde olmaktan mutluluk duyuyoruz."
+            ></textarea>
           </div>
         </div>
       </SettingsCard>

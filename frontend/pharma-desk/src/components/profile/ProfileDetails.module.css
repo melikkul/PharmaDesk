@@ -1,0 +1,79 @@
+/* Ana kart stili aynı kalıyor */
+.card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+/* Kart başlığı artık içeriği iki uca yaslıyor */
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between; /* İkonu sağa yaslamak için */
+    gap: 12px;
+    padding-bottom: 15px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+/* Başlık ve ikonu bir arada tutan sol taraf */
+.headerTitle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.headerTitle h3 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.headerTitle svg {
+    color: var(--text-secondary);
+}
+
+/* YENİ: Düzenleme ikonu stili */
+.editIcon {
+    color: var(--text-secondary);
+    transition: color 0.2s;
+    cursor: pointer;
+}
+
+.editIcon:hover {
+    color: var(--active-link-bg);
+}
+
+/* Kart içeriği stilleri aynı kalıyor */
+.cardBody p {
+    margin: 0;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.infoList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.infoList li {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-size: 14px;
+}
+
+.infoList svg {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.infoList strong {
+    color: var(--text-secondary);
+    font-weight: 500;
+}

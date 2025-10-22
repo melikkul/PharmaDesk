@@ -1,0 +1,25 @@
+.profileContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* Yeni yerleşim için ana taşıyıcı */
+.profileBody {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+/* Hakkında ve Detaylar kartlarını içeren satır */
+.detailsRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Eşit genişlikte iki sütun */
+    gap: 30px;
+    align-items: start;
+}
+
+/* İlaçlarım kartını içeren satır */
+.medicationsRow {
+    width: 100%;
+}
