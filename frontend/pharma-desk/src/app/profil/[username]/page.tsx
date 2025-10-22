@@ -4,7 +4,8 @@ import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
 // Veri ve Bileşenleri import ediyoruz
-import { pharmacyData, initialNotifications, initialMessages, userMedicationsData } from '../../../data/dashboardData';
+// DEĞİŞİKLİK 1: 'otherPharmaciesData' import edildi
+import { pharmacyData, otherPharmaciesData, initialNotifications, initialMessages, userMedicationsData } from '../../../data/dashboardData';
 import Sidebar from '../../../components/Sidebar';
 import Header from '../../../components/Header';
 import ProfileHeader from '../../../components/profile/ProfileHeader';
@@ -27,11 +28,12 @@ interface SelectedNotification extends Omit<Notification, 'read'> {
   detail?: string;
 }
 
+// DEĞİŞİKLİK 2: Fonksiyon artık tüm eczaneler içinde arama yapıyor
 const getPharmacyData = (username: string | string[]) => {
-  if (typeof username === 'string' && username === pharmacyData.username) {
-    return pharmacyData;
-  }
-  return null;
+  // Kendi eczane verimiz ile diğer eczanelerin verilerini birleştiriyoruz
+  const allPharmacies = [pharmacyData, ...otherPharmaciesData];
+  // URL'den gelen username ile eşleşen eczaneyi buluyoruz
+  return allPharmacies.find(p => p.username === username) || null;
 };
 
 export default function ProfilePage() {
@@ -92,13 +94,14 @@ export default function ProfilePage() {
     return <div><p>Eczane profili bulunamadı.</p></div>;
   }
 
+  // Bu kontrol, profilin size mi yoksa başkasına mı ait olduğunu belirler
   const isOwnProfile = params.username === pharmacyData.username;
 
   return (
     <div className="dashboard-container">
       <Sidebar />
       <Header
-        userData={pharmacyData}
+        userData={pharmacyData} // Header her zaman giriş yapmış olan sizin bilgilerinizi gösterir
         onMessageClick={toggleMessagesPanel}
         onNotificationClick={toggleNotificationsPanel}
         unreadNotificationCount={unreadNotificationCount}
@@ -107,14 +110,18 @@ export default function ProfilePage() {
       />
       <main className="main-content">
         <div className={styles.profileContainer}>
+          {/* isOwnProfile prop'u, düzenleme butonunu gösterip gizlemek için kullanılır */}
           <ProfileHeader pharmacy={pharmacy} isOwnProfile={isOwnProfile} />
           <div className={styles.profileBody}>
             <div className={styles.detailsRow}>
               <ProfileDetails pharmacy={pharmacy} isOwnProfile={isOwnProfile} />
             </div>
-            <div className={styles.medicationsRow}>
-              <ProfileMedications data={userMedicationsData} />
-            </div>
+            {/* DEĞİŞİKLİK 3: İlaçlarım bölümü sadece kendi profilinizde görünür */}
+            {isOwnProfile && (
+              <div className={styles.medicationsRow}>
+                <ProfileMedications data={userMedicationsData} />
+              </div>
+            )}
           </div>
         </div>
       </main>

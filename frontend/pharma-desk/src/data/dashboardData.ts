@@ -8,17 +8,35 @@ export interface MedicationItem {
   expirationDate: string;
 }
 
+export interface SellerInfo {
+  pharmacyUsername: string;
+  pharmacyName: string;
+}
+export interface ShowroomMedication {
+  id: number;
+  name: string;
+  manufacturer: string;
+  imageUrl: string;
+  price: number;
+  expirationDate: string;
+  initialStock: number;
+  currentStock: number;
+  bonus: number;
+  sellers: SellerInfo[]; // Her ilacı satan eczanelerin listesi
+}
+
+
 export interface PharmacyProfileData {
   pharmacyName: string;
-  pharmacistInCharge: string; // Sorumlu Eczacı
+  pharmacistInCharge: string;
   balance: number;
-  logoUrl: string | null; // Kişisel avatar yerine logo
+  logoUrl: string | null;
   coverImageUrl: string | null;
-  about: string; // 'bio' yerine 'about'
+  about: string;
   location: string;
   registrationDate: string;
-  licenseNumber: string; // Ruhsat Numarası
-  phone: string; // Telefon
+  licenseNumber: string;
+  phone: string;
   username: string; // URL için benzersiz eczane kimliği
 }
 export interface Offer {
@@ -124,4 +142,42 @@ export const userMedicationsData: MedicationItem[] = [
     { id: 4, productName: 'Dolorex', stock: '100 + 12', price: 45.00, expirationDate: '01/2028' },
     { id: 5, productName: 'Benical Cold', stock: '40 + 0', price: 65.20, expirationDate: '05/2026' },
     { id: 6, productName: 'Aspirin 100mg', stock: '300 + 50', price: 15.00, expirationDate: '09/2027' },
+];
+
+export const ilaclarShowroomData: ShowroomMedication[] = [
+  { id: 1, name: 'Dolorex', manufacturer: 'Abdi İbrahim', imageUrl: '/dolorex.jpg', price: 48.23, expirationDate: '2026-12', initialStock: 60, currentStock: 60, bonus: 5, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }] },
+  { id: 2, name: 'Parol', manufacturer: 'Atabay', imageUrl: '/dolorex.jpg', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: '/dolorex.jpg', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }, { pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 9, name: 'Minoset Plus', manufacturer: 'Bayer', imageUrl: '/dolorex.jpg', price: 22.40, expirationDate: '2027-05', initialStock: 40, currentStock: 0, bonus: 0, sellers: [] },
+  { id: 5, name: 'Benical Cold', manufacturer: 'Bayer', imageUrl: '/dolorex.jpg', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 6, name: 'Aspirin 100mg', manufacturer: 'Bayer', imageUrl: '/dolorex.jpg', price: 15.00, expirationDate: '2027-09', initialStock: 300, currentStock: 150, bonus: 50, sellers: [] },
+];
+
+export const otherPharmaciesData: PharmacyProfileData[] = [
+    {
+        pharmacyName: "Güneş Eczanesi",
+        pharmacistInCharge: "Ahmet Çelik",
+        balance: 0, // Başkasının bakiyesi görünmez
+        logoUrl: null,
+        coverImageUrl: '/cover-photo.jpg',
+        about: "Kadıköy'ün en köklü eczanelerinden biriyiz.",
+        location: "Caferağa Mah. Mühürdar Cad. No: 54/B, Kadıköy, İstanbul",
+        registrationDate: "Mart 2024",
+        licenseNumber: "54321/34",
+        phone: "0216 123 45 67",
+        username: "gunes-eczanesi"
+    },
+    {
+        pharmacyName: "Meltem Eczanesi",
+        pharmacistInCharge: "Fatma Aydın",
+        balance: 0,
+        logoUrl: null,
+        coverImageUrl: '/cover-photo.jpg',
+        about: "Sağlığınız bizim için değerli.",
+        location: "Kızılay Mah. Gazi Mustafa Kemal Blv. No: 22/A, Çankaya, Ankara",
+        registrationDate: "Kasım 2023",
+        licenseNumber: "98765/06",
+        phone: "0312 987 65 43",
+        username: "meltem-eczanesi"
+    }
 ];

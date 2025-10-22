@@ -1,0 +1,113 @@
+/* src/app/ilaçlar/ilaclar.module.css */
+
+/* Bu ana sarmalayıcı, dashboard.css'ten gelen stilleri sıfırlar ve yeni bir düzen oluşturur. */
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 25px; /* Başlık, filtre ve ürün gridi arasındaki boşluk */
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    flex-wrap: wrap; /* Küçük ekranlar için */
+    gap: 15px;
+}
+
+.pageTitle {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.selectWrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    color: var(--text-secondary);
+}
+
+.selectWrapper svg {
+    position: absolute;
+    left: 14px;
+    pointer-events: none;
+}
+
+.actionSelect {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 10px 18px 10px 40px;
+    border-radius: 8px;
+    border: 1px solid #DEE2E6;
+    background-color: #fff;
+    font-weight: 500;
+    font-size: 15px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 0.7rem center;
+    background-repeat: no-repeat;
+    background-size: 1.5em 1.5em;
+    padding-right: 2.5rem;
+    transition: all 0.2s ease;
+}
+.actionSelect:hover {
+    border-color: var(--text-primary);
+}
+
+
+.actionButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 8px;
+    border: 1px solid #DEE2E6;
+    background-color: #fff;
+    font-weight: 500;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.actionButton:hover {
+    border-color: var(--text-primary);
+    color: var(--text-primary);
+}
+
+.actionButton.active {
+    background-color: var(--active-link-bg);
+    color: #fff;
+    border-color: var(--active-link-bg);
+}
+
+/* Animasyonlu filtre alanı */
+.filterContainer {
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.4s ease-out, opacity 0.3s ease-out;
+    width: 100%;
+}
+
+.filterContainer.visible {
+    max-height: 500px; /* Panel içeriğine yetecek bir yükseklik */
+    opacity: 1;
+}
+
+.productGrid {
+    display: grid;
+    /* auto-fill yerine auto-fit kullanarak daha esnek bir yapı sağlıyoruz */
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 25px;
+    width: 100%;
+}

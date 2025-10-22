@@ -1,0 +1,181 @@
+/* src/components/ilaclar/ProductCard.module.css */
+
+.cardWrapper {
+    background-color: #FFFFFF;
+    /* YENİ: Kart çevresine çerçeve eklendi */
+    border: 1px solid #EAEFF7;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cardWrapper:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(44, 62, 80, 0.1);
+}
+
+.cardWrapper .imageContainer {
+    position: relative;
+    width: 100%;
+    padding: 15px;
+    background-color: #fdfdfd;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1.5 / 1;
+    /* Çerçeve için alt çizgiyi kaldırıyoruz */
+    /* border-bottom: 1px solid #EAEFF7; */
+    overflow: hidden;
+}
+
+.cardWrapper .productImage {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+.cardWrapper .cardContent {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    gap: 12px;
+    border-top: 1px solid #EAEFF7; /* Çizgiyi buraya taşıdık */
+}
+
+.cardWrapper .productName {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--text-primary);
+    line-height: 1.4;
+    height: 45px;
+    overflow: hidden;
+}
+
+.cardWrapper .offerBar {
+    width: 100%;
+    background-color: #EAEFF7;
+    border-radius: 20px;
+    position: relative;
+    height: 28px;
+    overflow: hidden;
+    border: 1px solid #DEE2E6;
+}
+
+.cardWrapper .offerFill {
+    background-color: #E74C3C;
+    height: 100%;
+    border-radius: 20px 0 0 20px;
+    transition: width 0.5s ease;
+}
+
+.cardWrapper .offerText {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    /* YENİ: Yazı rengi beyaz yapıldı */
+    color: #FFFFFF;
+    font-weight: 700;
+    font-size: 14px;
+    /* Okunabilirliği artırmak için gölge eklendi */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.cardWrapper .price {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: auto;
+    padding-top: 8px;
+    /* YENİ: Fiyat ortalandı */
+    text-align: center;
+}
+
+.cardWrapper .addToCartBtn {
+    width: 100%;
+    padding: 10px;
+    background-color: var(--sidebar-bg);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+}
+
+.cardWrapper .addToCartBtn:hover {
+    background-color: var(--active-link-bg);
+}
+
+.cardWrapper.outOfStock .productImage {
+    filter: grayscale(90%);
+}
+
+.cardWrapper .outOfStockBanner {
+    position: absolute;
+    top: 25px;
+    left: -50px;
+    width: 200px;
+    padding: 8px 0;
+    background-color: red;
+    color: white;
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 1px;
+    transform: rotate(-45deg);
+    z-index: 2;
+    box-shadow: 0 0 5px rgba(0,0,0,0.3);
+}
+
+.cardWrapper .addToCartBtn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.cardWrapper .addToCartBtn:disabled:hover {
+    background-color: #bdc3c7;
+}
+
+.productLink {
+    text-decoration: none;
+    color: inherit;
+}
+
+.pharmacyList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    justify-content: center;
+    min-height: 24px; /* Eczane olmadığında boşluk kalması için */
+    margin-bottom: 4px;
+}
+
+.pharmacyLink {
+    background-color: #EBF5FB;
+    color: #3498DB;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.pharmacyLink:hover {
+    background-color: #3498DB;
+    color: #FFFFFF;
+}
+
+.noSeller {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-style: italic;
+}

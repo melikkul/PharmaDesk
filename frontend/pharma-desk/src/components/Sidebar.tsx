@@ -9,7 +9,7 @@ const Sidebar = () => (
     <a href="/dashboard"><img src="/logoBeyaz.png" alt="PharmaDesk Logo" className={styles.sidebarLogo} /></a>
     <nav className={styles.sidebarNav}>
       <ul>
-        <li><a href="#">İLAÇLAR</a></li>
+        <li><a href="/ilaclar">İLAÇLAR</a></li>
         <li><a href="#">TEKLİFLERİM</a></li>
         <li><a href="#">RAPORLAR</a></li>
         <li><a href="#">İŞLEM GEÇMİŞİ</a></li>

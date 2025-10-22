@@ -1,0 +1,110 @@
+/* src/components/ilaclar/FilterPanel.module.css */
+
+/* Bu ana sarmalayıcı, tüm iç stillerin önceliğini artırır ve ezilmeyi önler. */
+.filterPanelWrapper {
+    background-color: #FFFFFF;
+    border-radius: 12px;
+    padding: 25px;
+    border: 1px solid #EAEFF7;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.filterGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 25px;
+    align-items: flex-end;
+}
+
+.filterGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.groupTitle {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.checkboxWrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.checkboxLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.priceInputs {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Tüm input ve select elemanları için ortak, yüksek öncelikli stil */
+.inputBase {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 14px;
+    margin: 0; /* Global stillerden gelebilecek margin'i sıfırlar */
+    border-radius: 8px;
+    border: 1px solid #DEE2E6;
+    outline: none;
+    font-size: 15px;
+    background-color: #FFFFFF;
+    font-family: var(--font-family);
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.inputBase:focus {
+    border-color: var(--active-link-bg);
+    box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.15);
+}
+
+.buttonGroup {
+    display: flex;
+    justify-content: flex-end;
+    gap: 15px;
+    padding-top: 20px;
+    margin-top: 20px;
+    border-top: 1px solid #EAEFF7;
+}
+
+.applyBtn, .clearBtn {
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+    font-size: 14px;
+}
+
+.applyBtn {
+    background-color: var(--sidebar-bg);
+    color: white;
+}
+.applyBtn:hover {
+    background-color: #2C3E50;
+}
+
+.clearBtn {
+    background-color: #FFFFFF;
+    color: var(--text-secondary);
+    border-color: #DEE2E6;
+}
+.clearBtn:hover {
+    border-color: var(--text-secondary);
+    color: var(--text-primary);
+}
