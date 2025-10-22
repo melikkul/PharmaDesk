@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Sidebar from '../../../components/Sidebar';
 import Header from '../../../components/Header';
 // YENİ: priceHistoryData import edildi
-import { pharmacyData, ilaclarShowroomData, initialNotifications, initialMessages, priceHistoryData } from '../../../data/dashboardData';
+import { pharmacyData, ilaclarShowroomData, initialNotifications, initialMessages, priceHistoryData, ShowroomMedication } from '../../../data/dashboardData';
 import SlidePanel from '../../../components/ui/SlidePanel';
 import NotificationItem from '../../../components/notifications/NotificationItem';
 import MessageItem from '../../../components/notifications/MessageItem';
@@ -17,6 +17,77 @@ import PriceChart from '../../../components/ilaclar/PriceChart';
 import styles from './ilacDetay.module.css';
 import '../../dashboard/dashboard.css';
 
+// YENİ: QuantitySelector Bileşen Tanımı
+interface QuantitySelectorProps {
+    quantity: number;
+    onDecrement: () => void;
+    onIncrement: () => void;
+    maxStock: number;
+    className?: string; 
+}
+
+const QuantitySelector: React.FC<QuantitySelectorProps> = ({ quantity, onDecrement, onIncrement, maxStock, className }) => (
+    <div className={`${styles.quantitySelector} ${className || ''}`}>
+        <button onClick={onDecrement} disabled={quantity <= 1}>-</button>
+        <input 
+            type="number" 
+            value={quantity} 
+            readOnly 
+            min="1" 
+            max={maxStock}
+        />
+        <button onClick={onIncrement} disabled={quantity >= maxStock}>+</button>
+    </div>
+);
+
+
+// YENİ: Offer Item Bileşen Tanımı (Listede kullanılan)
+interface OfferItemComponentProps {
+    medication: ShowroomMedication;
+    seller: { pharmacyUsername: string; pharmacyName: string };
+    styles: any; // Stil nesnesini prop olarak alıyoruz
+    QuantitySelector: React.FC<QuantitySelectorProps>;
+    maxStock: number;
+}
+
+const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, seller, styles, QuantitySelector, maxStock }) => {
+    const [offerQuantity, setOfferQuantity] = useState(1);
+    const canBuy = maxStock > 0;
+
+    const handleOfferDecrement = () => {
+        setOfferQuantity(prev => Math.max(1, prev - 1));
+    };
+
+    const handleOfferIncrement = () => {
+        setOfferQuantity(prev => Math.min(maxStock, prev + 1));
+    };
+
+    return (
+        <div className={styles.offerItem}>
+            <span className={styles.offerPrice}>{medication.price.toFixed(2).replace('.', ',')} ₺</span>
+            <div className={styles.offerSellerInfo}>
+                <span>{seller.pharmacyName}</span>
+                <span className={styles.sellerLocation}>Ankara, Çankaya</span>
+            </div>
+            <div className={styles.offerStock}>
+                {medication.currentStock} + {medication.bonus}
+            </div>
+            {canBuy && (
+                <QuantitySelector 
+                    quantity={offerQuantity}
+                    onDecrement={handleOfferDecrement}
+                    onIncrement={handleOfferIncrement}
+                    maxStock={maxStock}
+                />
+            )}
+            <button className={styles.buyButtonSecondary} disabled={!canBuy}>
+                Satın Al
+            </button>
+        </div>
+    );
+};
+// //////////////////////////////////////////////////////
+
 
 export default function IlacDetayPage() {
     // ... (state'ler ve fonksiyonlar aynı kalıyor) ...
@@ -25,6 +96,9 @@ export default function IlacDetayPage() {
     const { ilacAdi } = params;
 
     const medication = ilaclarShowroomData.find(m => m.name.toLowerCase().replace(/\s+/g, '-') === ilacAdi);
+    
+    // YENİ: Ana Satın Alma Miktarı State'i
+    const [mainQuantity, setMainQuantity] = useState(1); 
     
     const [notifications, setNotifications] = useState(initialNotifications);
     const [messages, setMessages] = useState(initialMessages);
@@ -55,7 +129,20 @@ export default function IlacDetayPage() {
     if (!medication) {
         return <div>İlaç bulunamadı.</div>;
     }
+    
+    // YENİ: Maksimum stok değeri
+    const maxStock = medication.currentStock;
+    const canBuy = maxStock > 0;
 
+    // YENİ: Ana Miktar Değiştirme Fonksiyonları
+    const handleMainDecrement = () => {
+        setMainQuantity(prev => Math.max(1, prev - 1));
+    };
+
+    const handleMainIncrement = () => {
+        setMainQuantity(prev => Math.min(maxStock, prev + 1));
+    };
+    
     const similarProducts = ilaclarShowroomData.filter(m => m.id !== medication.id).slice(0, 3);
     
     return (
@@ -86,7 +173,22 @@ export default function IlacDetayPage() {
                             <p className={styles.manufacturer}>Üretici: {medication.manufacturer}</p>
                             <div className={styles.mainPriceInfo}>
                                 <span className={styles.price}>{medication.price.toFixed(2).replace('.', ',')} ₺</span>
-                                <button className={styles.buyButton}>Satın Al</button>
+                                
+                                {/* YENİ: Quantity Selector ve Satın Al Butonu Grubu */}
+                                <div className={styles.buyActionGroup}>
+                                    {canBuy && (
+                                        <QuantitySelector 
+                                            quantity={mainQuantity}
+                                            onDecrement={handleMainDecrement}
+                                            onIncrement={handleMainIncrement}
+                                            maxStock={maxStock}
+                                        />
+                                    )}
+                                    <button className={styles.buyButton} disabled={!canBuy}>
+                                        {canBuy ? 'Satın Al' : 'Stokta Yok'} 
+                                        {/* ÖNCE: {canBuy ? `Satın Al (${mainQuantity} Adet)` : 'Stokta Yok'} */}
+                                    </button>
+                                </div>
                             </div>
                             
                             <div className={styles.sellerAndStatsContainer}>
@@ -110,17 +212,14 @@ export default function IlacDetayPage() {
                         <h2>Eczane İlaç Teklifleri</h2>
                         <div className={styles.offerList}>
                             {medication.sellers.map(seller => (
-                                <div key={seller.pharmacyUsername} className={styles.offerItem}>
-                                    <span className={styles.offerPrice}>{medication.price.toFixed(2).replace('.', ',')} ₺</span>
-                                    <div className={styles.offerSellerInfo}>
-                                        <span>{seller.pharmacyName}</span>
-                                        <span className={styles.sellerLocation}>Ankara, Çankaya</span>
-                                    </div>
-                                    <div className={styles.offerStock}>
-                                        {medication.currentStock} + {medication.bonus}
-                                    </div>
-                                    <button className={styles.buyButtonSecondary}>Satın Al</button>
-                                </div>
+                                <OfferItemComponent 
+                                    key={seller.pharmacyUsername} 
+                                    medication={medication} 
+                                    seller={seller} 
+                                    styles={styles} 
+                                    QuantitySelector={QuantitySelector} 
+                                    maxStock={medication.currentStock}
+                                />
                             ))}
                         </div>
                     </div>

@@ -64,6 +64,8 @@
     align-items: center;
     gap: 20px;
     margin-bottom: 25px;
+    /* ADDED: Quantity selector ve buton için bir grup oluştur */
+    flex-wrap: wrap; 
 }
 
 .price {
@@ -149,13 +151,16 @@
 
 .offerItem {
     display: grid;
-    grid-template-columns: 120px 1fr 100px 150px;
+    /* Price(120px) | SellerInfo(1fr) | Stock(100px) | QuantitySelector(100px) | BuyButton(150px) */
+    grid-template-columns: 120px 1fr 100px 100px 150px;
     align-items: center;
     gap: 20px;
     padding: 15px;
     border-radius: 8px;
     transition: background-color 0.2s;
 }
+
+
 .offerItem:hover {
     background-color: #f8f9fa;
 }
@@ -203,4 +208,57 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
     gap: 25px;
+}
+
+/* YENİ: Miktar seçici ve Satın Al butonunu bir arada tutan grup */
+.buyActionGroup {
+    display: flex;
+    align-items: center;
+    gap: 15px; /* Selector ve buton arası boşluk */
+}
+
+/* YENİ: Quantity Selector Ana Stilleri */
+.quantitySelector {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    height: 50px; /* main buy button yüksekliğine yakın */
+    flex-shrink: 0;
+}
+.quantitySelector button {
+    background-color: #f4f7fc;
+    border: none;
+    color: var(--text-primary);
+    width: 40px;
+    height: 100%;
+    font-size: 20px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.quantitySelector button:hover:not(:disabled) {
+    background-color: var(--border-color);
+}
+.quantitySelector button:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+.quantitySelector input {
+    width: 50px;
+    height: 100%;
+    text-align: center;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    /* Input'taki okları gizlemek için */
+    -moz-appearance: textfield; 
+}
+/* Webkit tabanlı tarayıcılarda input oklarını gizle */
+.quantitySelector input::-webkit-outer-spin-button,
+.quantitySelector input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
