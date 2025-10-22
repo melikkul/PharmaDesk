@@ -12,19 +12,21 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
   const isOutOfStock = medication.currentStock === 0;
   const barWidth = medication.initialStock > 0 ? (medication.currentStock / medication.initialStock) * 100 : 0;
 
+  // Create a URL-friendly slug from the medication name
+  const medicationSlug = medication.name.toLowerCase().replace(/\s+/g, '-');
+
   return (
     <div className={`${styles.cardWrapper} ${isOutOfStock ? styles.outOfStock : ''}`}>
-      <Link href="#" className={styles.productLink}>
+      <Link href={`/ilaclar/${medicationSlug}`} className={styles.productLink}>
         <div className={styles.imageContainer}>
           {isOutOfStock && <div className={styles.outOfStockBanner}><span>TÜKENDİ</span></div>}
-          <img src="/dolorex_placeholder.png" alt={medication.name} className={styles.productImage} />
+          <img src={medication.imageUrl || "/dolorex_placeholder.png"} alt={medication.name} className={styles.productImage} />
         </div>
       </Link>
 
       <div className={styles.cardContent}>
         <h3 className={styles.productName} title={medication.name}>{medication.name}</h3>
         
-        {/* YENİ: Eczane Listesi */}
         <div className={styles.pharmacyList}>
           {medication.sellers.length > 0 ? (
             medication.sellers.map(seller => (
@@ -44,7 +46,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
 
         <div className={styles.price}>{medication.price.toFixed(2).replace('.', ',')}₺</div>
         
-        <Link href="#" className={styles.productLink}>
+        <Link href={`/ilaclar/${medicationSlug}`} className={styles.productLink}>
             <button className={styles.addToCartBtn} disabled={isOutOfStock}>
             {isOutOfStock ? 'Stokta Yok' : 'İncele'}
             </button>

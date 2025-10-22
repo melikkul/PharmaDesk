@@ -1,0 +1,57 @@
+/* src/components/ilaclar/PriceChart.module.css */
+.chartContainer {
+    width: 100%;
+    max-width: 550px;
+    margin-top: 10px;
+    display: flex;
+    justify-content: center;
+}
+
+.axis {
+    stroke: #f0f3f8;
+    stroke-width: 2;
+}
+
+.gridLine {
+    stroke: #f0f3f8;
+    stroke-width: 1;
+}
+
+.axisLabel {
+    font-size: 12px;
+    fill: var(--text-secondary);
+    text-anchor: end; 
+}
+
+.axisLabelX {
+    font-size: 12px;
+    fill: var(--text-secondary);
+    text-anchor: middle;
+}
+
+.line {
+    fill: none;
+    stroke: var(--active-link-bg);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.tooltipCircle {
+    fill: var(--active-link-bg);
+    stroke: white;
+    stroke-width: 2;
+}
+
+.tooltipBox {
+    fill: var(--sidebar-bg);
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.tooltipText {
+    font-size: 12px;
+    fill: white;
+    font-weight: 500;
+    text-anchor: middle;
+    transform: translateX(40px);
+}

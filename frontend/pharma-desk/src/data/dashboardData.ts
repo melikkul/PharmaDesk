@@ -79,6 +79,19 @@ export interface Message {
   read: boolean;
 }
 
+export interface PriceData {
+  day: string;
+  price: number;
+}
+
+// YENİ EKLENDİ
+export interface WarehouseOffer {
+  id: number;
+  warehouseName: string;
+  price: number;
+  stockInfo: string;
+}
+
 
 export const pharmacyData: PharmacyProfileData = {
     pharmacyName: "Yıldız Eczanesi",
@@ -145,12 +158,12 @@ export const userMedicationsData: MedicationItem[] = [
 ];
 
 export const ilaclarShowroomData: ShowroomMedication[] = [
-  { id: 1, name: 'Dolorex', manufacturer: 'Abdi İbrahim', imageUrl: '/dolorex.jpg', price: 48.23, expirationDate: '2026-12', initialStock: 60, currentStock: 60, bonus: 5, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }] },
-  { id: 2, name: 'Parol', manufacturer: 'Atabay', imageUrl: '/dolorex.jpg', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
-  { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: '/dolorex.jpg', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }, { pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
-  { id: 9, name: 'Minoset Plus', manufacturer: 'Bayer', imageUrl: '/dolorex.jpg', price: 22.40, expirationDate: '2027-05', initialStock: 40, currentStock: 0, bonus: 0, sellers: [] },
-  { id: 5, name: 'Benical Cold', manufacturer: 'Bayer', imageUrl: '/dolorex.jpg', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
-  { id: 6, name: 'Aspirin 100mg', manufacturer: 'Bayer', imageUrl: '/dolorex.jpg', price: 15.00, expirationDate: '2027-09', initialStock: 300, currentStock: 150, bonus: 50, sellers: [] },
+  { id: 1, name: 'Dolorex', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/j1umlb5.png', price: 48.23, expirationDate: '2026-12', initialStock: 60, currentStock: 60, bonus: 5, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }] },
+  { id: 2, name: 'Parol', manufacturer: 'Atabay', imageUrl: 'https://i.hizliresim.com/21s3irj.png', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/gle5dcm.png', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }, { pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 9, name: 'Minoset Plus', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/mm5sy8z.png', price: 22.40, expirationDate: '2027-05', initialStock: 40, currentStock: 0, bonus: 0, sellers: [] },
+  { id: 5, name: 'Benical Cold', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/jrqzrdq.png', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 6, name: 'Aspirin 100mg', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/tkz0vdm.png', price: 15.00, expirationDate: '2027-09', initialStock: 300, currentStock: 150, bonus: 50, sellers: [] },
 ];
 
 export const otherPharmaciesData: PharmacyProfileData[] = [
@@ -180,4 +193,22 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         phone: "0312 987 65 43",
         username: "meltem-eczanesi"
     }
+];
+
+export const priceHistoryData: PriceData[] = [
+    { day: 'Pzt', price: 48.23 },
+    { day: 'Sal', price: 47.99 },
+    { day: 'Çar', price: 48.05 },
+    { day: 'Per', price: 47.50 },
+    { day: 'Cum', price: 47.80 },
+    { day: 'Cmt', price: 48.10 },
+    { day: 'Paz', price: 47.90 },
+];
+
+// YENİ EKLENDİ
+export const warehouseOffersData: WarehouseOffer[] = [
+    { id: 1, warehouseName: 'Selçuk Ecza Deposu', price: 45.50, stockInfo: 'Stok Var' },
+    { id: 2, warehouseName: 'Alliance Healthcare', price: 45.75, stockInfo: 'Stok Var' },
+    { id: 3, warehouseName: 'Hedef Ecza Deposu', price: 46.00, stockInfo: 'Sınırlı Stok' },
+    { id: 4, warehouseName: 'Galenos Ecza Deposu', price: 46.10, stockInfo: 'Stok Var' },
 ];

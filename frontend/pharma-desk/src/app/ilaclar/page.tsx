@@ -1,4 +1,4 @@
-// src/app/ilaçlar/page.tsx
+// src/app/ilaclar/page.tsx
 'use client';
 
 import React, { useState } from 'react';
@@ -15,6 +15,7 @@ import NotificationModal from '../../components/notifications/NotificationModal'
 import ChatWindow from '../../components/chat/ChatWindow';
 
 import '../dashboard/dashboard.css';
+// CORRECTED IMPORT PATH:
 import styles from './ilaclar.module.css';
 
 // İkonlar
@@ -27,7 +28,6 @@ export default function IlaclarPage() {
     const [notifications, setNotifications] = useState(initialNotifications);
     const [messages, setMessages] = useState(initialMessages);
     
-    // DÜZELTME: Modal ve Chat pencereleri için state'ler
     const [selectedNotification, setSelectedNotification] = useState(null);
     const [selectedChat, setSelectedChat] = useState(null);
     
@@ -38,17 +38,16 @@ export default function IlaclarPage() {
     const toggleNotificationsPanel = () => { setShowNotificationsPanel(p => !p); setShowMessagesPanel(false); };
     const toggleMessagesPanel = () => { setShowMessagesPanel(p => !p); setShowNotificationsPanel(false); };
 
-    // YENİ FONKSİYONLAR: Panel içi tıklamaları yönetir
-    const handleNotificationClick = (notification) => {
-        setSelectedNotification(notification); // İlgili bildirimi state'e ata (modal'ı açar)
-        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n)); // Okundu olarak işaretle
-        setShowNotificationsPanel(false); // Paneli kapat
+    const handleNotificationClick = (notification: any) => {
+        setSelectedNotification(notification); 
+        setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+        setShowNotificationsPanel(false);
     };
 
-    const handleMessageClick = (message) => {
-        setSelectedChat(message); // İlgili mesajı state'e ata (chat'i açar)
-        setMessages(prev => prev.map(m => m.id === message.id ? { ...m, read: true } : m)); // Okundu olarak işaretle
-        setShowMessagesPanel(false); // Paneli kapat
+    const handleMessageClick = (message: any) => {
+        setSelectedChat(message); 
+        setMessages(prev => prev.map(m => m.id === message.id ? { ...m, read: true } : m));
+        setShowMessagesPanel(false); 
     };
 
     const unreadNotificationCount = notifications.filter(n => !n.read).length;
@@ -67,7 +66,6 @@ export default function IlaclarPage() {
             />
             <main className="main-content">
                 <div className={styles.pageContainer}>
-                    {/* ... sayfa içeriği ... */}
                     <div className={styles.pageHeader}>
                         <h1 className={styles.pageTitle}>İlaç Vitrini</h1>
                         <div className={styles.headerActions}>
@@ -95,7 +93,6 @@ export default function IlaclarPage() {
                 </div>
             </main>
             
-            {/* DÜZELTME: onClick fonksiyonları doğru şekilde bağlandı */}
             <SlidePanel title="Bildirimler" show={showNotificationsPanel} onClose={() => setShowNotificationsPanel(false)} onMarkAllRead={() => {}}>
                 {notifications.map(n => <NotificationItem key={n.id} item={n} onClick={handleNotificationClick} />)}
             </SlidePanel>
@@ -103,7 +100,6 @@ export default function IlaclarPage() {
                 {messages.map(m => <MessageItem key={m.id} item={m} onClick={handleMessageClick} />)}
             </SlidePanel>
 
-            {/* Bu pencereler artık tıklama ile açılacak */}
             <NotificationModal notification={selectedNotification} onClose={() => setSelectedNotification(null)} />
             <ChatWindow chat={selectedChat} onClose={() => setSelectedChat(null)} />
         </div>
