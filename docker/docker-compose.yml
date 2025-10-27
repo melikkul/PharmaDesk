@@ -1,36 +1,25 @@
-
-version: '3.8'
-
 services:
-  # PostgreSQL Veritabanı Servisi
-  db:
-    image: postgres:14-alpine
-    container_name: pharma_desk_db
-    restart: always
-    environment:
-      - POSTGRES_USER= ${POSTGRE_ROOT_USER}
-      - POSTGRES_PASSWORD= ${POSTGRE_ROOT_PASSWORD}
-      - POSTGRES_DB= ${POSTGRE_ROOT_DATABASE}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+  backend:
+    build: ./backend
+    container_name: pharma_desk_backend
+    env_file:
+      - ./backend/.env
     ports:
-      - "${POSTGRE_PORT:-5432}:5432"
+      - "8081:8081"
     networks:
       - pharmanet
+    environment:
+      - DATABASE_URL=${DATABASE_URL}
 
-  # Next.js Frontend Servisi
   frontend:
     build: ../frontend/pharma-desk
     container_name: pharma_desk_frontend
     ports:
       - "3000:3000"
     depends_on:
-      - db
+      - backend
     networks:
       - pharmanet
-
-volumes:
-  postgres_data:
 
 networks:
   pharmanet:
