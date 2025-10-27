@@ -1,30 +1,30 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import { ping } from "./config/db.js";
+import drugsRoutes from "./routes/drugs.routes.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 dotenv.config();
 
 const app = express();
-app.use(express.json());
-app.use(cors({ origin: ["http://localhost:3000"], credentials: true }));
-
 const PORT = process.env.PORT || 8081;
+const CORS_ORIGIN = process.env.CORS_ORIGIN || "http://localhost:3000";
 
-app.get("/health", (req, res) => {
-  res.json({ ok: true, service: "pharmadesk-backend", time: new Date().toISOString() });
+app.use(express.json());
+app.use(cors({ origin: [CORS_ORIGIN], credentials: true }));
+
+app.get("/health", async (req, res) => {
+  try {
+    const db = await ping();
+    res.json({ ok: true, service: "pharmadesk-backend", db });
+  } catch (e) {
+    res.json({ ok: true, service: "pharmadesk-backend", db: { ok: 0, error: e.message } });
+  }
 });
 
-app.get(["/drugs", "/api/drugs"], (req, res) => {
-  const DRUGS = [
-    { id: 1, name: "Aspirin", form: "tablet" },
-    { id: 2, name: "Paracetamol", form: "tablet" },
-    { id: 3, name: "Ibuprofen", form: "capsule" },
-  ];
-  const q = (req.query.q || "").toString().toLowerCase();
-  const data = q ? DRUGS.filter(d => d.name.toLowerCase().includes(q)) : DRUGS;
-  res.json({ count: data.length, data });
-});
+app.use("/api/drugs", drugsRoutes);
 
-app.listen(PORT, () => {
-  console.log(`🚀 Backend running at http://localhost:${PORT}`);
-});
+app.use(errorHandler);
+
+app.listen(PORT, () => console.log(`🚀 Backend running on http://localhost:${PORT}`));
