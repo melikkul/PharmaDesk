@@ -3,7 +3,10 @@
 import React, { useState } from 'react';
 import ProfileDropdown from './header/ProfileDropdown';
 import styles from './Header.module.css';
-import { MessageIcon, NotificationIcon } from './ui/Icons';
+// YENİ: CartIcon import edildi
+import { MessageIcon, NotificationIcon, CartIcon } from './ui/Icons';
+// HATA DÜZELTMESİ: useCart burada import edildi
+import { useCart } from '../context/CartContext'; 
 
 // Arayüz, eczane verisine göre güncellendi
 interface HeaderPharmacyData {
@@ -18,13 +21,23 @@ interface HeaderProps {
   userData: HeaderPharmacyData; // Prop adı aynı kalsa da tipi artık HeaderPharmacyData
   onMessageClick: () => void;
   onNotificationClick: () => void;
+  onCartClick: () => void; // YENİ: Sepet tıklama prop'u
   unreadNotificationCount: number;
   unreadMessageCount: number;
   onLogout: () => void;
 }
 
-const Header: React.FC<HeaderProps> = ({ userData, onMessageClick, onNotificationClick, unreadNotificationCount, unreadMessageCount, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ 
+  userData, 
+  onMessageClick, 
+  onNotificationClick, 
+  onCartClick, // YENİ
+  unreadNotificationCount, 
+  unreadMessageCount, 
+  onLogout 
+}) => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
+  const { unreadCartItemCount } = useCart(); // YENİ: Sepet sayısını context'ten al
 
   return (
     <header className={styles.header}>
@@ -34,6 +47,11 @@ const Header: React.FC<HeaderProps> = ({ userData, onMessageClick, onNotificatio
       <div className={styles.headerActions}>
         <span className={styles.pharmacyName}>{userData.pharmacyName}</span>
         
+        {/* YENİ: Sepet Butonu */}
+        <button className={`${styles.iconButton} ${styles.hasBadge}`} onClick={onCartClick} data-badge={unreadCartItemCount}>
+          <CartIcon />
+        </button>
+
         <button className={`${styles.iconButton} ${styles.hasBadge}`} onClick={onMessageClick} data-badge={unreadMessageCount}>
           <MessageIcon />
         </button>

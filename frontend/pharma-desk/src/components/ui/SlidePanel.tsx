@@ -7,7 +7,8 @@ interface SlidePanelProps {
   show: boolean;
   onClose: () => void;
   children: React.ReactNode;
-  onMarkAllRead: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  // GÜNCELLENDİ: Prop opsiyonel yapıldı (?)
+  onMarkAllRead?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
 }
 
 const SlidePanel: React.FC<SlidePanelProps> = ({ title, show, onClose, children, onMarkAllRead }) => (
@@ -17,7 +18,10 @@ const SlidePanel: React.FC<SlidePanelProps> = ({ title, show, onClose, children,
             <div className="panel-header">
                 <h3>{title}</h3>
                 <div className="panel-actions">
-                     <a href="#" onClick={onMarkAllRead}>Tümünü okundu işaretle</a>
+                     {/* GÜNCELLENDİ: Sadece onMarkAllRead varsa göster */}
+                     {onMarkAllRead && (
+                       <a href="#" onClick={onMarkAllRead}>Tümünü okundu işaretle</a>
+                     )}
                      <button onClick={onClose} className="panel-close-btn">&times;</button>
                 </div>
             </div>

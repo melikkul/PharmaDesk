@@ -1,0 +1,82 @@
+/* src/components/cart/CartPanel.module.css */
+.cartPanelContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.cartList {
+    flex-grow: 1;
+    overflow-y: auto;
+    padding: 10px 15px;
+}
+
+.cartFooter {
+    padding: 20px 25px;
+    border-top: 2px solid var(--border-color);
+    background-color: #fcfcfc;
+    flex-shrink: 0;
+    /* Flexbox ve Gap ile boşluk ayarı */
+    display: flex;
+    flex-direction: column;
+    gap: 10px; /* Butonlar ve toplam fiyat arası boşluk */
+}
+
+.totalPrice {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* GÜNCELLENDİ: margin-bottom kaldırıldı, gap ile yönetilecek */
+    /* margin-bottom: 15px; */
+}
+
+.totalPrice span {
+    font-size: 16px;
+    color: var(--text-secondary);
+}
+
+.totalPrice strong {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--active-link-bg);
+}
+
+.checkoutButton {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+    font-weight: 700;
+    background-color: var(--active-link-bg);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    /* YENİ: Sıralamayı belirlemek için order eklendi (isteğe bağlı) */
+    order: 2; /* Siparişi Tamamla en sonda */
+}
+
+.checkoutButton:hover {
+    background-color: #16a085;
+}
+
+.clearCartButton {
+    width: 100%;
+    padding: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    background-color: transparent;
+    color: var(--negative-color);
+    border: 1px solid var(--negative-color);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+    /* GÜNCELLENDİ: margin-top kaldırıldı, gap ile yönetilecek */
+    /* margin-top: 10px; */
+     /* YENİ: Sıralamayı belirlemek için order eklendi (isteğe bağlı) */
+    order: 1; /* Sepeti Boşalt önce */
+}
+
+.clearCartButton:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+}

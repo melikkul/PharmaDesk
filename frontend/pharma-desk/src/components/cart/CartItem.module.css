@@ -1,0 +1,89 @@
+/* src/components/cart/CartItem.module.css */
+.cartItem {
+    display: flex;
+    gap: 15px;
+    padding: 15px 10px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.itemImage {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    flex-shrink: 0;
+}
+
+.itemDetails {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.itemName {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.itemSeller {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.itemPrice {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--sidebar-bg);
+}
+
+.itemActions {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+}
+
+.quantitySelector {
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    overflow: hidden;
+    height: 30px;
+}
+.quantitySelector button {
+    background-color: #f4f7fc;
+    border: none;
+    color: var(--text-primary);
+    width: 25px;
+    height: 100%;
+    font-size: 16px;
+    cursor: pointer;
+}
+.quantitySelector input {
+    width: 35px;
+    height: 100%;
+    text-align: center;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    font-weight: 600;
+    -moz-appearance: textfield;
+}
+.quantitySelector input::-webkit-outer-spin-button,
+.quantitySelector input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.removeButton {
+    background: none;
+    border: none;
+    color: var(--negative-color);
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+}
