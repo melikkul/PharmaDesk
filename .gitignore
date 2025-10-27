@@ -1,0 +1,9 @@
+docker/backend/.env
+docker/.env
+**/node_modules
+**/.next
+**/dist
+**/build
+.DS_Store
+docker/.DS_Store
+**/npm-debug.log*
