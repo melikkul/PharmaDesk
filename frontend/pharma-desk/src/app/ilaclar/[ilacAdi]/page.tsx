@@ -21,24 +21,30 @@ import '../../dashboard/dashboard.css';
 
 // YENİ: QuantitySelector Bileşen Tanımı (Dışarıdan prop ile className alacak şekilde güncellendi)
 interface QuantitySelectorProps {
-    quantity: number;
+    // GÜNCELLENDİ: 'quantity' artık 'string' veya 'number' olabilir
+    quantity: number | string;
     onDecrement: () => void;
     onIncrement: () => void;
+    // YENİ EKLENDİ: Manuel giriş için event handler'lar
+    onQuantityChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    onBlur: (e: React.FocusEvent<HTMLInputElement>) => void;
     maxStock: number;
-    className?: string; 
+    className?: string;
 }
 
-const QuantitySelector: React.FC<QuantitySelectorProps> = ({ quantity, onDecrement, onIncrement, maxStock, className }) => (
+const QuantitySelector: React.FC<QuantitySelectorProps> = ({ quantity, onDecrement, onIncrement, onQuantityChange, onBlur, maxStock, className }) => (
     <div className={`${styles.quantitySelector} ${className || ''}`}>
-        <button onClick={onDecrement} disabled={quantity <= 1}>-</button>
-        <input 
-            type="number" 
-            value={quantity} 
-            readOnly 
-            min="1" 
+        <button onClick={onDecrement} disabled={Number(quantity) <= 1}>-</button>
+        <input
+            type="number" // Mobil'de sayısal klavye için
+            value={quantity}
+            // GÜNCELLENDİ: readOnly kaldırıldı, onChange ve onBlur eklendi
+            onChange={onQuantityChange}
+            onBlur={onBlur}
+            min="1"
             max={maxStock}
         />
-        <button onClick={onIncrement} disabled={quantity >= maxStock}>+</button>
+        <button onClick={onIncrement} disabled={Number(quantity) >= maxStock}>+</button>
     </div>
 );
 
@@ -53,16 +59,48 @@ interface OfferItemComponentProps {
 }
 
 const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, seller, styles, QuantitySelector, maxStock }) => {
-    const [offerQuantity, setOfferQuantity] = useState(1);
+    // GÜNCELLENDİ: State artık string veya number tutabilir
+    const [offerQuantity, setOfferQuantity] = useState<number | string>(1);
     const canBuy = maxStock > 0;
 
+    // GÜNCELLENDİ: Artırma/Azaltma fonksiyonları state'in string olabileceğini hesaba katıyor
     const handleOfferDecrement = () => {
-        setOfferQuantity(prev => Math.max(1, prev - 1));
+        const currentQuantity = Number(offerQuantity) || 1;
+        setOfferQuantity(Math.max(1, currentQuantity - 1));
     };
 
     const handleOfferIncrement = () => {
-        setOfferQuantity(prev => Math.min(maxStock, prev + 1));
+        const currentQuantity = Number(offerQuantity) || 0;
+        setOfferQuantity(Math.min(maxStock, currentQuantity + 1));
     };
+
+    // YENİ EKLENDİ: Manuel klavye girişi için handler
+    const handleOfferQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        if (value === '') {
+            setOfferQuantity(''); // Kullanıcının alanı temizlemesine izin ver
+            return;
+        }
+        const num = parseInt(value, 10);
+        if (!isNaN(num)) {
+            if (num > maxStock) {
+                setOfferQuantity(maxStock);
+            } else if (num < 1) {
+                // Negatif veya 0 girmesini engelle (input'un min="1" özelliği bunu destekler)
+                setOfferQuantity(1);
+            } else {
+                setOfferQuantity(num);
+            }
+        }
+    };
+
+    // YENİ EKLENDİ: Alan boş bırakılırsa veya geçersizse 1'e dön
+    const handleOfferBlur = () => {
+        if (offerQuantity === '' || Number(offerQuantity) < 1) {
+            setOfferQuantity(1);
+        }
+    };
+
 
     return (
         <div className={styles.offerItem}>
@@ -75,10 +113,13 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, sel
                 {medication.currentStock} + {medication.bonus}
             </div>
             {canBuy && (
-                <QuantitySelector 
+                <QuantitySelector
                     quantity={offerQuantity}
                     onDecrement={handleOfferDecrement}
                     onIncrement={handleOfferIncrement}
+                    // YENİ EKLENDİ: Handler'ları component'e iletiyoruz
+                    onQuantityChange={handleOfferQuantityChange}
+                    onBlur={handleOfferBlur}
                     maxStock={maxStock}
                     className={styles.secondaryQuantitySelector}
                 />
@@ -98,9 +139,10 @@ export default function IlacDetayPage() {
     const { ilacAdi } = params as { ilacAdi: string };
 
     const medication = ilaclarShowroomData.find(m => m.name.toLowerCase().replace(/\s+/g, '-') === ilacAdi);
-    
-    const [mainQuantity, setMainQuantity] = useState(1); 
-    
+
+    // GÜNCELLENDİ: State artık string veya number tutabilir
+    const [mainQuantity, setMainQuantity] = useState<number | string>(1);
+
     // Bildirim ve Mesaj State'leri
     const [notifications, setNotifications] = useState(initialNotifications);
     const [messages, setMessages] = useState(initialMessages);
@@ -131,22 +173,50 @@ export default function IlacDetayPage() {
     if (!medication) {
         return <div>İlaç bulunamadı.</div>;
     }
-    
+
     // Maksimum stok değeri
     const maxStock = medication.currentStock;
     const canBuy = maxStock > 0;
 
-    // Ana Miktar Değiştirme Fonksiyonları
+    // GÜNCELLENDİ: Artırma/Azaltma fonksiyonları state'in string olabileceğini hesaba katıyor
     const handleMainDecrement = () => {
-        setMainQuantity(prev => Math.max(1, prev - 1));
+        const currentQuantity = Number(mainQuantity) || 1;
+        setMainQuantity(Math.max(1, currentQuantity - 1));
     };
 
     const handleMainIncrement = () => {
-        setMainQuantity(prev => Math.min(maxStock, prev + 1));
+        const currentQuantity = Number(mainQuantity) || 0;
+        setMainQuantity(Math.min(maxStock, currentQuantity + 1));
     };
-    
+
+    // YENİ EKLENDİ: Ana miktar alanı için manuel klavye girişi handler'ı
+    const handleMainQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        if (value === '') {
+            setMainQuantity(''); // Kullanıcının alanı temizlemesine izin ver
+            return;
+        }
+        const num = parseInt(value, 10);
+        if (!isNaN(num)) {
+            if (num > maxStock) {
+                setMainQuantity(maxStock);
+            } else if (num < 1) {
+                setMainQuantity(1);
+            } else {
+                setMainQuantity(num);
+            }
+        }
+    };
+
+    // YENİ EKLENDİ: Alan boş bırakılırsa veya geçersizse 1'e dön
+    const handleMainBlur = () => {
+        if (mainQuantity === '' || Number(mainQuantity) < 1) {
+            setMainQuantity(1);
+        }
+    };
+
     const similarProducts = ilaclarShowroomData.filter(m => m.id !== medication.id).slice(0, 3);
-    
+
     return (
         <div className="dashboard-container">
             <Sidebar />
@@ -175,40 +245,56 @@ export default function IlacDetayPage() {
                         <div className={styles.productInfoContainer}>
                             <h1>{medication.name}</h1>
                             <p className={styles.manufacturer}>Üretici: {medication.manufacturer}</p>
-                            
+
                             {/* GÖRSELDEKİ ANA BİLGİ SATIRI */}
                             <div className={styles.mainInfoRow}>
                                 <span className={styles.mainPriceDisplay}>{medication.price.toFixed(2).replace('.', ',')} ₺</span>
                                 <div className={styles.mainBuyActionGroup}>
                                     {canBuy && (
-                                        <QuantitySelector 
+                                        <QuantitySelector
                                             quantity={mainQuantity}
                                             onDecrement={handleMainDecrement}
                                             onIncrement={handleMainIncrement}
+                                            // YENİ EKLENDİ: Handler'ları component'e iletiyoruz
+                                            onQuantityChange={handleMainQuantityChange}
+                                            onBlur={handleMainBlur}
                                             maxStock={maxStock}
                                         />
                                     )}
                                     <button className={styles.buyButtonMain} disabled={!canBuy}>
-                                        {canBuy ? 'Satın Al' : 'Stokta Yok'} 
+                                        {canBuy ? 'Satın Al' : 'Stokta Yok'}
                                     </button>
                                 </div>
                             </div>
-                            
-                            <div className={styles.sellerAndStatsContainer}>
+
+                            {/* --- SATICI BİLGİSİ BURAYA TAŞINDI --- */}
+                            <div className={styles.sellerInfo} /* style={{ marginTop: '15px' }} kaldırıldı */ >
+                                Satıcı: <a href={`/profil/${medication.sellers[0]?.pharmacyUsername}`}>{medication.sellers[0]?.pharmacyName}</a>
+                            </div>
+                            {/* --- TAŞIMA İŞLEMİ BİTTİ --- */}
+
+
+                            {/* .sellerAndStatsContainer -> .chartAndOfferContainer olarak yeniden adlandırıldı */}
+                            <div className={styles.chartAndOfferContainer}>
+
+                                {/* 1. Bölüm: Grafik */}
                                 <div className={styles.sellerAndChart}>
-                                     {/* Fiyat Grafiği */}
                                      <div className={styles.priceChartWrapper}>
                                         <PriceChart data={priceHistoryData as PriceData[]} />
                                     </div>
-                                    <div className={styles.sellerInfo} style={{ marginTop: '15px' }}>
-                                        Satıcı: <a href={`/profil/${medication.sellers[0]?.pharmacyUsername}`}>{medication.sellers[0]?.pharmacyName}</a>
+                                    {/* Satıcı bilgisi buradan kaldırıldı */}
+                                </div>
+
+                                {/* 2. Bölüm: Teklif Sayısı (Yeni sarmalayıcı eklendi) */}
+                                <div className={styles.offerCountWrapper}>
+                                    <div className={styles.offerCount}>
+                                        <span>Teklif Sayısı</span>
+                                        <strong>{medication.sellers.length}</strong>
                                     </div>
                                 </div>
-                                <div className={styles.offerCount}>
-                                    <span>Teklif Sayısı</span>
-                                    <strong>{medication.sellers.length}</strong>
-                                </div>
+
                             </div>
+
                         </div>
                     </div>
 
@@ -220,18 +306,18 @@ export default function IlacDetayPage() {
                         <h2>Eczane İlaç Teklifleri</h2>
                         <div className={styles.offerList}>
                             {medication.sellers.map(seller => (
-                                <OfferItemComponent 
-                                    key={seller.pharmacyUsername} 
-                                    medication={medication} 
-                                    seller={seller} 
-                                    styles={styles} 
-                                    QuantitySelector={QuantitySelector} 
+                                <OfferItemComponent
+                                    key={seller.pharmacyUsername}
+                                    medication={medication}
+                                    seller={seller}
+                                    styles={styles}
+                                    QuantitySelector={QuantitySelector}
                                     maxStock={medication.currentStock}
                                 />
                             ))}
                         </div>
                     </div>
-                    
+
                     <div className={styles.similarProductsSection}>
                         <h2>Benzer Ürünler</h2>
                         <div className={styles.similarProductsGrid}>

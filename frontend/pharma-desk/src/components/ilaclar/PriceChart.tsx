@@ -26,55 +26,66 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
     return <div className={styles.chartContainer}>Yeterli veri yok.</div>;
   }
 
-  const svgWidth = 550;
-  const svgHeight = 200;
-  const margin = { top: 20, right: 20, bottom: 30, left: 50 };
-  const width = svgWidth - margin.left - margin.right;
-  const height = svgHeight - margin.top - margin.bottom;
+  // ViewBox için koordinat sistemi boyutları
+  const viewBoxWidth = 550;
+  const viewBoxHeight = 200;
+  
+  // --- DEĞİŞİKLİK BURADA: Sol ve Sağ margin değerleri azaltıldı ---
+  const margin = { top: 20, right: 10, bottom: 30, left: 30 }; 
+  // --- ---
+
+  // İç çizim alanı boyutları (koordinat sistemi içinde) - Otomatik olarak güncellenecek
+  const width = viewBoxWidth - margin.left - margin.right;
+  const height = viewBoxHeight - margin.top - margin.bottom;
 
   const prices = data.map(d => d.price);
   const maxPriceRaw = Math.max(...prices);
   const minPriceRaw = Math.min(...prices);
   const rawPriceRange = maxPriceRaw - minPriceRaw;
-  
-  // X eksenine yapışmaması için %15 boşluk bırakılan minPrice ayarı korunuyor.
+
   const minPrice = minPriceRaw - (rawPriceRange * 0.15 || minPriceRaw * 0.05);
-  // Üstte %10'luk boşluk bırakalım.
   const maxPrice = maxPriceRaw + (rawPriceRange * 0.10 || maxPriceRaw * 0.05);
-  // Fiyat aralığı hesaplanır
   const priceRange = maxPrice - minPrice <= 0.01 ? 1 : maxPrice - minPrice;
 
   const getPoint = (d: PriceData, i: number) => {
     const x = (i / (data.length - 1)) * width;
-    // minPrice başlangıcına göre Y konumu hesaplanır.
     const y = height - ((d.price - minPrice) / priceRange) * height;
     return { x, y };
   };
-  
-  // Fiyat etiketlerinin Y pozisyonunu hesaplamak için yardımcı fonksiyon
+
   const getYPosition = (price: number) => {
-    // price'ın minPrice'a göre konumu
     return height - ((price - minPrice) / priceRange) * height;
   }
-  
-  // Etiket pozisyonları
+
   const maxPriceRawY = getYPosition(maxPriceRaw);
   const minPriceRawY = getYPosition(minPriceRaw);
-  
+
   const points = data.map((d, i) => {
     const { x, y } = getPoint(d, i);
     return `${x},${y}`;
   }).join(' ');
 
   const handleMouseMove = (event: React.MouseEvent<SVGRectElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const x = event.clientX - rect.left;
+    const svgRect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
+    if (!svgRect) return;
+
+    // SVG içindeki fare koordinatlarını hesapla
+    const pt = event.currentTarget.ownerSVGElement!.createSVGPoint();
+    pt.x = event.clientX;
+    pt.y = event.clientY;
+    const svgPoint = pt.matrixTransform(event.currentTarget.ownerSVGElement!.getScreenCTM()!.inverse());
+
+    // Koordinatları viewBox koordinat sistemine dönüştür
+    const xInViewBox = svgPoint.x - margin.left;
+
+    // En yakın veri noktasını bul
     const segmentWidth = width / (data.length - 1);
-    const index = Math.min(data.length - 1, Math.max(0, Math.round(x / segmentWidth)));
-    
+    const index = Math.min(data.length - 1, Math.max(0, Math.round(xInViewBox / segmentWidth)));
+
     const pointData = data[index];
     const { x: pointX, y: pointY } = getPoint(pointData, index);
     setTooltip({
+      // Tooltip pozisyonunu viewBox koordinatlarına göre ayarla
       x: pointX + margin.left,
       y: pointY + margin.top,
       index: index,
@@ -93,48 +104,55 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
 
   return (
     <div className={styles.chartContainer}>
-      <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} preserveAspectRatio="xMidYMid meet">
+      {/* SVG ELEMENTİ */}
+      <svg
+        viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
+        preserveAspectRatio="xMidYMid meet"
+        width="100%" /* SVG'nin konteyneri doldurmasını sağlar */
+        height={viewBoxHeight} /* Yüksekliği sabit tutabilir veya "auto" yapabilirsiniz */
+      >
+        {/* Çizim alanı grubu, margin kadar içeri kaydırılır */}
         <g transform={`translate(${margin.left}, ${margin.top})`}>
-          {/* En yüksek fiyatı temsil eden ızgara çizgisi (en üstteki) */}
+          {/* Izgara Çizgileri */}
           <line className={styles.gridLine} x1="0" y1={maxPriceRawY} x2={width} y2={maxPriceRawY} />
-          
-          {/* En düşük fiyatı temsil eden ızgara çizgisi (çizginin altındaki) */}
           <line className={styles.gridLine} x1="0" y1={minPriceRawY} x2={width} y2={minPriceRawY} />
           
-          {/* X ekseni (yatay çizgi) */}
-          <line className={styles.axis} x1="0" y1={height} x2={width} y2={height} />
+          {/* Eksen Çizgileri */}
+          <line className={styles.axis} x1="0" y1={height} x2={width} y2={height} /> 
+          {/* Dikey eksen çizgisi (isteğe bağlı) */}
+          {/* <line className={styles.axis} x1="0" y1="0" x2="0" y2={height} /> */}
           
-          {/* En Yüksek Fiyat Etiketi - Kendi Çizgisinin Üstüne Hizalı */}
+          {/* Y Ekseni Etiketleri (margin.left kadar solda) */}
           <text className={styles.axisLabel} x="-10" y={maxPriceRawY} dy="-0.32em">{maxPriceRaw.toFixed(2)}</text>
-          
-          {/* KRİTİK DÜZELTME: En Düşük Fiyat Etiketi - Kendi Çizgisine Hizalı */}
           <text className={styles.axisLabel} x="-10" y={minPriceRawY} dy="0.32em">{minPriceRaw.toFixed(2)}</text>
-          
-          {/* KRİTİK DÜZELTME: 0.00 Etiketi - X Ekseni Çizgisine Hizalı */}
-          <text className={styles.axisLabel} x="-10" y={height} dy="0.32em">0.00</text>
-          
+          <text className={styles.axisLabel} x="-10" y={height} dy="0.32em">0.00</text> 
+
+          {/* X Ekseni Etiketleri (çizim alanının altında) */}
           {data.map((d, i) => (
-            <text 
+            <text
               key={i}
               className={styles.axisLabelX}
-              x={getPoint(d, i).x} 
-              y={height + 20}
+              x={getPoint(d, i).x}
+              y={height + 20} /* margin.bottom'a göre ayarlanır */
             >
               {d.day}
             </text>
           ))}
 
+          {/* Fiyat Çizgisi */}
           <polyline className={styles.line} points={points} />
-          
+
+          {/* Mouse olaylarını yakalamak için görünmez dikdörtgen */}
           <rect
             fill="transparent"
-            width={width}
-            height={height}
+            width={width} /* Sadece çizim alanı genişliğinde */
+            height={height} /* Sadece çizim alanı yüksekliğinde */
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
           />
         </g>
-        
+
+        {/* Tooltip */}
         {tooltip && (
           <g transform={`translate(${tooltip.x}, ${tooltip.y})`}>
             <circle className={styles.tooltipCircle} r="5" />
