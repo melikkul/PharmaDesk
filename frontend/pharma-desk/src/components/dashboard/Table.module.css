@@ -1,14 +1,16 @@
+/* src/components/dashboard/Table.module.css */
 .table {
     width: 100%;
     border-collapse: collapse;
 }
 
 .table th, .table td {
-    padding: 15px 5px;
+    padding: 12px 10px; /* Padding biraz azaltıldı */
     text-align: left;
     border-bottom: 1px solid var(--border-color);
     font-size: 14px;
     white-space: nowrap;
+    vertical-align: middle; /* İçeriği dikeyde ortala */
 }
 
 .table thead th {
@@ -16,11 +18,46 @@
     color: var(--text-secondary);
     font-size: 12px;
     text-transform: uppercase;
+    position: relative; /* Sıralama ikonları için */
+    padding-right: 20px; /* İkon için yer aç */
 }
+
+/* YENİ: Sıralanabilir başlık stili */
+.sortableHeader {
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s;
+}
+.sortableHeader:hover {
+    background-color: #f8f9fa;
+}
+.sortableHeader svg {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+.sortableHeader:hover svg {
+    opacity: 1;
+}
+
 
 .table tbody tr:last-child td {
     border-bottom: none;
 }
+
+.table tbody tr:hover {
+    background-color: #fdfdfd; /* Satır üzerine gelince hafif arka plan */
+}
+
+/* YENİ: Seçili satır stili */
+.selectedRow {
+    background-color: #e8f6f3 !important; /* Vurgulu arka plan */
+    box-shadow: inset 3px 0 0 0 var(--active-link-bg); /* Sol kenarda çizgi */
+}
+
 
 .productImagePlaceholder {
     width: 40px;
@@ -39,4 +76,3 @@
     cursor: pointer;
     margin-left: 5px;
 }
-

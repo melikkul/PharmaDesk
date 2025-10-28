@@ -41,7 +41,7 @@
 
 .actionCell {
     display: flex;
-    gap: 10px;
+    gap: 8px; /* Butonlar arası boşluk biraz azaltıldı */
 }
 
 .actionButton {
@@ -49,18 +49,26 @@
     border: none;
     cursor: pointer;
     color: var(--text-secondary);
-    transition: color 0.2s;
+    transition: color 0.2s, opacity 0.2s;
     padding: 4px;
+    display: flex; /* İkonu ortalamak için */
+    align-items: center;
+    justify-content: center;
 }
-
-.actionButton:hover {
+.actionButton:hover:not(:disabled) {
     color: var(--text-primary);
 }
+/* YENİ: Disabled durum stili */
+.actionButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 
-.editButton:hover {
+
+.editButton:hover:not(:disabled) {
     color: var(--active-link-bg);
 }
 
-.deleteButton:hover {
+.deleteButton:hover:not(:disabled) {
     color: var(--negative-color);
 }

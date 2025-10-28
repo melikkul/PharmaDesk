@@ -1,34 +1,34 @@
 // src/app/tekliflerim/[offerId]/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-// Relative paths used
+// Alias kullanıldı
 import '../../dashboard/dashboard.css';
-import styles from '../tekliflerim.module.css'; // Parent directory's module CSS
+import styles from '../tekliflerim.module.css';
 
-// ANA BİLEŞENLER (Relative paths used)
-import Sidebar from '../../../components/Sidebar';
-import Header from '../../../components/Header';
-// Relative path used for OfferForm
-import OfferForm from '../OfferForm';
+// ANA BİLEŞENLER (Alias kullanıldı)
+import Sidebar from '@/components/Sidebar';
+import Header from '@/components/Header';
+import OfferForm from '../OfferForm'; // Aynı dizinde
 
-// BİLDİRİM & MESAJ BİLEŞENLERİ (Relative paths used)
-import SlidePanel from '../../../components/ui/SlidePanel';
-import NotificationItem from '../../../components/notifications/NotificationItem';
-import MessageItem from '../../../components/notifications/MessageItem';
-import NotificationModal from '../../../components/notifications/NotificationModal';
-import ChatWindow from '../../../components/chat/ChatWindow';
-import CartPanel from '../../../components/cart/CartPanel';
+// BİLDİRİM & MESAJ BİLEŞENLERİ (Alias kullanıldı)
+import SlidePanel from '@/components/ui/SlidePanel';
+import NotificationItem from '@/components/notifications/NotificationItem';
+import MessageItem from '@/components/notifications/MessageItem';
+import NotificationModal from '@/components/notifications/NotificationModal';
+import ChatWindow from '@/components/chat/ChatWindow';
+import CartPanel from '@/components/cart/CartPanel';
 
-// VERİLER (Relative path used)
+// VERİLER (Alias kullanıldı)
 import {
   pharmacyData,
   userMedicationsData,
   initialNotifications,
-  initialMessages
-} from '../../../data/dashboardData';
+  initialMessages,
+  MedicationItem // Tip import edildi
+} from '@/data/dashboardData';
 
 // Tipler
 type Notification = typeof initialNotifications[0];
@@ -42,9 +42,20 @@ export default function DuzenleTeklifPage() {
   const params = useParams();
   const { offerId } = params as { offerId: string };
 
-  const medicationToEdit = userMedicationsData.find(m => m.id.toString() === offerId);
+  // --- Düzenlenecek İlacı Bulma ---
+   const [medicationToEdit, setMedicationToEdit] = useState<MedicationItem | null | undefined>(undefined); // undefined: yükleniyor, null: bulunamadı
 
-  // --- Bildirim/Mesaj/Sepet State Yönetimi ---
+  useEffect(() => {
+      // Normalde burada API'den tekil ilaç verisi çekilir
+      console.log(`API Çağrısı: ${offerId} ID'li teklif detayları getiriliyor...`);
+      setTimeout(() => {
+          const foundMedication = userMedicationsData.find(m => m.id.toString() === offerId);
+          setMedicationToEdit(foundMedication || null); // Bulunamazsa null ata
+      }, 300); // Küçük bir gecikme
+  }, [offerId]);
+
+
+  // --- Bildirim/Mesaj/Sepet State Yönetimi (Aynı kalıyor) ---
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
   const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null);
   const [messages, setMessages] = useState<Message[]>(initialMessages);
@@ -52,7 +63,10 @@ export default function DuzenleTeklifPage() {
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showCartPanel, setShowCartPanel] = useState(false);
+  // --- Form Kaydetme Durumu ---
+  const [isSaving, setIsSaving] = useState(false);
 
+  // --- Handler Fonksiyonları (Aynı kalıyor) ---
   const handleLogout = () => { if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) router.push('/anasayfa'); };
   const handleNotificationClick = (notification: Notification) => { setSelectedNotification(notification); setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n)); setShowNotificationsPanel(false); };
   const markAllNotificationsAsRead = (e: React.MouseEvent) => { e.preventDefault(); setNotifications(prev => prev.map(n => ({ ...n, read: true }))); };
@@ -63,7 +77,20 @@ export default function DuzenleTeklifPage() {
   const toggleCartPanel = () => { setShowCartPanel(!showCartPanel); setShowNotificationsPanel(false); setShowMessagesPanel(false); };
   const unreadNotificationCount = notifications.filter(n => !n.read).length;
   const unreadMessageCount = messages.filter(m => !m.read).length;
-  // --- State Yönetimi Sonu ---
+
+  // --- Form Kaydetme Fonksiyonu (Simülasyon) ---
+  const handleUpdateOffer = async (formData: any) => {
+      if (!medicationToEdit) return;
+      setIsSaving(true);
+      console.log(`API Çağrısı: ${offerId} ID'li teklif güncelleniyor...`, formData);
+      // Simülasyon
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      console.log("Teklif başarıyla güncellendi.");
+      setIsSaving(false);
+      // Başarılı güncellemeden sonra tekliflerim sayfasına yönlendir
+      router.push('/tekliflerim');
+      // TODO: Başarı mesajı gösterilebilir (Toast notification vb.)
+  };
 
   return (
     <div className="dashboard-container">
@@ -88,15 +115,19 @@ export default function DuzenleTeklifPage() {
             </Link>
           </div>
 
-          {medicationToEdit ? (
-            <OfferForm medication={medicationToEdit} />
-          ) : (
-            <p>Düzenlenecek ilaç bulunamadı.</p>
+          {medicationToEdit === undefined && <p>Teklif yükleniyor...</p>}
+          {medicationToEdit === null && <p>Düzenlenecek teklif bulunamadı.</p>}
+          {medicationToEdit && (
+            <OfferForm
+                medication={medicationToEdit}
+                onSave={handleUpdateOffer}
+                isSaving={isSaving}
+            />
           )}
         </div>
       </main>
 
-      {/* --- Panel ve Modal Alanı --- */}
+      {/* --- Panel ve Modal Alanı (Aynı kalıyor) --- */}
       <SlidePanel title="Bildirimler" show={showNotificationsPanel} onClose={() => setShowNotificationsPanel(false)} onMarkAllRead={markAllNotificationsAsRead}>
         {notifications.map(notif => <NotificationItem key={notif.id} item={notif} onClick={handleNotificationClick} />)}
       </SlidePanel>

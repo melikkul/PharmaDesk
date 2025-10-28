@@ -92,6 +92,19 @@ export interface WarehouseOffer {
   stockInfo: string;
 }
 
+export type OfferStatus = 'active' | 'paused' | 'expired' | 'out_of_stock';
+
+export interface MedicationItem {
+  id: number;
+  productName: string;
+  barcode?: string; // Barkod alanı eklendi (opsiyonel)
+  stock: string; // "Stok + MF" formatı korunuyor
+  price: number;
+  expirationDate: string; // MM/YYYY formatı korunuyor
+  status: OfferStatus; // Durum alanı eklendi
+  dateAdded: string; // Eklenme tarihi (YYYY-MM-DD)
+}
+
 
 export const pharmacyData: PharmacyProfileData = {
     pharmacyName: "Yıldız Eczanesi",
@@ -149,12 +162,41 @@ export const initialMessages: Message[] = [
 ];
 
 export const userMedicationsData: MedicationItem[] = [
-    { id: 1, productName: 'Apranax Forte', stock: '50 + 5', price: 52.50, expirationDate: '12/2026' },
-    { id: 2, productName: 'Parol 500mg', stock: '200 + 20', price: 25.00, expirationDate: '08/2027' },
-    { id: 3, productName: 'Majezik 100mg', stock: '75 + 8', price: 48.75, expirationDate: '11/2025' },
-    { id: 4, productName: 'Dolorex', stock: '100 + 12', price: 45.00, expirationDate: '01/2028' },
-    { id: 5, productName: 'Benical Cold', stock: '40 + 0', price: 65.20, expirationDate: '05/2026' },
-    { id: 6, productName: 'Aspirin 100mg', stock: '300 + 50', price: 15.00, expirationDate: '09/2027' },
+    {
+        id: 1,
+        productName: 'Apranax Forte',
+        stock: '50 + 5',
+        price: 52.50,
+        expirationDate: '12/2026',
+    },
+    {
+        id: 2,
+        productName: 'Parol 500mg',
+        stock: '200 + 20',
+        price: 25.00,
+        expirationDate: '08/2027',
+    },
+    {
+        id: 3,
+        productName: 'Majezik 100mg',
+        stock: '75 + 8',
+        price: 48.75,
+        expirationDate: '11/2025',
+    },
+    {
+        id: 4,
+        productName: 'Dolorex',
+        stock: '100 + 12',
+        price: 45.00,
+        expirationDate: '01/2028',
+    },
+    {
+        id: 6,
+        productName: 'Aspirin 100mg',
+        stock: '300 + 50',
+        price: 15.00,
+        expirationDate: '09/2027',
+    },
 ];
 
 export const ilaclarShowroomData: ShowroomMedication[] = [
@@ -216,3 +258,6 @@ export const warehouseOffersData: WarehouseOffer[] = [
     { id: 7, warehouseName: 'Eczacıbaşı', price: 46.50, stockInfo: 'Tükendi' },
     { id: 8, warehouseName: 'Novartis Depo', price: 46.75, stockInfo: 'Sınırlı Stok' },
 ];
+
+export { pharmacyData, offersData, balanceHistoryData, transfersData, shipmentsData, initialNotifications, initialMessages, ilaclarShowroomData, otherPharmaciesData, priceHistoryData, warehouseOffersData };
+export type { SellerInfo, ShowroomMedication, PharmacyProfileData, Offer, BalanceItem, TransferItem, ShipmentItem, Notification, Message, PriceData, WarehouseOffer };
