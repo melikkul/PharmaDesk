@@ -10,7 +10,7 @@ interface ProfileMedicationsProps {
 
 const ProfileMedications: React.FC<ProfileMedicationsProps> = ({ data }) => {
   return (
-    <DashboardCard title="Sistemdeki İlaçlarım" viewAllLink="#">
+    <DashboardCard title="Sistemdeki İlaçlarım" viewAllLink="/tekliflerim">
       <table className={tableStyles.table}>
         <thead>
           <tr>
