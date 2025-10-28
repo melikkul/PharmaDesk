@@ -1,4 +1,4 @@
-// app/ayarlar/layout.tsx
+// src/app/ayarlar/layout.tsx
 'use client';
 import React from 'react';
 import { useRouter, usePathname } from 'next/navigation';
@@ -12,9 +12,10 @@ import NotificationItem from '../../components/notifications/NotificationItem';
 import MessageItem from '../../components/notifications/MessageItem';
 import NotificationModal from '../../components/notifications/NotificationModal';
 import ChatWindow from '../../components/chat/ChatWindow';
+// YENİ: CartPanel import edildi
+import CartPanel from '../../components/cart/CartPanel';
 
 // Veri ve stilleri import ediyoruz
-// DEĞİŞİKLİK: 'userData' yerine 'pharmacyData' import edildi
 import { pharmacyData, initialNotifications, initialMessages } from '../../data/dashboardData';
 import '../dashboard/dashboard.css';
 import styles from './layout.module.css'; // Bu layout'a özel stiller
@@ -50,13 +51,15 @@ const SettingsNav = () => {
 export default function AyarlarPagesLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   
-  // State yönetimi ve fonksiyonlar (bildirimler, mesajlar vb.) aynı kalıyor
+  // State yönetimi
   const [notifications, setNotifications] = React.useState<Notification[]>(initialNotifications);
   const [selectedNotification, setSelectedNotification] = React.useState<SelectedNotification | null>(null);
   const [messages, setMessages] = React.useState<Message[]>(initialMessages);
   const [selectedChat, setSelectedChat] = React.useState<Message | null>(null);
   const [showNotificationsPanel, setShowNotificationsPanel] = React.useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = React.useState(false);
+  // YENİ: Sepet paneli state'i
+  const [showCartPanel, setShowCartPanel] = React.useState(false);
 
   const handleLogout = () => {
     if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
@@ -89,11 +92,20 @@ export default function AyarlarPagesLayout({ children }: { children: React.React
   const toggleNotificationsPanel = () => {
       setShowNotificationsPanel(!showNotificationsPanel);
       setShowMessagesPanel(false);
+      setShowCartPanel(false); // YENİ
   }
 
   const toggleMessagesPanel = () => {
       setShowMessagesPanel(!showMessagesPanel);
       setShowNotificationsPanel(false);
+      setShowCartPanel(false); // YENİ
+  }
+
+  // YENİ: Sepet paneli toggle fonksiyonu
+  const toggleCartPanel = () => {
+      setShowCartPanel(!showCartPanel);
+      setShowNotificationsPanel(false);
+      setShowMessagesPanel(false);
   }
 
   const unreadNotificationCount = notifications.filter(n => !n.read).length;
@@ -103,10 +115,10 @@ export default function AyarlarPagesLayout({ children }: { children: React.React
     <div className="dashboard-container">
       <Sidebar />
       <Header
-        // DEĞİŞİKLİK: 'userData' prop'una 'pharmacyData' geçirildi
         userData={pharmacyData}
         onMessageClick={toggleMessagesPanel}
         onNotificationClick={toggleNotificationsPanel}
+        onCartClick={toggleCartPanel} // YENİ: Prop eklendi
         unreadNotificationCount={unreadNotificationCount}
         unreadMessageCount={unreadMessageCount}
         onLogout={handleLogout}
@@ -120,7 +132,7 @@ export default function AyarlarPagesLayout({ children }: { children: React.React
         </div>
       </main>
 
-      {/* Açılır paneller ve modallar (bildirim, mesaj vb.) aynı kalıyor */}
+      {/* Açılır paneller ve modallar */}
       <SlidePanel
         title="Bildirimler"
         show={showNotificationsPanel}
@@ -150,6 +162,9 @@ export default function AyarlarPagesLayout({ children }: { children: React.React
             <div className="panel-empty-state"><p>Yeni mesajınız yok.</p></div>
         )}
       </SlidePanel>
+
+      {/* YENİ: CartPanel render edildi */}
+      <CartPanel show={showCartPanel} onClose={toggleCartPanel} />
 
       <NotificationModal
         notification={selectedNotification}

@@ -1,3 +1,4 @@
+// src/app/dashboard/page.tsx
 'use client'; 
 
 import React, { useState, useCallback } from 'react';
@@ -20,9 +21,10 @@ import NotificationItem from '../../components/notifications/NotificationItem';
 import MessageItem from '../../components/notifications/MessageItem';
 import NotificationModal from '../../components/notifications/NotificationModal';
 import ChatWindow from '../../components/chat/ChatWindow';
+// YENİ: CartPanel import edildi
+import CartPanel from '../../components/cart/CartPanel';
 
 // VERİLER
-// DEĞİŞİKLİK: 'userData' yerine 'pharmacyData' import edildi
 import {
   pharmacyData, 
   offersData,
@@ -33,7 +35,7 @@ import {
   initialMessages
 } from '../../data/dashboardData';
 
-// Tipler (Daha merkezi bir yerden de import edilebilir)
+// Tipler
 type Notification = typeof initialNotifications[0];
 type Message = typeof initialMessages[0];
 type SelectedNotification = Notification & { detail?: string };
@@ -55,20 +57,16 @@ export default function DashboardPage() {
 
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
+  // YENİ: Sepet paneli state'i
+  const [showCartPanel, setShowCartPanel] = useState(false);
 
   // --- FONKSİYONLAR ---
 
-  // Örnek bir logout fonksiyonu
   const router = useRouter();
 
   const handleLogout = () => {
-    // Tarayıcının standart onay penceresini kullanıyoruz
     if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
-      console.log("Çıkış yapma işlemi onaylandı. Yönlendiriliyor...");
-      // Onay verilirse /anasayfa adresine yönlendir
       router.push('/anasayfa');
-    } else {
-      console.log("Çıkış yapma işlemi iptal edildi.");
     }
   };
 
@@ -97,11 +95,20 @@ export default function DashboardPage() {
   const toggleNotificationsPanel = () => {
       setShowNotificationsPanel(!showNotificationsPanel);
       setShowMessagesPanel(false);
+      setShowCartPanel(false); // YENİ: Diğer panelleri kapat
   }
 
   const toggleMessagesPanel = () => {
       setShowMessagesPanel(!showMessagesPanel);
       setShowNotificationsPanel(false);
+      setShowCartPanel(false); // YENİ: Diğer panelleri kapat
+  }
+  
+  // YENİ: Sepet paneli toggle fonksiyonu
+  const toggleCartPanel = () => {
+      setShowCartPanel(!showCartPanel);
+      setShowNotificationsPanel(false);
+      setShowMessagesPanel(false);
   }
 
   // Hesaplanmış Değerler
@@ -113,10 +120,10 @@ export default function DashboardPage() {
       <Sidebar />
 
       <Header
-        // DEĞİŞİKLİK: 'userData' prop'una 'pharmacyData' geçirildi
         userData={pharmacyData} 
         onMessageClick={toggleMessagesPanel}
         onNotificationClick={toggleNotificationsPanel}
+        onCartClick={toggleCartPanel} // YENİ: Prop eklendi
         unreadNotificationCount={unreadNotificationCount}
         unreadMessageCount={unreadMessageCount}
         onLogout={handleLogout}
@@ -164,6 +171,9 @@ export default function DashboardPage() {
             </div>
         )}
       </SlidePanel>
+
+      {/* YENİ: CartPanel render edildi */}
+      <CartPanel show={showCartPanel} onClose={toggleCartPanel} />
 
       <NotificationModal
         notification={selectedNotification}

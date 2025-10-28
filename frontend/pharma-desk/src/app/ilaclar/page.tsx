@@ -13,9 +13,10 @@ import NotificationItem from '../../components/notifications/NotificationItem';
 import MessageItem from '../../components/notifications/MessageItem';
 import NotificationModal from '../../components/notifications/NotificationModal';
 import ChatWindow from '../../components/chat/ChatWindow';
+// YENİ: CartPanel import edildi
+import CartPanel from '../../components/cart/CartPanel';
 
 import '../dashboard/dashboard.css';
-// CORRECTED IMPORT PATH:
 import styles from './ilaclar.module.css';
 
 // İkonlar
@@ -33,10 +34,27 @@ export default function IlaclarPage() {
     
     const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
     const [showMessagesPanel, setShowMessagesPanel] = useState(false);
+    // YENİ: Sepet paneli state'i
+    const [showCartPanel, setShowCartPanel] = useState(false);
 
     const handleLogout = () => { if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) router.push('/anasayfa'); };
-    const toggleNotificationsPanel = () => { setShowNotificationsPanel(p => !p); setShowMessagesPanel(false); };
-    const toggleMessagesPanel = () => { setShowMessagesPanel(p => !p); setShowNotificationsPanel(false); };
+    
+    const toggleNotificationsPanel = () => { 
+        setShowNotificationsPanel(p => !p); 
+        setShowMessagesPanel(false); 
+        setShowCartPanel(false); // YENİ
+    };
+    const toggleMessagesPanel = () => { 
+        setShowMessagesPanel(p => !p); 
+        setShowNotificationsPanel(false); 
+        setShowCartPanel(false); // YENİ
+    };
+    // YENİ: Sepet paneli toggle fonksiyonu
+    const toggleCartPanel = () => {
+        setShowCartPanel(p => !p);
+        setShowNotificationsPanel(false);
+        setShowMessagesPanel(false);
+    }
 
     const handleNotificationClick = (notification: any) => {
         setSelectedNotification(notification); 
@@ -60,6 +78,7 @@ export default function IlaclarPage() {
                 userData={pharmacyData}
                 onMessageClick={toggleMessagesPanel}
                 onNotificationClick={toggleNotificationsPanel}
+                onCartClick={toggleCartPanel} // YENİ: Prop eklendi
                 unreadNotificationCount={unreadNotificationCount}
                 unreadMessageCount={unreadMessageCount}
                 onLogout={handleLogout}
@@ -99,6 +118,9 @@ export default function IlaclarPage() {
             <SlidePanel title="Mesajlar" show={showMessagesPanel} onClose={() => setShowMessagesPanel(false)} onMarkAllRead={() => {}}>
                 {messages.map(m => <MessageItem key={m.id} item={m} onClick={handleMessageClick} />)}
             </SlidePanel>
+            
+            {/* YENİ: CartPanel render edildi */}
+            <CartPanel show={showCartPanel} onClose={toggleCartPanel} />
 
             <NotificationModal notification={selectedNotification} onClose={() => setSelectedNotification(null)} />
             <ChatWindow chat={selectedChat} onClose={() => setSelectedChat(null)} />
