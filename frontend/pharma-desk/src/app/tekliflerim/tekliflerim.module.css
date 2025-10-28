@@ -1,0 +1,66 @@
+/* src/app/tekliflerim/tekliflerim.module.css */
+
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.pageTitle {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.primaryButton {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    background-color: var(--active-link-bg);
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.primaryButton:hover {
+    background-color: #16a085;
+}
+
+.actionCell {
+    display: flex;
+    gap: 10px;
+}
+
+.actionButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+    padding: 4px;
+}
+
+.actionButton:hover {
+    color: var(--text-primary);
+}
+
+.editButton:hover {
+    color: var(--active-link-bg);
+}
+
+.deleteButton:hover {
+    color: var(--negative-color);
+}

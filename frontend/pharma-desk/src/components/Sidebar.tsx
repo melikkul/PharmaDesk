@@ -10,7 +10,7 @@ const Sidebar = () => (
     <nav className={styles.sidebarNav}>
       <ul>
         <li><a href="/ilaclar">İLAÇLAR</a></li>
-        <li><a href="#">TEKLİFLERİM</a></li>
+        <li><a href="/tekliflerim">TEKLİFLERİM</a></li>
         <li><a href="#">RAPORLAR</a></li>
         <li><a href="#">İŞLEM GEÇMİŞİ</a></li>
         <li><a href="#">TRANSFERLERİM</a></li>
