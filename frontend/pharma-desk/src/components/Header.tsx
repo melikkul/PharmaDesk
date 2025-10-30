@@ -68,6 +68,8 @@ const Header: React.FC<HeaderProps> = ({
             className={styles.avatarPlaceholder}
             style={{ backgroundImage: userData.logoUrl ? `url(${userData.logoUrl})` : 'none' }}
           >
+            {/* GÜNCELLENDİ: Logo yoksa Eczane adının ilk harfini göster */}
+            {!userData.logoUrl && <span>{userData.pharmacyName.charAt(0)}</span>}
           </div>
           {isDropdownOpen && <ProfileDropdown user={userData} onClose={() => setDropdownOpen(false)} onLogout={onLogout} />}
         </div>

@@ -13,8 +13,8 @@ const Sidebar = () => (
         <li><a href="/tekliflerim">TEKLİFLERİM</a></li>
         <li><a href="/raporlar">RAPORLAR</a></li>
         <li><a href="/islem-gecmisi">İŞLEM GEÇMİŞİ</a></li>
-        <li><a href="#">TRANSFERLERİM</a></li>
-        <li><a href="#">GRUBUM</a></li>
+        <li><a href="/transferlerim">TRANSFERLERİM</a></li>
+        <li><a href="/grubum">GRUBUM</a></li>
       </ul>
     </nav>
   </aside>

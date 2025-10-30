@@ -25,12 +25,32 @@ export interface PharmacyProfileData {
   logoUrl: string | null;
   coverImageUrl: string | null;
   about: string;
-  location: string;
+  location: string; // Adres (örn: "Örnek Mah. No: 1, Çankaya, Ankara")
   registrationDate: string;
   licenseNumber: string;
   phone: string;
   username: string; // URL için benzersiz eczane kimliği
+  group?: string; // YENİ: Grubum sayfası için eklendi
+  city?: string; // YENİ: Grubum sayfasında filtreleme için
+  district?: string; // YENİ: Grubum sayfasında filtreleme için
 }
+
+// GÜNCELLENDİ: ShipmentItem arayüzü Transferlerim sayfası için genişletildi
+export type ShipmentStatus = 'pending' | 'shipped' | 'in_transit' | 'delivered' | 'cancelled';
+export type TransferType = 'inbound' | 'outbound';
+
+export interface ShipmentItem {
+  id: number;
+  orderNumber: string;
+  productName: string;
+  trackingNumber: string;
+  date: string; // YYYY-MM-DD formatında
+  transferType: TransferType; // Gelen / Giden
+  counterparty: string; // Satıcı veya Alıcı Eczane
+  shippingProvider: string; // Kargo Firması
+  status: ShipmentStatus; // Kargo Durumu
+}
+
 export interface Offer {
   id: number;
   productName: string;
@@ -50,12 +70,7 @@ export interface TransferItem {
   productName: string;
   amount: number;
 }
-export interface ShipmentItem {
-  id: number;
-  orderNumber: string;
-  productName: string;
-  trackingNumber: string;
-}
+
 export interface Notification {
   id: number;
   read: boolean;
@@ -107,10 +122,13 @@ export const pharmacyData: PharmacyProfileData = {
     coverImageUrl: '/cover-photo.jpg',
     about: "Ankara'nın merkezinde 20 yıldır kesintisiz hizmet veren, hasta odaklı ve yenilikçi bir eczaneyiz. İlaç takas sistemi ile meslektaşlarımızla dayanışma içinde olmaktan mutluluk duyuyoruz.",
     location: "Örnek Mah. Atatürk Cad. No: 123/A, Çankaya, Ankara",
+    city: "Ankara", // YENİ
+    district: "Çankaya", // YENİ
     registrationDate: "Ekim 2025",
     licenseNumber: "12345/06",
     phone: "0312 123 45 67",
-    username: "yildiz-eczanesi" // URL için
+    username: "yildiz-eczanesi",
+    group: "Ankara Grubu" // YENİ
 };
 
 export const offersData: Offer[] = [
@@ -135,11 +153,63 @@ export const transfersData: TransferItem[] = [
     { id: 4, orderNumber: '201-12345678', productName: 'Dolorex', amount: 450.00 },
 ];
 
+// GÜNCELLENDİ: shipmentsData, Transferlerim sayfası için daha detaylı
 export const shipmentsData: ShipmentItem[] = [
-    { id: 1, orderNumber: '202-58963214', productName: 'Apranax', trackingNumber: '8521479632' },
-    { id: 2, orderNumber: '202-14785236', productName: 'Parol', trackingNumber: '7412589632' },
-    { id: 3, orderNumber: '201-98765432', productName: 'Majezik', trackingNumber: '9632587412' },
-    { id: 4, orderNumber: '201-12345678', productName: 'Dolorex', trackingNumber: '5862734531' },
+  { 
+    id: 1, 
+    orderNumber: '202-58963214', 
+    productName: 'Apranax', 
+    trackingNumber: '8521479632',
+    date: '2025-10-28',
+    transferType: 'outbound',
+    counterparty: 'Güneş Eczanesi',
+    shippingProvider: 'Yurtiçi Kargo',
+    status: 'delivered'
+  },
+  { 
+    id: 2, 
+    orderNumber: '202-14785236', 
+    productName: 'Parol', 
+    trackingNumber: '7412589632',
+    date: '2025-10-29',
+    transferType: 'outbound',
+    counterparty: 'Meltem Eczanesi',
+    shippingProvider: 'MNG Kargo',
+    status: 'in_transit'
+  },
+  { 
+    id: 3, 
+    orderNumber: '201-98765432', 
+    productName: 'Majezik', 
+    trackingNumber: '9632587412',
+    date: '2025-10-29',
+    transferType: 'inbound',
+    counterparty: 'Defne Eczanesi',
+    shippingProvider: 'Aras Kargo',
+    status: 'shipped'
+  },
+  { 
+    id: 4, 
+    orderNumber: '201-12345678', 
+    productName: 'Dolorex', 
+    trackingNumber: '5862734531',
+    date: '2025-10-30',
+    transferType: 'outbound',
+    counterparty: 'Güneş Eczanesi',
+    shippingProvider: 'PTT Kargo',
+    status: 'pending'
+  },
+  { 
+    id: 5, 
+    orderNumber: '200-78945612', 
+    productName: 'Benical Cold', 
+    trackingNumber: '1122334455',
+    date: '2025-10-25',
+    transferType: 'inbound',
+    counterparty: 'Meltem Eczanesi',
+    shippingProvider: 'Yurtiçi Kargo',
+    status: 'delivered'
+  },
 ];
 
 export type NotificationType = 'offer' | 'shipment' | 'balance' | 'message';
@@ -227,10 +297,13 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         coverImageUrl: '/cover-photo.jpg',
         about: "Kadıköy'ün en köklü eczanelerinden biriyiz.",
         location: "Caferağa Mah. Mühürdar Cad. No: 54/B, Kadıköy, İstanbul",
+        city: "İstanbul", // YENİ
+        district: "Kadıköy", // YENİ
         registrationDate: "Mart 2024",
         licenseNumber: "54321/34",
         phone: "0216 123 45 67",
-        username: "gunes-eczanesi"
+        username: "gunes-eczanesi",
+        group: "İstanbul Grubu" // YENİ
     },
     {
         pharmacyName: "Meltem Eczanesi",
@@ -240,10 +313,30 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         coverImageUrl: '/cover-photo.jpg',
         about: "Sağlığınız bizim için değerli.",
         location: "Kızılay Mah. Gazi Mustafa Kemal Blv. No: 22/A, Çankaya, Ankara",
+        city: "Ankara", // YENİ
+        district: "Çankaya", // YENİ
         registrationDate: "Kasım 2023",
         licenseNumber: "98765/06",
         phone: "0312 987 65 43",
-        username: "meltem-eczanesi"
+        username: "meltem-eczanesi",
+        group: "Ankara Grubu" // YENİ
+    },
+    {
+        pharmacyName: "Defne Eczanesi",
+        pharmacistInCharge: "Mehmet Öztürk",
+        balance: 0,
+        // DÜZELTME BURADA: '/logo-placeholder.png' yerine null yapıldı.
+        logoUrl: null, 
+        coverImageUrl: '/cover-photo.jpg',
+        about: "Yenimahalle'de hizmetinizdeyiz.",
+        location: "Batıkent Mah. Başkent Blv. No: 55, Yenimahalle, Ankara",
+        city: "Ankara", // YENİ
+        district: "Yenimahalle", // YENİ
+        registrationDate: "Ocak 2024",
+        licenseNumber: "78912/06",
+        phone: "0312 789 12 34",
+        username: "defne-eczanesi",
+        group: "Ankara Grubu" // YENİ
     }
 ];
 
@@ -419,5 +512,5 @@ export const transactionHistoryData: TransactionHistoryItem[] = [
   },
 ];
 
-export { pharmacyData, offersData, balanceHistoryData, transfersData, shipmentsData, initialNotifications, initialMessages, ilaclarShowroomData, otherPharmaciesData, priceHistoryData, warehouseOffersData };
-export type { SellerInfo, ShowroomMedication, PharmacyProfileData, Offer, BalanceItem, TransferItem, ShipmentItem, Notification, Message, PriceData, WarehouseOffer };
+export { pharmacyData, offersData, balanceHistoryData, transfersData, initialNotifications, initialMessages, ilaclarShowroomData, otherPharmaciesData, priceHistoryData, warehouseOffersData, userMedicationsData, miadReportData, envanterReportData, performanceReportData, demandReportData, financialSummaryData, transactionHistoryData };
+export type { SellerInfo, ShowroomMedication, PharmacyProfileData, Offer, BalanceItem, TransferItem, ShipmentItem, Notification, Message, PriceData, WarehouseOffer, MedicationItem, TransactionHistoryItem, NotificationType, ShipmentStatus, TransferType, TransactionStatus, TransactionType, OfferStatus };

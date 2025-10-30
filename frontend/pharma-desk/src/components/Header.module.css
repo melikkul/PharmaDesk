@@ -118,9 +118,18 @@
     font-weight: 700;
 }
 
+/* GÜNCELLENDİ: Harfi ortalamak için flex stilleri ve arka plan/yazı stilleri eklendi */
 .avatarPlaceholder {
     width: 48px;
     height: 48px;
-    background-color: #EAEFF7;
+    background-color: var(--sidebar-bg); /* Arka plan rengi değiştirildi */
     border-radius: 50%;
+    display: flex; /* Eklendi */
+    align-items: center; /* Eklendi */
+    justify-content: center; /* Eklendi */
+    color: white; /* Eklendi */
+    font-size: 20px; /* Eklendi */
+    font-weight: 600; /* Eklendi */
+    background-size: cover; /* Logo varsa kaplaması için */
+    background-position: center; /* Logo varsa ortalaması için */
 }

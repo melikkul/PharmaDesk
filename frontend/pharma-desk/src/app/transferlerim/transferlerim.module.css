@@ -1,0 +1,52 @@
+/* src/app/transferlerim/transferlerim.module.css */
+
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.pageTitle {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Durum Badge'leri için ek renkler */
+.badgeInfo {
+    background-color: #3498db; /* Dağıtımda için mavi */
+    color: white;
+}
+
+/* Eylem Butonları */
+.actionCell {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+}
+
+.actionButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.2s, opacity 0.2s;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.actionButton:hover:not(:disabled) {
+    color: var(--text-primary);
+}
+
+.trackButton:hover:not(:disabled) {
+    color: var(--active-link-bg); /* Takip butonu için yeşil */
+}
