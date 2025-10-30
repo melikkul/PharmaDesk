@@ -1,0 +1,15 @@
+.adminContainer {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  grid-template-rows: 1fr;
+  grid-template-areas: "sidebar main";
+  height: 100vh;
+  background-color: var(--main-bg);
+}
+.mainContent {
+  grid-area: main;
+  padding: 40px;
+  overflow-y: auto;
+  height: 100vh;
+  box-sizing: border-box;
+}

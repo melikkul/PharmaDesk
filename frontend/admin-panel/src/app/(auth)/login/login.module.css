@@ -1,0 +1,70 @@
+.loginContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: var(--main-bg);
+}
+.loginBox {
+  background-color: var(--card-bg);
+  padding: 40px;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+.logo {
+  max-width: 200px;
+  margin-bottom: 20px;
+}
+.loginBox h2 {
+  font-size: 24px;
+  color: var(--text-primary);
+  margin-bottom: 25px;
+}
+.inputGroup {
+  text-align: left;
+  margin-bottom: 20px;
+}
+.inputGroup label {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: var(--text-secondary);
+}
+.inputGroup input {
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 16px;
+  box-sizing: border-box; /* Önemli */
+}
+.loginButton {
+  width: 100%;
+  padding: 15px;
+  border: none;
+  border-radius: 8px;
+  background-color: var(--active-link-bg);
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.loginButton:hover:not(:disabled) {
+  background-color: #16a085;
+}
+.loginButton:disabled {
+  background-color: #bdc3c7;
+  cursor: not-allowed;
+}
+.error {
+  color: var(--negative-color);
+  background-color: rgba(231, 76, 60, 0.1);
+  padding: 10px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}

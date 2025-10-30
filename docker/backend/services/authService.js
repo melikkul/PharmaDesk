@@ -10,15 +10,26 @@ export async function login(email, password){
 
   const user = rows[0];
 
-  const ph = await pool.query(
-    `SELECT p.id, p.title, p.gln, a.city, a.district
-     FROM pharmacies p
-     LEFT JOIN pharmacy_addresses a ON a.pharmacy_id=p.id
-     WHERE p.user_id=$1
-     LIMIT 1`, [user.id]
-  );
+  // Admin girişi (eczanesi yok)
+  if (user.role === 'admin') {
+    const token = jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET || 'dev_secret', { expiresIn: '12h' });
+    return { token, user, pharmacy: null }; // Eczane bilgisi null
+  }
 
-  const token = jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET || 'dev_secret', { expiresIn: '12h' });
+  // Eczacı girişi (mevcut kod)
+  if (user.role === 'pharmacist') {
+    const ph = await pool.query(
+      `SELECT p.id, p.title, p.gln, a.city, a.district
+       FROM pharmacies p
+       LEFT JOIN pharmacy_addresses a ON a.pharmacy_id=p.id
+       WHERE p.user_id=$1
+       LIMIT 1`, [user.id]
+    );
 
-  return { token, user, pharmacy: ph.rows[0] || null };
+    const token = jwt.sign({ sub: user.id, role: user.role }, process.env.JWT_SECRET || 'dev_secret', { expiresIn: '12h' });
+    return { token, user, pharmacy: ph.rows[0] || null };
+  }
+
+  // Diğer roller (giriş yapamaz)
+  throw new Error('Access denied for this role.');
 }

@@ -1,0 +1,30 @@
+:root {
+  --sidebar-bg: #34495E;
+  --main-bg: #F4F7FC;
+  --card-bg: #FFFFFF;
+  --header-bg: #FFFFFF;
+  --text-primary: #2C3E50;
+  --text-secondary: #8A97A8;
+  --border-color: #EAEFF7;
+  --active-link-bg: #1ABC9C;
+  --positive-color: #27AE60;
+  --negative-color: #E74C3C;
+  --unread-dot-color: #3498DB;
+  --font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background-color: var(--main-bg);
+  color: var(--text-primary);
+  font-family: var(--font-family), Arial, Helvetica, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+/* Genel başlık stili */
+.pageTitle {
+  font-size: 28px;
+  font-weight: 700;
+  margin: 0 0 20px 0;
+  color: var(--text-primary);
+}

@@ -98,6 +98,18 @@ async function up() {
   } finally {
     client.release();
   }
+
+  const adminEmail = 'admin@pharmadesk.local';
+    const checkAdmin = await client.query(`SELECT 1 FROM users WHERE email=$1`, [adminEmail]);
+    if (checkAdmin.rowCount === 0) {
+      await client.query(
+        `INSERT INTO users (email,password_hash,phone,role)
+         VALUES ($1, crypt('admin1234', gen_salt('bf')), '0000000000', 'admin')`, // 'admin' rolü
+        [adminEmail]
+      );
+    }
+
+    await client.query('COMMIT');
 }
 
 up();
