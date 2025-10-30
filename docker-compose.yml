@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: pharma_desk_db
+    ports:
+      - "5432:5432"
+    networks:
+      - pharmanet
+    environment:
+      POSTGRES_DB: pharmadesk_db
+      POSTGRES_USER: pharmadesk_user
+      POSTGRES_PASSWORD: melik123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build: ./packages/api  # <-- YOL GÜNCELLENDİ
+    container_name: pharma_desk_backend
+    env_file:
+      - ./packages/api/.env  # <-- YOL GÜNCELLENDİ
+    ports:
+      - "8081:8081"
+    networks:
+      - pharmanet
+    environment:
+      # Docker ağı içindeki 'db' servisine bağlan
+      DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
+    depends_on:
+      - db
+
+  frontend-web:  # <-- İSİM GÜNCELLENDİ (eski frontend)
+    build: ./packages/web  # <-- YOL GÜNCELLENDİ (eski pharma-desk)
+    container_name: pharma_desk_frontend_web
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - pharmanet
+
+  frontend-admin:  # <-- YENİ SERVİS EKLENDİ
+    build: ./packages/admin # <-- YOL GÜNCELLENDİ
+    container_name: pharma_desk_frontend_admin
+    ports:
+      - "3001:3000" # Dışarıda 3001, içeride 3000
+    depends_on:
+      - backend
+    networks:
+      - pharmanet
+
+networks:
+  pharmanet:
+    driver: bridge
+
+volumes:
+  postgres_data:
