@@ -1,4 +1,5 @@
 // components/profile/ProfileMedications.tsx
+// ### OPTİMİZASYON: 'React.memo' için 'React' import edildi ###
 import React from 'react';
 import DashboardCard from '../DashboardCard';
 import type { MedicationItem } from '../../data/dashboardData';
@@ -38,4 +39,6 @@ const ProfileMedications: React.FC<ProfileMedicationsProps> = ({ data }) => {
   );
 };
 
-export default ProfileMedications;
+// ### OPTİMİZASYON: React.memo ###
+// Bu "dumb" (sadece prop gösteren) bileşenin gereksiz render'ları engellendi.
+export default React.memo(ProfileMedications);

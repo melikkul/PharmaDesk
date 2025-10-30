@@ -1,4 +1,5 @@
 // src/components/ilaclar/ProductCard.tsx
+// ### OPTİMİZASYON: 'React.memo' için 'React' import edildi ###
 import React from 'react';
 import Link from 'next/link'; // Yönlendirme için Link import ediyoruz
 import type { ShowroomMedication } from '../../data/dashboardData';
@@ -13,6 +14,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
   const barWidth = medication.initialStock > 0 ? (medication.currentStock / medication.initialStock) * 100 : 0;
 
   // Create a URL-friendly slug from the medication name
+  // Bu hesaplama basit olduğu için useMemo'ya gerek duyulmamıştır.
   const medicationSlug = medication.name.toLowerCase().replace(/\s+/g, '-');
 
   return (
@@ -56,4 +58,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
   );
 };
 
-export default ProductCard;
+// ### OPTİMİZASYON: React.memo ###
+// Bu bileşen bir liste içinde map ile render edildiği için,
+// 'medication' prop'u değişmediği sürece yeniden render olmasını engellemek
+// listenin genel performansı için kritiktir.
+export default React.memo(ProductCard);

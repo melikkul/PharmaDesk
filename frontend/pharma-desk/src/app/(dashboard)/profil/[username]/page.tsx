@@ -1,7 +1,8 @@
 // src/app/(dashboard)/profil/[username]/page.tsx
 'use client'
 
-import React from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 
 // Veri ve Bileşenleri import ediyoruz
@@ -24,10 +25,16 @@ const getPharmacyData = (username: string | string[]) => {
 
 export default function ProfilePage() {
   const params = useParams<{ username: string }>();
-  const pharmacy = getPharmacyData(params.username);
+
+  // ### OPTİMİZASYON: useMemo ###
+  // 'getPharmacyData' fonksiyonunun 'params.username' değişmediği sürece
+  // gereksiz yere çağrılmasını engeller.
+  const pharmacy = useMemo(() => {
+    return getPharmacyData(params.username);
+  }, [params.username]);
 
   // 1. ADIM: Context'ten (layout'tan) gelen fonksiyonu al
-  const { handleStartChat } = useDashboard();
+  const { handleStartChat } = useDashboard(); // Bu fonksiyon zaten memoize edilmiş (önceki adımda)
 
   // --- Tüm local state'ler ve handler'lar SİLİNDİ ---
 
@@ -37,13 +44,19 @@ export default function ProfilePage() {
 
   const isOwnProfile = params.username === pharmacyData.username;
 
+  // ### OPTİMİZASYON: useCallback ###
+  // 'ProfileHeader' bileşenine prop olarak geçirilen fonksiyon memoize edildi.
+  const handleChatClick = useCallback(() => {
+    handleStartChat(pharmacy);
+  }, [handleStartChat, pharmacy]); // 'handleStartChat' ve 'pharmacy'ye bağımlı
+
   return (
     <div className={styles.profileContainer}>
       {/* 2. ADIM: Context'teki fonksiyonu butona bağla */}
       <ProfileHeader 
         pharmacy={pharmacy} 
         isOwnProfile={isOwnProfile} 
-        onStartChat={() => handleStartChat(pharmacy)} // pharmacy verisini fonksiyona yolla
+        onStartChat={handleChatClick} // Memoize edilmiş fonksiyon kullanılıyor
       />
       <div className={styles.profileBody}>
         <div className={styles.detailsRow}>

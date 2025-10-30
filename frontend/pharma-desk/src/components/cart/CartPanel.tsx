@@ -1,5 +1,6 @@
 // src/components/cart/CartPanel.tsx
-import React from 'react';
+// ### OPTİMİZASYON: useMemo ve useCallback import edildi ###
+import React, { useMemo, useCallback } from 'react';
 import Link from 'next/link'; // YENİ: Link import edildi
 import { useCart } from '../../context/CartContext';
 import SlidePanel from '../ui/SlidePanel';
@@ -12,20 +13,22 @@ interface CartPanelProps {
 }
 
 const CartPanel: React.FC<CartPanelProps> = ({ show, onClose }) => {
-  // GÜNCELLENDİ: clearCart'ı buradan alıyoruz ama onMarkAllRead için kullanmayacağız
+  // GÜNCELLENDİ: clearCart'ı buradan alıyoruz
   const { cartItems, clearCart, updateQuantity, removeFromCart } = useCart();
 
-  const total = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  // ### OPTİMİZASYON: useMemo ###
+  // Toplam fiyat, 'cartItems' değişmediği sürece yeniden hesaplanmaz.
+  const total = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  }, [cartItems]);
 
-  // handleMarkAllRead fonksiyonu artık kullanılmayacak, kaldırılabilir veya yorum satırı yapılabilir
-  /*
-  const handleMarkAllRead = (e: React.MouseEvent<HTMLAnchorElement>) => {
-      e.preventDefault();
-      if (window.confirm("Sepeti boşaltmak istediğinizden emin misiniz?")) {
-          clearCart();
-      }
-  };
-  */
+  // ### OPTİMİZASYON: useCallback ###
+  // Sepeti boşaltma fonksiyonu memoize edildi.
+  const handleClearCart = useCallback(() => {
+    if (window.confirm("Sepeti boşaltmak istediğinizden emin misiniz?")) {
+        clearCart();
+    }
+  }, [clearCart]); // 'clearCart' context'ten geldiği ve memoize edildiği için stabil.
 
   return (
     <SlidePanel
@@ -33,12 +36,11 @@ const CartPanel: React.FC<CartPanelProps> = ({ show, onClose }) => {
       show={show}
       onClose={onClose}
       // GÜNCELLENDİ: onMarkAllRead prop'u kaldırıldı
-      // onMarkAllRead={handleMarkAllRead}
     >
       {cartItems.length > 0 ? (
         <div className={styles.cartPanelContainer}>
           <div className={styles.cartList}>
-            {cartItems.map((item) => ( // index'e gerek kalmadı
+            {cartItems.map((item) => (
               <CartItemComponent
                 key={`${item.product.id}-${item.sellerName}`}
                 item={item}
@@ -52,8 +54,8 @@ const CartPanel: React.FC<CartPanelProps> = ({ show, onClose }) => {
               <span>Toplam Tutar:</span>
               <strong>{total.toFixed(2).replace('.', ',')} ₺</strong>
             </div>
-            {/* Sepeti Boşalt butonu eklenebilir */}
-            <button onClick={() => { if (window.confirm("Sepeti boşaltmak istediğinizden emin misiniz?")) { clearCart(); } }} className={styles.clearCartButton}>Sepeti Boşalt</button>
+            {/* Sepeti Boşalt butonu eklendi */}
+            <button onClick={handleClearCart} className={styles.clearCartButton}>Sepeti Boşalt</button>
             
             {/* YENİ: Buton Link'e dönüştürüldü (ISTEK 4) */}
             <Link href="/sepet" className={styles.checkoutButton} onClick={onClose}>

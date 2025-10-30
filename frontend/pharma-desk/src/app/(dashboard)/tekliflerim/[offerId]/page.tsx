@@ -1,7 +1,8 @@
 // src/app/(dashboard)/tekliflerim/[offerId]/page.tsx
 'use client';
 
-import React, { useState, useEffect } from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 // DÜZELTME: dashboard.css yolunu (dashboard) içine al
@@ -44,8 +45,9 @@ export default function DuzenleTeklifPage() {
   // --- Form Kaydetme Durumu ---
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- Form Kaydetme Fonksiyonu (Simülasyon) ---
-  const handleUpdateOffer = async (formData: any) => {
+  // ### OPTİMİZASYON: useCallback ###
+  // Form Kaydetme Fonksiyonu (Simülasyon)
+  const handleUpdateOffer = useCallback(async (formData: any) => {
       if (!medicationToEdit) return;
       setIsSaving(true);
       console.log(`API Çağrısı: ${offerId} ID'li teklif güncelleniyor...`, formData);
@@ -53,7 +55,7 @@ export default function DuzenleTeklifPage() {
       console.log("Teklif başarıyla güncellendi.");
       setIsSaving(false);
       router.push('/tekliflerim');
-  };
+  }, [medicationToEdit, offerId, router]); // Bağımlılıklar eklendi
 
   return (
     // <div className="dashboard-container"> // SİLİNDİ

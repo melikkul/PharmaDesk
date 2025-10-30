@@ -1,6 +1,6 @@
 // melikkul/pharmadesk/PharmaDesk-main/frontend/pharma-desk/src/components/ilaclar/WarehouseOffers.tsx
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { WarehouseOffer } from '../../data/dashboardData';
 // === DÜZELTME BURADA ===
 // Hatalı yol: import styles from '../../app/ilaclar/[ilacAdi]/ilacDetay.module.css';
@@ -39,8 +39,10 @@ const WarehouseOffers: React.FC<WarehouseOffersProps> = ({ data }) => {
     const [canScrollLeft, setCanScrollLeft] = useState(false);
     const [canScrollRight, setCanScrollRight] = useState(false);
     
-    // Kaydırma durumunu kontrol eden fonksiyon
-    const checkScrollState = () => {
+    // ### OPTİMİZASYON: useCallback ###
+    // Kaydırma durumunu kontrol eden fonksiyon.
+    // scrollRef.current'a her zaman en son haliyle erişeceği için bağımlılığa gerek yok.
+    const checkScrollState = useCallback(() => {
         if (scrollRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
             
@@ -51,10 +53,11 @@ const WarehouseOffers: React.FC<WarehouseOffersProps> = ({ data }) => {
             // 20px tolerans, kaydırma çubuğunun hassasiyetini dengelemek için
             setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 10);
         }
-    };
+    }, []); // Bağımlılık yok, çünkü sadece ref'in .current'ını okuyor.
     
-    // Yana kaydırma fonksiyonu
-    const scroll = (direction: 'left' | 'right') => {
+    // ### OPTİMİZASYON: useCallback ###
+    // Yana kaydırma fonksiyonu. `checkScrollState`'e bağımlı.
+    const scroll = useCallback((direction: 'left' | 'right') => {
         if (scrollRef.current) {
             const cardWidth = 260; // 240px kart genişliği + 20px gap
             const scrollAmount = direction === 'left' ? -cardWidth : cardWidth;
@@ -65,9 +68,10 @@ const WarehouseOffers: React.FC<WarehouseOffersProps> = ({ data }) => {
             });
             
             // Kaydırma bittikten sonra durumu güncellemek için küçük bir gecikme
+            // checkScrollState'in memoize edilmiş halini kullanır.
             setTimeout(checkScrollState, 350); 
         }
-    };
+    }, [checkScrollState]); // checkScrollState'e bağımlı.
 
     // Bileşen yüklendiğinde ve pencere boyutu değiştiğinde kaydırma durumunu kontrol et
     useEffect(() => {
@@ -79,12 +83,13 @@ const WarehouseOffers: React.FC<WarehouseOffersProps> = ({ data }) => {
             clearTimeout(timer);
             window.removeEventListener('resize', checkScrollState);
         };
-    }, [data]); // data değiştiğinde de kontrol et
+    }, [data, checkScrollState]); // ### OPTİMİZASYON: checkScrollState bağımlılıklara eklendi.
 
-    // Kaydırma olayını dinle
-    const handleScroll = () => {
+    // ### OPTİMİZASYON: useCallback ###
+    // Kaydırma olayını dinleyen fonksiyon.
+    const handleScroll = useCallback(() => {
         checkScrollState();
-    };
+    }, [checkScrollState]); // checkScrollState'e bağımlı.
 
 
     return (
@@ -105,7 +110,7 @@ const WarehouseOffers: React.FC<WarehouseOffersProps> = ({ data }) => {
                 <div 
                     className={styles.warehouseList} 
                     ref={scrollRef}
-                    onScroll={handleScroll}
+                    onScroll={handleScroll} // Memoize edilmiş fonksiyon kullanılıyor
                 >
                     {data.map(offer => (
                         <WarehouseOfferItem 

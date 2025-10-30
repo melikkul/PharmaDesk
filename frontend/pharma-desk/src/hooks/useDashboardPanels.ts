@@ -1,7 +1,8 @@
 // src/hooks/useDashboardPanels.ts
 'use client';
 
-import { useState, createContext, useContext } from 'react';
+// ### OPTİMİZASYON: useMemo ve useCallback import edildi ###
+import { useState, createContext, useContext, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 // GÜNCELLEME: Tipleri data dosyasından import ediyoruz
 import { 
@@ -58,54 +59,64 @@ export const useDashboardPanels = () => {
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showCartPanel, setShowCartPanel] = useState(false);
 
-  const handleLogout = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  // Fonksiyonun gereksiz yere yeniden oluşturulmasını engeller.
+  const handleLogout = useCallback(() => {
     if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
       router.push('/anasayfa');
     }
-  };
+  }, [router]); // router bağımlılığı eklendi
 
-  const toggleNotificationsPanel = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  const toggleNotificationsPanel = useCallback(() => {
       setShowNotificationsPanel(p => !p);
       setShowMessagesPanel(false);
       setShowCartPanel(false);
-  };
+  }, []); // Bağımlılığı yok
 
-  const toggleMessagesPanel = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  const toggleMessagesPanel = useCallback(() => {
       setShowMessagesPanel(p => !p);
       setShowNotificationsPanel(false);
       setShowCartPanel(false);
-  };
+  }, []); // Bağımlılığı yok
   
-  const toggleCartPanel = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  const toggleCartPanel = useCallback(() => {
       setShowCartPanel(p => !p);
       setShowNotificationsPanel(false);
       setShowMessagesPanel(false);
-  };
+  }, []); // Bağımlılığı yok
 
-  const handleNotificationClick = (notification: TNotification) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleNotificationClick = useCallback((notification: TNotification) => {
     setSelectedNotification(notification);
     setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
     setShowNotificationsPanel(false);
-  };
+  }, []); // Bağımlılığı yok
 
-  const markAllNotificationsAsRead = (e: React.MouseEvent) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const markAllNotificationsAsRead = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
+  }, []); // Bağımlılığı yok
 
-  const handleMessageClick = (message: TMessage) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleMessageClick = useCallback((message: TMessage) => {
     setSelectedChat(message);
     setMessages(prev => prev.map(m => m.id === message.id ? { ...m, read: true } : m));
     setShowMessagesPanel(false);
-  };
+  }, []); // Bağımlılığı yok
 
-   const markAllMessagesAsRead = (e: React.MouseEvent) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const markAllMessagesAsRead = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
       setMessages(prev => prev.map(m => ({ ...m, read: true })));
-  };
+  }, []); // Bağımlılığı yok
   
   // 4. ADIM: YENİ SOHBET BAŞLATMA FONKSİYONU (GÜNCELLENDİ)
-  const handleStartChat = (pharmacy: PharmacyProfileData) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleStartChat = useCallback((pharmacy: PharmacyProfileData) => {
     // Eczane verisinden bir Mesaj objesi oluştur
     const chatData: TMessage = {
       id: 0, // Geçici ID
@@ -118,22 +129,28 @@ export const useDashboardPanels = () => {
     
     // State'leri güncelle
     setSelectedChat(chatData); // Sadece bu state'i set ediyoruz
-
-    // === DÜZELTME BURADA ===
-    // Artık sohbet listesi panelini açmıyoruz
     setShowMessagesPanel(false); 
-    // =======================
-    
     setShowNotificationsPanel(false); // Diğerlerini kapat
     setShowCartPanel(false);
-  };
+  }, []); // Bağımlılığı yok
 
+  // ### OPTİMİZASYON: useCallback ###
+  const closeNotificationModal = useCallback(() => setSelectedNotification(null), []);
+  
+  // ### OPTİMİZASYON: useCallback ###
+  const closeChatWindow = useCallback(() => setSelectedChat(null), []);
 
-  const unreadNotificationCount = notifications.filter(n => !n.read).length;
-  const unreadMessageCount = messages.filter(m => !m.read).length;
+  // ### OPTİMİZASYON: useMemo ###
+  // Bu değerler 'notifications' ve 'messages' state'lerine bağlı.
+  const unreadNotificationCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+  const unreadMessageCount = useMemo(() => messages.filter(m => !m.read).length, [messages]);
 
   // 5. ADIM: Tüm değerleri ve yeni fonksiyonu döndür
-  return {
+  // ### OPTİMİZASYON: useMemo ###
+  // Hook'un döndürdüğü ana obje memoize edildi.
+  // Sadece içindeki bir değer (state veya memoize edilmiş fonksiyon) değişirse
+  // bu objenin referansı değişir. Bu, context tüketicilerinde gereksiz render'ları engeller.
+  return useMemo(() => ({
     notifications,
     selectedNotification,
     messages,
@@ -151,10 +168,17 @@ export const useDashboardPanels = () => {
     toggleCartPanel,
     unreadNotificationCount,
     unreadMessageCount,
-    closeNotificationModal: () => setSelectedNotification(null),
-    closeChatWindow: () => setSelectedChat(null),
+    closeNotificationModal,
+    closeChatWindow,
     handleStartChat 
-  };
+  }), [
+    notifications, selectedNotification, messages, selectedChat,
+    showNotificationsPanel, showMessagesPanel, showCartPanel,
+    handleLogout, handleNotificationClick, markAllNotificationsAsRead,
+    handleMessageClick, markAllMessagesAsRead, toggleNotificationsPanel,
+    toggleMessagesPanel, toggleCartPanel, unreadNotificationCount,
+    unreadMessageCount, closeNotificationModal, closeChatWindow, handleStartChat
+  ]);
 };
 
 // 6. ADIM: Context'i dışarı aktaran bir hook oluşturalım

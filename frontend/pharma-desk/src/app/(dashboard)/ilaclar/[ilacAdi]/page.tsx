@@ -1,9 +1,9 @@
 // src/app/(dashboard)/ilaclar/[ilacAdi]/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { ilaclarShowroomData, priceHistoryData, warehouseOffersData, ShowroomMedication, PriceData } from '@/data/dashboardData';
+import { ilaclarShowroomData, priceHistoryData, warehouseOffersData, ShowroomMedication, PriceData, SellerInfo } from '@/data/dashboardData';
 import ProductCard from '@/components/ilaclar/ProductCard';
 import PriceChart from '@/components/ilaclar/PriceChart';
 import WarehouseOffers from '@/components/ilaclar/WarehouseOffers';
@@ -14,13 +14,10 @@ import styles from './ilacDetay.module.css';
 // DÜZELTME: dashboard.css yolunu (dashboard) içine al
 import '@/app/(dashboard)/dashboard/dashboard.css';
 
-// ANA BİLEŞENLER (TÜMÜ SİLİNDİ)
-// BİLDİRİM & MESAJ BİLEŞENLERİ (TÜMÜ SİLİNDİ)
-// Tipler (TÜMÜ SİLİNDİ)
-
 const MAX_ALLOWED_QUANTITY = 1000;
 
-// ... (QuantitySelector arayüzü ve bileşeni) ...
+// ### OPTİMİZASYON: Bileşen, ana component'in dışına taşındı ###
+// Bu, her render'da yeniden oluşturulmasını engeller.
 interface QuantitySelectorProps {
     quantity: number | string;
     onDecrement: () => void;
@@ -47,30 +44,41 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({ quantity, onDecreme
 );
 
 
-// ... (OfferItemComponent arayüzü) ...
+// ### OPTİMİZASYON: Bileşen, ana component'in dışına taşındı ###
 interface OfferItemComponentProps {
     medication: ShowroomMedication;
-    seller: { pharmacyUsername: string; pharmacyName: string };
-    styles: any;
-    QuantitySelector: React.FC<QuantitySelectorProps>;
-    maxStock: number;
+    seller: SellerInfo;
 }
 
-
-const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, seller, styles, QuantitySelector, maxStock }) => {
+// React.memo eklendi, prop'lar (medication, seller) değişmediği sürece
+// bu bileşenin yeniden render olmasını engeller.
+const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ medication, seller }) => {
     const [offerQuantity, setOfferQuantity] = useState<number | string>(1);
+    const [isAdding, setIsAdding] = useState(false);
+    
+    const { addToCart } = useCart();
+
     const canBuy = medication.currentStock > 0;
     const effectiveMaxStock = Math.min(medication.currentStock, MAX_ALLOWED_QUANTITY);
 
-    const { addToCart } = useCart();
-    const [isAdding, setIsAdding] = useState(false);
+    // ### OPTİMİZASYON: useCallback ###
+    const handleOfferIncrement = useCallback(() => {
+        setOfferQuantity(q => {
+             const currentQuantity = Number(q) || 0;
+             return Math.min(effectiveMaxStock, currentQuantity + 1);
+        });
+    }, [effectiveMaxStock]);
 
-    const handleOfferIncrement = () => {
-        const currentQuantity = Number(offerQuantity) || 0;
-        setOfferQuantity(Math.min(effectiveMaxStock, currentQuantity + 1));
-    };
+    // ### OPTİMİZASYON: useCallback ###
+    const handleOfferDecrement = useCallback(() => {
+        setOfferQuantity(q => {
+            const currentQuantity = Number(q) || 1;
+            return Math.max(1, currentQuantity - 1);
+        });
+    }, []);
 
-    const handleOfferQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ### OPTİMİZASYON: useCallback ###
+    const handleOfferQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         if (value === '') {
             setOfferQuantity('');
@@ -86,25 +94,25 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, sel
                 setOfferQuantity(num);
             }
         }
-    };
+    }, [effectiveMaxStock]);
     
-    const handleOfferDecrement = () => {
-        const currentQuantity = Number(offerQuantity) || 1;
-        setOfferQuantity(Math.max(1, currentQuantity - 1));
-    };
-    const handleOfferBlur = () => {
-        if (offerQuantity === '' || Number(offerQuantity) < 1) {
-            setOfferQuantity(1);
-        } else if (Number(offerQuantity) > effectiveMaxStock) {
-            setOfferQuantity(effectiveMaxStock);
-        }
-    };
+    // ### OPTİMİZASYON: useCallback ###
+    const handleOfferBlur = useCallback(() => {
+        setOfferQuantity(q => {
+            if (q === '' || Number(q) < 1) {
+                return 1;
+            } else if (Number(q) > effectiveMaxStock) {
+                return effectiveMaxStock;
+            }
+            return q;
+        });
+    }, [effectiveMaxStock]);
 
-
-    const handleOfferAddToCart = () => {
+    // ### OPTİMİZASYON: useCallback ###
+    const handleOfferAddToCart = useCallback(() => {
         if (!canBuy || isAdding) return;
-        const quantityToAdd = Math.min(Number(offerQuantity), effectiveMaxStock);
-        if (quantityToAdd < 1) return; 
+        
+        const quantityToAdd = Math.max(1, Math.min(Number(offerQuantity), effectiveMaxStock));
 
         setIsAdding(true);
         addToCart(medication, quantityToAdd, seller.pharmacyName);
@@ -112,7 +120,7 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, sel
         setTimeout(() => {
             setIsAdding(false);
         }, 1000);
-    };
+    }, [canBuy, isAdding, offerQuantity, effectiveMaxStock, addToCart, medication, seller.pharmacyName]);
 
     return (
         <div className={styles.offerItem}>
@@ -144,22 +152,27 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, sel
             </button>
         </div>
     );
-};
+});
+
+OfferItemComponent.displayName = 'OfferItemComponent'; // React.memo için displayName eklendi
+
+// //////////////////////////////////////////////////////
+// ANA SAYFA BİLEŞENİ
 // //////////////////////////////////////////////////////
 
-
 export default function IlacDetayPage() {
-    const router = useRouter();
     const params = useParams();
     const { ilacAdi } = params as { ilacAdi: string };
     const { addToCart } = useCart();
-    const medication = ilaclarShowroomData.find(m => m.name.toLowerCase().replace(/\s+/g, '-') === ilacAdi);
+
+    // ### OPTİMİZASYON: useMemo ###
+    // 'medication' verisi, 'ilacAdi' değişmediği sürece yeniden aranmaz.
+    const medication = useMemo(() => {
+        return ilaclarShowroomData.find(m => m.name.toLowerCase().replace(/\s+/g, '-') === ilacAdi) || null;
+    }, [ilacAdi]);
 
     const [mainQuantity, setMainQuantity] = useState<number | string>(1);
     const [isMainAdding, setIsMainAdding] = useState(false);
-
-    // --- Bildirim/Mesaj/Sepet State'leri SİLİNDİ ---
-    // --- Handler Fonksiyonları SİLİNDİ ---
 
     if (!medication) {
         return <div>İlaç bulunamadı.</div>;
@@ -167,13 +180,26 @@ export default function IlacDetayPage() {
 
     const canBuy = medication.currentStock > 0;
     const effectiveMaxStock = Math.min(medication.currentStock, MAX_ALLOWED_QUANTITY);
+    const mainSeller = medication.sellers[0]; // Ana satıcı
 
-    const handleMainIncrement = () => {
-        const currentQuantity = Number(mainQuantity) || 0;
-        setMainQuantity(Math.min(effectiveMaxStock, currentQuantity + 1));
-    };
+    // ### OPTİMİZASYON: useCallback ###
+    const handleMainIncrement = useCallback(() => {
+        setMainQuantity(q => {
+            const currentQuantity = Number(q) || 0;
+            return Math.min(effectiveMaxStock, currentQuantity + 1);
+        });
+    }, [effectiveMaxStock]);
 
-    const handleMainQuantityChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // ### OPTİMİZASYON: useCallback ###
+    const handleMainDecrement = useCallback(() => {
+        setMainQuantity(q => {
+            const currentQuantity = Number(q) || 1;
+            return Math.max(1, currentQuantity - 1);
+        });
+    }, []);
+
+    // ### OPTİMİZASYON: useCallback ###
+    const handleMainQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         if (value === '') {
             setMainQuantity('');
@@ -189,127 +215,121 @@ export default function IlacDetayPage() {
                 setMainQuantity(num);
             }
         }
-    };
+    }, [effectiveMaxStock]);
     
-     const handleMainDecrement = () => {
-        const currentQuantity = Number(mainQuantity) || 1;
-        setMainQuantity(Math.max(1, currentQuantity - 1));
-    };
-    const handleMainBlur = () => {
-        if (mainQuantity === '' || Number(mainQuantity) < 1) {
-             setMainQuantity(1);
-        } else if (Number(mainQuantity) > effectiveMaxStock) {
-            setMainQuantity(effectiveMaxStock);
-        }
-    };
+    // ### OPTİMİZASYON: useCallback ###
+    const handleMainBlur = useCallback(() => {
+        setMainQuantity(q => {
+            if (q === '' || Number(q) < 1) {
+                 return 1;
+            } else if (Number(q) > effectiveMaxStock) {
+                return effectiveMaxStock;
+            }
+            return q; // Mevcut geçerli değeri koru
+        });
+    }, [effectiveMaxStock]);
 
-
-    const handleMainAddToCart = () => {
-        if (!canBuy || isMainAdding || !medication.sellers[0]) return;
+    // ### OPTİMİZASYON: useCallback ###
+    const handleMainAddToCart = useCallback(() => {
+        if (!canBuy || isMainAdding || !mainSeller) return;
         
-        const quantityToAdd = Math.min(Number(mainQuantity), effectiveMaxStock);
-         if (quantityToAdd < 1) return; 
+        const quantityToAdd = Math.max(1, Math.min(Number(mainQuantity), effectiveMaxStock));
 
         setIsMainAdding(true);
-        addToCart(medication, quantityToAdd, medication.sellers[0].pharmacyName);
+        addToCart(medication, quantityToAdd, mainSeller.pharmacyName);
 
         setTimeout(() => {
             setIsMainAdding(false);
         }, 1000);
-    };
+    }, [canBuy, isMainAdding, mainSeller, mainQuantity, effectiveMaxStock, addToCart, medication]);
 
-
-    const similarProducts = ilaclarShowroomData.filter(m => m.id !== medication.id).slice(0, 3);
+    // ### OPTİMİZASYON: useMemo ###
+    // 'similarProducts' listesi, 'medication.id' değişmediği sürece yeniden hesaplanmaz.
+    const similarProducts = useMemo(() => {
+         return ilaclarShowroomData.filter(m => m.id !== medication.id).slice(0, 3);
+    }, [medication.id]);
 
     return (
-        // <div className="dashboard-container"> // SİLİNDİ
-        //   <Sidebar /> // SİLİNDİ
-        //   <Header /> // SİLİNDİ
-        //   <main className="main-content"> // SİLİNDİ
-                <div className={styles.pageContainer}>
-                    <div className={styles.productDetailGrid}>
-                        <div className={styles.productImageContainer}>
-                            <img src={medication.imageUrl || '/dolorex_placeholder.png'} alt={medication.name} />
-                            <div className={styles.imageThumbnails}>
-                            </div>
-                        </div>
-
-                        <div className={styles.productInfoContainer}>
-                            <h1>{medication.name}</h1>
-                            <p className={styles.manufacturer}>Üretici: {medication.manufacturer}</p>
-
-                            <div className={styles.mainInfoRow}>
-                                <span className={styles.mainPriceDisplay}>{medication.price.toFixed(2).replace('.', ',')} ₺</span>
-                                <div className={styles.mainBuyActionGroup}>
-                                    {canBuy && (
-                                        <QuantitySelector
-                                            quantity={mainQuantity}
-                                            onDecrement={handleMainDecrement}
-                                            onIncrement={handleMainIncrement}
-                                            onQuantityChange={handleMainQuantityChange}
-                                            onBlur={handleMainBlur}
-                                            maxStock={effectiveMaxStock}
-                                        />
-                                    )}
-                                    <button
-                                        className={styles.buyButtonMain}
-                                        disabled={!canBuy || isMainAdding}
-                                        onClick={handleMainAddToCart}
-                                    >
-                                         {isMainAdding ? 'Eklendi!' : (canBuy ? 'Sepete Ekle' : 'Stokta Yok')}
-                                    </button>
-                                </div>
-                            </div>
-
-                             <div className={styles.sellerInfo}>
-                                Satıcı: <a href={`/profil/${medication.sellers[0]?.pharmacyUsername}`}>{medication.sellers[0]?.pharmacyName}</a>
-                            </div>
-
-                            <div className={styles.chartAndOfferContainer}>
-                                <div className={styles.sellerAndChart}>
-                                    <div className={styles.priceChartWrapper}>
-                                        <PriceChart data={priceHistoryData as PriceData[]} />
-                                    </div>
-                                </div>
-                                <div className={styles.offerCountWrapper}>
-                                    <div className={styles.offerCount}>
-                                        <span>Teklif Sayısı</span>
-                                        <strong>{medication.sellers.length}</strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+        <div className={styles.pageContainer}>
+            <div className={styles.productDetailGrid}>
+                <div className={styles.productImageContainer}>
+                    <img src={medication.imageUrl || '/dolorex_placeholder.png'} alt={medication.name} />
+                    <div className={styles.imageThumbnails}>
                     </div>
+                </div>
 
-                    <WarehouseOffers data={warehouseOffersData} />
+                <div className={styles.productInfoContainer}>
+                    <h1>{medication.name}</h1>
+                    <p className={styles.manufacturer}>Üretici: {medication.manufacturer}</p>
 
-                    <div className={styles.offersSection}>
-                        <h2>Eczane İlaç Teklifleri</h2>
-                        <div className={styles.offerList}>
-                            {medication.sellers.map(seller => (
-                                <OfferItemComponent
-                                    key={seller.pharmacyUsername}
-                                    medication={medication}
-                                    seller={seller}
-                                    styles={styles}
-                                    QuantitySelector={QuantitySelector}
-                                    maxStock={Math.min(medication.currentStock, MAX_ALLOWED_QUANTITY)} 
+                    <div className={styles.mainInfoRow}>
+                        <span className={styles.mainPriceDisplay}>{medication.price.toFixed(2).replace('.', ',')} ₺</span>
+                        <div className={styles.mainBuyActionGroup}>
+                            {canBuy && (
+                                <QuantitySelector
+                                    quantity={mainQuantity}
+                                    onDecrement={handleMainDecrement}
+                                    onIncrement={handleMainIncrement}
+                                    onQuantityChange={handleMainQuantityChange}
+                                    onBlur={handleMainBlur}
+                                    maxStock={effectiveMaxStock}
                                 />
-                            ))}
+                            )}
+                            <button
+                                className={styles.buyButtonMain}
+                                disabled={!canBuy || isMainAdding || !mainSeller}
+                                onClick={handleMainAddToCart}
+                            >
+                                 {isMainAdding ? 'Eklendi!' : (canBuy ? 'Sepete Ekle' : 'Stokta Yok')}
+                            </button>
                         </div>
                     </div>
 
-                    <div className={styles.similarProductsSection}>
-                        <h2>Benzer Ürünler</h2>
-                        <div className={styles.similarProductsGrid}>
-                            {similarProducts.map(med => (
-                                <ProductCard key={med.id} medication={med} />
-                            ))}
+                    {mainSeller && (
+                        <div className={styles.sellerInfo}>
+                            Satıcı: <a href={`/profil/${mainSeller.pharmacyUsername}`}>{mainSeller.pharmacyName}</a>
+                        </div>
+                    )}
+
+                    <div className={styles.chartAndOfferContainer}>
+                        <div className={styles.sellerAndChart}>
+                            <div className={styles.priceChartWrapper}>
+                                <PriceChart data={priceHistoryData as PriceData[]} />
+                            </div>
+                        </div>
+                        <div className={styles.offerCountWrapper}>
+                            <div className={styles.offerCount}>
+                                <span>Teklif Sayısı</span>
+                                <strong>{medication.sellers.length}</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
-        //   </main> // SİLİNDİ
-        //   {/* --- Panel ve Modal Alanı SİLİNDİ --- */}
-        // </div> // SİLİNDİ
+            </div>
+
+            <WarehouseOffers data={warehouseOffersData} />
+
+            <div className={styles.offersSection}>
+                <h2>Eczane İlaç Teklifleri</h2>
+                <div className={styles.offerList}>
+                    {medication.sellers.map(seller => (
+                        <OfferItemComponent
+                            key={seller.pharmacyUsername}
+                            medication={medication}
+                            seller={seller}
+                        />
+                    ))}
+                </div>
+            </div>
+
+            <div className={styles.similarProductsSection}>
+                <h2>Benzer Ürünler</h2>
+                <div className={styles.similarProductsGrid}>
+                    {similarProducts.map(med => (
+                        <ProductCard key={med.id} medication={med} />
+                    ))}
+                </div>
+            </div>
+        </div>
     );
 }

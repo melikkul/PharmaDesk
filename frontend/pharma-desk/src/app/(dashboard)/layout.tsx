@@ -1,7 +1,7 @@
 // src/app/(dashboard)/layout.tsx
 'use client';
 
-import React from 'react';
+import React from 'react'; // React.memo için 'React' import edildi
 import './dashboard/dashboard.css'; // Global dashboard stilleri
 
 // Ana Bileşenler
@@ -20,7 +20,50 @@ import CartPanel from '@/components/cart/CartPanel';
 import { pharmacyData } from '@/data/dashboardData';
 
 // GÜNCELLEME: Hook'u ve Context'i import et
-import { useDashboardPanels, DashboardContext } from '@/hooks/useDashboardPanels';
+import { useDashboardPanels, DashboardContext, Notification, Message } from '@/hooks/useDashboardPanels';
+
+// ### OPTİMİZASYON: Bildirim Listesi Ayrı Bileşene Taşındı ve Memoize Edildi ###
+// Bu bileşen, 'items' veya 'onClick' değişmediği sürece yeniden render olmaz.
+const NotificationList = React.memo(({ items, onClick }: { items: Notification[], onClick: (item: Notification) => void }) => {
+  if (items.length === 0) {
+    return (
+      <div className="panel-empty-state">
+        <p>Yeni bildiriminiz yok.</p>
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      {items.map(notif => (
+        <NotificationItem key={notif.id} item={notif} onClick={onClick} />
+      ))}
+    </>
+  );
+});
+NotificationList.displayName = 'NotificationList'; // Debugging için
+
+// ### OPTİMİZASYON: Mesaj Listesi Ayrı Bileşene Taşındı ve Memoize Edildi ###
+// Bu bileşen, 'items' veya 'onClick' değişmediği sürece yeniden render olmaz.
+const MessageList = React.memo(({ items, onClick }: { items: Message[], onClick: (item: Message) => void }) => {
+  if (items.length === 0) {
+    return (
+      <div className="panel-empty-state">
+        <p>Yeni mesajınız yok.</p>
+      </div>
+    );
+  }
+  
+  return (
+    <>
+      {items.map(msg => (
+        <MessageItem key={msg.id} item={msg} onClick={onClick} />
+      ))}
+    </>
+  );
+});
+MessageList.displayName = 'MessageList'; // Debugging için
+
 
 export default function DashboardLayout({
   children,
@@ -56,15 +99,11 @@ export default function DashboardLayout({
           onClose={panelValues.toggleNotificationsPanel}
           onMarkAllRead={panelValues.markAllNotificationsAsRead}
         >
-          {panelValues.notifications.length > 0 ? (
-              panelValues.notifications.map(notif => (
-                  <NotificationItem key={notif.id} item={notif} onClick={panelValues.handleNotificationClick} />
-              ))
-          ) : (
-              <div className="panel-empty-state">
-                  <p>Yeni bildiriminiz yok.</p>
-              </div>
-          )}
+          {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
+          <NotificationList 
+            items={panelValues.notifications} 
+            onClick={panelValues.handleNotificationClick} 
+          />
         </SlidePanel>
 
         <SlidePanel
@@ -73,15 +112,11 @@ export default function DashboardLayout({
           onClose={panelValues.toggleMessagesPanel}
           onMarkAllRead={panelValues.markAllMessagesAsRead}
         >
-          {panelValues.messages.length > 0 ? (
-              panelValues.messages.map(msg => (
-                  <MessageItem key={msg.id} item={msg} onClick={panelValues.handleMessageClick} />
-              ))
-          ) : (
-              <div className="panel-empty-state">
-                  <p>Yeni mesajınız yok.</p>
-              </div>
-          )}
+          {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
+          <MessageList 
+            items={panelValues.messages} 
+            onClick={panelValues.handleMessageClick} 
+          />
         </SlidePanel>
 
         <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />

@@ -1,5 +1,6 @@
 // components/header/ProfileDropdown.tsx
-import React, { useEffect, useRef } from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './ProfileDropdown.module.css';
 
@@ -34,6 +35,14 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onClose, onLogo
     };
   }, [onClose]);
 
+  // ### OPTİMİZASYON: useCallback ###
+  // 'onLogout' prop'unu çağıran fonksiyon memoize edildi.
+  const handleLogoutClick = useCallback(() => {
+    // 'onClose' prop'u 'onLogout'tan önce çağrılabilir (opsiyonel)
+    // onClose(); 
+    onLogout();
+  }, [onLogout]);
+
   return (
     <div className={styles.profileDropdown} ref={dropdownRef}>
       <Link href={`/profil/${user.username}`} className={styles.dropdownHeaderLink} onClick={onClose}>
@@ -54,10 +63,14 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onClose, onLogo
         </li>
       </ul>
       <div className={styles.dropdownFooter}>
-        <button onClick={onLogout}><LogoutIcon /> Çıkış Yap</button>
+        <button onClick={handleLogoutClick}><LogoutIcon /> Çıkış Yap</button>
       </div>
     </div>
   );
 };
 
-export default ProfileDropdown;
+// ### OPTİMİZASYON: React.memo ###
+// Prop'ları (user, onClose, onLogout) değişmediği sürece
+// (ki bu prop'lar artık üst bileşenlerde memoize edildi)
+// bu bileşenin yeniden render olması engellendi.
+export default React.memo(ProfileDropdown);

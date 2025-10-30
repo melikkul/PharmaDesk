@@ -1,4 +1,5 @@
 // components/profile/ProfileDetails.tsx
+// ### OPTİMİZASYON: 'React.memo' için 'React' import edildi ###
 import React from 'react';
 import Link from 'next/link';
 import styles from './ProfileDetails.module.css';
@@ -64,4 +65,6 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ pharmacy, isOwnProfile 
   );
 };
 
-export default ProfileDetails;
+// ### OPTİMİZASYON: React.memo ###
+// Bu "dumb" (sadece prop gösteren) bileşenin gereksiz render'ları engellendi.
+export default React.memo(ProfileDetails);

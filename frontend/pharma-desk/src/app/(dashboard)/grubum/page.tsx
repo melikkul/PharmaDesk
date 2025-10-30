@@ -1,7 +1,8 @@
 // src/app/(dashboard)/grubum/page.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useState, useMemo, useCallback } from 'react';
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from './grubum.module.css';
 import tableStyles from '@/components/dashboard/Table.module.css';
@@ -41,7 +42,8 @@ export default function GrubumPage() {
     dateEnd: '',
   });
   
-  const allOtherPharmacies = [...otherPharmaciesData];
+  // Veri (normalde prop veya API'den gelir, şimdilik sabit)
+  const allOtherPharmacies = useMemo(() => [...otherPharmaciesData], []);
 
   const availableDistricts = useMemo(() => {
     const districts = new Set(allOtherPharmacies.map(p => p.district).filter(Boolean));
@@ -57,9 +59,20 @@ export default function GrubumPage() {
           const matchesStatus = filters.status === 'all' ||
                                 (filters.status === 'positive' && p.grupYuku >= 0) ||
                                 (filters.status === 'negative' && p.grupYuku < 0);
-          const kayitTarihi = new Date(p.kayitTarihi);
-          const matchesDateStart = filters.dateStart === '' || kayitTarihi >= new Date(filters.dateStart);
-          const matchesDateEnd = filters.dateEnd === '' || kayitTarihi <= new Date(filters.dateEnd);
+          
+          // Tarih filtrelemesi için 'kayitTarihi' string'ini Date objesine çevir
+          // ve sadece geçerli tarihler için filtre yap
+          let matchesDateStart = true;
+          let matchesDateEnd = true;
+          
+          if(p.kayitTarihi) {
+            const kayitTarihi = new Date(p.kayitTarihi);
+            if (!isNaN(kayitTarihi.getTime())) { // Geçerli tarih mi?
+              matchesDateStart = filters.dateStart === '' || kayitTarihi >= new Date(filters.dateStart);
+              matchesDateEnd = filters.dateEnd === '' || kayitTarihi <= new Date(filters.dateEnd);
+            }
+          }
+
           return matchesSearch && matchesDistrict && matchesStatus && matchesDateStart && matchesDateEnd;
       });
       return filtered;
@@ -67,12 +80,14 @@ export default function GrubumPage() {
   
   // --- Lokal handleStartChat SİLİNDİ ---
   
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleFilterChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
-  };
+  }, []); // Bağımlılığı yok
 
-  const clearFilters = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  const clearFilters = useCallback(() => {
     setFilters({
       searchTerm: '',
       district: 'all',
@@ -80,7 +95,7 @@ export default function GrubumPage() {
       dateStart: '',
       dateEnd: '',
     });
-  };
+  }, []); // Bağımlılığı yok
 
   return (
     <div className={styles.pageContainer}>
@@ -120,7 +135,7 @@ export default function GrubumPage() {
             >
               <option value="all">Tüm Durumlar</option>
               <option value="positive">Artıda Olanlar</option>
-              <option value="negative">Ekside Olanlar</option>
+              <option value_grupYuku="negative">Ekside Olanlar</option>
             </select>
              <input
               type="date"

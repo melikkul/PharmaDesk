@@ -1,7 +1,8 @@
 // src/app/(dashboard)/ilaclar/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useState, useCallback } from 'react';
 // DÜZELTME: dashboard.css yolunu (dashboard) içine al
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from './ilaclar.module.css';
@@ -25,6 +26,12 @@ export default function IlaclarPage() {
     // --- Bildirim/Mesaj/Sepet State'leri SİLİNDİ ---
     // --- Handler Fonksiyonları SİLİNDİ ---
 
+    // ### OPTİMİZASYON: useCallback ###
+    // Filtre panelinin görünürlüğünü değiştiren fonksiyon memoize edildi.
+    const toggleFilterVisibility = useCallback(() => {
+        setIsFilterVisible(prev => !prev);
+    }, []); // Bağımlılığı yok
+
     return (
       // <div className="dashboard-container"> // SİLİNDİ
       //   <Sidebar /> // SİLİNDİ
@@ -43,7 +50,10 @@ export default function IlaclarPage() {
                                 <option>SKT: En Yakın</option>
                             </select>
                         </div>
-                        <button className={`${styles.actionButton} ${isFilterVisible ? styles.active : ''}`} onClick={() => setIsFilterVisible(!isFilterVisible)}>
+                        <button 
+                            className={`${styles.actionButton} ${isFilterVisible ? styles.active : ''}`} 
+                            onClick={toggleFilterVisibility} // Memoize edilmiş fonksiyon kullanılıyor
+                        >
                             <FilterIcon />
                             <span>Filtrele</span>
                         </button>

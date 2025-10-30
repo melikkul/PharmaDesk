@@ -1,7 +1,8 @@
 // src/app/(dashboard)/tekliflerim/OfferForm.tsx
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useIMask, IMask } from 'react-imask';
 import { MedicationItem } from '@/data/dashboardData';
 import SettingsCard from '@/components/settings/SettingsCard';
@@ -37,6 +38,19 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   });
   // --- SKT State Sonu ---
 
+  // ### OPTİMİZASYON: 'onAccept' fonksiyonu useCallback içine alındı ###
+  // Bu, IMask hook'unun gereksiz yere güncellenmesini engeller.
+  const handleSktAccept = useCallback((value: string, mask: IMask.InputMask<any>) => {
+      const unmasked = mask.unmaskedValue; // AAYYYY formatında
+      if (unmasked.length === 6) {
+          const month = unmasked.substring(0, 2);
+          const year = unmasked.substring(2, 6);
+          setValidSktYearMonth(`${year}-${month}`); // YYYY-MM state'ini güncelle
+      } else {
+          setValidSktYearMonth(null); // Tam değilse state'i null yap
+      }
+  }, []); // Bağımlılığı yok
+
   // --- IMask Hook ---
   const {
     ref: sktRef,
@@ -65,16 +79,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     overwrite: true,
   },
   {
-      onAccept: (value, mask) => {
-          const unmasked = mask.unmaskedValue; // AAYYYY formatında
-          if (unmasked.length === 6) {
-              const month = unmasked.substring(0, 2);
-              const year = unmasked.substring(2, 6);
-              setValidSktYearMonth(`${year}-${month}`); // YYYY-MM state'ini güncelle
-          } else {
-              setValidSktYearMonth(null); // Tam değilse state'i null yap
-          }
-      },
+      onAccept: handleSktAccept, // Memoize edilmiş fonksiyon kullanılıyor
   });
   // --- IMask Olayları Sonu ---
 
@@ -95,11 +100,12 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       setValidSktYearMonth(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medication]);
+  }, [medication, setMaskedSktValue]); // setMaskedSktValue stabil olduğu için eklenebilir
 
 
+  // ### OPTİMİZASYON: useCallback ###
   // Input Değişikliklerini Yönetme (SKT hariç)
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
 
     if (id === 'expirationDate') return; // SKT'yi atla
@@ -109,19 +115,19 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
         const parts = val.split(',');
         if (parts.length > 2) val = `${parts[0]},${parts[1]}`;
         setFormData(prev => ({ ...prev, [id]: val }));
-    } else if (id === 'stock' || id === 'bonus') {
-        const numericValue = value.replace(/[^0-9]/g, '');
-        setFormData(prev => ({ ...prev, [id]: numericValue }));
-    } else if (id === 'barcode') {
+    } else if (id === 'stock' || id === 'bonus' || id === 'barcode') {
+        // Barkod, stok ve bonus için sadece rakamları al
         const numericValue = value.replace(/[^0-9]/g, '');
         setFormData(prev => ({ ...prev, [id]: numericValue }));
     } else {
+      // Diğer alanlar (productName)
       setFormData(prev => ({ ...prev, [id]: value }));
     }
-  };
+  }, []); // Bağımlılığı yok
 
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
     const isMaskComplete = maskRef.current?.masked.isComplete ?? false;
@@ -166,7 +172,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     };
 
     onSave(dataToSave);
-  };
+  }, [formData, validSktYearMonth, maskRef, sktRef, onSave, medication]); // Bağımlı olduğu tüm state ve prop'lar
 
   return (
     <form onSubmit={handleSubmit}>
@@ -189,7 +195,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
               onChange={handleInputChange}
               placeholder="Örn: Parol 500mg Tablet"
               required
-              disabled={!!medication}
+              disabled={!!medication} // Düzenleme modunda ilaç adı değiştirilemez
             />
           </div>
 

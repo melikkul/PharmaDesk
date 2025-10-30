@@ -1,7 +1,8 @@
 // src/app/(dashboard)/transferlerim/TransfersTable.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { ShipmentItem, ShipmentStatus, TransferType } from '@/data/dashboardData';
 import DashboardCard from '@/components/DashboardCard';
@@ -12,7 +13,6 @@ import filterStyles from '@/app/(dashboard)/tekliflerim/InventoryFilter.module.c
 // =======================
 import pageStyles from './transferlerim.module.css';
 
-// ... (dosyanın geri kalanı aynı) ...
 // İkonlar
 const FilterIcon = () => <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" /></svg>;
 const TruckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>;
@@ -21,7 +21,7 @@ const SortDescIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill=
 const SortIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6l-4 4h8l-4-4zm0 12l-4-4h8l-4 4z"/></svg>;
 
 
-// Yardımcı Fonksiyonlar
+// ### OPTİMİZASYON: Yardımcı Fonksiyonlar Component Dışına Taşındı ###
 const parseDate = (dateStr: string): Date => new Date(dateStr);
 const formatDate = (dateStr: string): string => {
   return parseDate(dateStr).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -45,6 +45,8 @@ const getTransferType = (type: TransferType) => {
         <span style={{color: 'var(--positive-color)', fontWeight: 600}}>Alış</span> : 
         <span style={{color: 'var(--negative-color)', fontWeight: 600}}>Satış</span>;
 };
+// ### Optimizasyon Sonu: Yardımcı Fonksiyonlar ###
+
 
 // Tipler
 type SortField = keyof ShipmentItem | null;
@@ -120,8 +122,11 @@ const TransfersTable: React.FC<TransfersTableProps> = ({ data }) => {
     return filteredAndSortedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSortedData, currentPage]);
 
-  const handlePageChange = (page: number) => setCurrentPage(page);
-  const handleSort = (field: keyof ShipmentItem) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handlePageChange = useCallback((page: number) => setCurrentPage(page), []);
+
+  // ### OPTİMİZASYON: useCallback ###
+  const handleSort = useCallback((field: keyof ShipmentItem) => {
     setSortField(prevField => {
       if (prevField === field) {
         setSortDirection(prevDir => (prevDir === 'asc' ? 'desc' : 'asc'));
@@ -131,20 +136,26 @@ const TransfersTable: React.FC<TransfersTableProps> = ({ data }) => {
       return field;
     });
     setCurrentPage(1);
-  };
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  }, []); // Bağımlılığı yok
+
+  // ### OPTİMİZASYON: useCallback ###
+  const handleFilterChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1);
-  };
-  const clearFilters = () => {
+  }, []); // Bağımlılığı yok
+
+  // ### OPTİMİZASYON: useCallback ###
+  const clearFilters = useCallback(() => {
     setFilters({ searchTerm: '', transferType: '', status: '', dateStart: '', dateEnd: '' });
     setCurrentPage(1);
-  };
-  const renderSortIcon = (field: keyof ShipmentItem) => {
+  }, []); // Bağımlılığı yok
+
+  // ### OPTİMİZASYON: useCallback ###
+  const renderSortIcon = useCallback((field: keyof ShipmentItem) => {
     if (sortField !== field) return <SortIcon />;
     return sortDirection === 'asc' ? <SortAscIcon /> : <SortDescIcon />;
-  };
+  }, [sortField, sortDirection]); // 'sortField' ve 'sortDirection' state'lerine bağımlı
 
   return (
     <DashboardCard title="Tüm Transferler">

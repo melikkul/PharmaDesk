@@ -1,6 +1,7 @@
 // components/Sidebar.tsx
 'use client'; 
 
+// ### OPTİMİZASYON: 'React.memo' için 'React' import edildi ###
 import React from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link'; // <Link> import edildi
@@ -9,6 +10,9 @@ import styles from './Sidebar.module.css';
 const Sidebar = () => {
   const pathname = usePathname();
 
+  // 'isActive' fonksiyonu bileşen içinde kaldığı için her render'da yeniden oluşur,
+  // ancak 'usePathname' değiştiğinde (URL değiştiğinde) Sidebar'ın zaten
+  // yeniden render olması gerektiği için bu bir performans sorunu yaratmaz.
   const isActive = (path: string) => {
     if (!pathname) return false;
     if (path === '/dashboard') {
@@ -84,4 +88,9 @@ const Sidebar = () => {
   );
 };
 
-export default Sidebar;
+// ### OPTİMİZASYON: React.memo ###
+// Sidebar'ın prop'ları (hiç yok) değişmediği ve sadece 'usePathname' hook'u
+// değiştiğinde (yani URL değiştiğinde) render olması için memoize edildi.
+// DashboardLayout'taki diğer state değişiklikleri (panel açma vb.)
+// Sidebar'ı gereksiz yere render etmeyecek.
+export default React.memo(Sidebar);

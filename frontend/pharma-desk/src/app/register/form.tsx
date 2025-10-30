@@ -3,7 +3,8 @@
 import "./form.css";
 import Register from "../../../public/Login.png";
 import { useIMask } from "react-imask";
-import { useState } from "react";
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import { useState, useCallback } from "react";
 
 export default function Form() {
   const [formData, setFormData] = useState({
@@ -15,15 +16,19 @@ export default function Form() {
     tekrarSifre: "",
   });
 
-  const handleInputChange = (e) => {
+  // ### OPTİMİZASYON: useCallback ###
+  // Form input fonksiyonu memoize edildi.
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
+    
+    // 'setFormData'nın callback formunu kullanarak 'formData' bağımlılığından kurtulduk.
     if (id === 'isim' || id === 'soyisim') {
       const filteredValue = value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
-      setFormData({ ...formData, [id]: filteredValue });
+      setFormData(prev => ({ ...prev, [id]: filteredValue }));
     } else {
-      setFormData({ ...formData, [id]: value });
+      setFormData(prev => ({ ...prev, [id]: value }));
     }
-  };
+  }, []); // Bağımlılığı yok
 
   const { ref: phoneRef } = useIMask({
     mask: '(\\0\\500) 000 00 00',

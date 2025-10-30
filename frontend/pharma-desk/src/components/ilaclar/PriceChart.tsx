@@ -1,5 +1,5 @@
 // src/components/ilaclar/PriceChart.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import styles from './PriceChart.module.css';
 
 interface PriceData {
@@ -22,10 +22,6 @@ interface TooltipData {
 const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 
-  if (!data || data.length < 2) {
-    return <div className={styles.chartContainer}>Yeterli veri yok.</div>;
-  }
-
   // ViewBox için koordinat sistemi boyutları
   const viewBoxWidth = 550;
   const viewBoxHeight = 200;
@@ -34,38 +30,81 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
   const margin = { top: 20, right: 10, bottom: 30, left: 30 }; 
   // --- ---
 
-  // İç çizim alanı boyutları (koordinat sistemi içinde) - Otomatik olarak güncellenecek
-  const width = viewBoxWidth - margin.left - margin.right;
-  const height = viewBoxHeight - margin.top - margin.bottom;
+  // ### OPTİMİZASYON: useMemo ###
+  // Tüm temel grafik hesaplamaları (boyutlar, ölçekler, yardımcı fonksiyonlar)
+  // 'data' prop'u değişmediği sürece yeniden hesaplanmayacak.
+  const chartGeometry = useMemo(() => {
+    if (!data || data.length < 2) {
+      return null;
+    }
 
-  const prices = data.map(d => d.price);
-  const maxPriceRaw = Math.max(...prices);
-  const minPriceRaw = Math.min(...prices);
-  const rawPriceRange = maxPriceRaw - minPriceRaw;
+    // İç çizim alanı boyutları
+    const width = viewBoxWidth - margin.left - margin.right;
+    const height = viewBoxHeight - margin.top - margin.bottom;
 
-  const minPrice = minPriceRaw - (rawPriceRange * 0.15 || minPriceRaw * 0.05);
-  const maxPrice = maxPriceRaw + (rawPriceRange * 0.10 || maxPriceRaw * 0.05);
-  const priceRange = maxPrice - minPrice <= 0.01 ? 1 : maxPrice - minPrice;
+    const prices = data.map(d => d.price);
+    const maxPriceRaw = Math.max(...prices);
+    const minPriceRaw = Math.min(...prices);
+    const rawPriceRange = maxPriceRaw - minPriceRaw;
 
-  const getPoint = (d: PriceData, i: number) => {
-    const x = (i / (data.length - 1)) * width;
-    const y = height - ((d.price - minPrice) / priceRange) * height;
-    return { x, y };
-  };
+    const minPrice = minPriceRaw - (rawPriceRange * 0.15 || minPriceRaw * 0.05);
+    const maxPrice = maxPriceRaw + (rawPriceRange * 0.10 || maxPriceRaw * 0.05);
+    // Fiyat aralığı 0'a çok yakınsa (tüm veriler aynıysa) 1 olarak ayarla
+    const priceRange = maxPrice - minPrice <= 0.01 ? 1 : maxPrice - minPrice;
 
-  const getYPosition = (price: number) => {
-    return height - ((price - minPrice) / priceRange) * height;
-  }
+    // Y koordinatını fiyata göre hesaplayan yardımcı fonksiyon
+    const getYPosition = (price: number) => {
+      return height - ((price - minPrice) / priceRange) * height;
+    };
+    
+    // Veri noktasına göre (x, y) koordinatlarını bulan yardımcı fonksiyon
+    const getPoint = (d: PriceData, i: number) => {
+      const x = (i / (data.length - 1)) * width;
+      const y = getYPosition(d.price);
+      return { x, y };
+    };
 
-  const maxPriceRawY = getYPosition(maxPriceRaw);
-  const minPriceRawY = getYPosition(minPriceRaw);
+    return {
+      width,
+      height,
+      minPrice,
+      maxPrice,
+      priceRange,
+      minPriceRaw,
+      maxPriceRaw,
+      getYPosition,
+      getPoint,
+    };
+  }, [data, margin.left, margin.right, margin.top, margin.bottom]);
 
-  const points = data.map((d, i) => {
-    const { x, y } = getPoint(d, i);
-    return `${x},${y}`;
-  }).join(' ');
+  // ### OPTİMİZASYON: useMemo ###
+  // 'points' (çizgi yolu) dizesi, sadece data veya geometri değiştiğinde hesaplanır.
+  const points = useMemo(() => {
+    if (!chartGeometry || !data) return '';
+    const { getPoint } = chartGeometry;
+    return data.map((d, i) => {
+      const { x, y } = getPoint(d, i);
+      return `${x},${y}`;
+    }).join(' ');
+  }, [data, chartGeometry]);
 
-  const handleMouseMove = (event: React.MouseEvent<SVGRectElement>) => {
+  // ### OPTİMİZASYON: useMemo ###
+  // Y ekseni etiketlerinin konumları
+  const yAxisTicks = useMemo(() => {
+    if (!chartGeometry) return null;
+    const { getYPosition, maxPriceRaw, minPriceRaw } = chartGeometry;
+    return {
+      maxPriceRawY: getYPosition(maxPriceRaw),
+      minPriceRawY: getYPosition(minPriceRaw),
+    };
+  }, [chartGeometry]);
+
+  // ### OPTİMİZASYON: useCallback ###
+  // Mouse hareket olayı, geometri değişmediği sürece yeniden oluşturulmaz.
+  const handleMouseMove = useCallback((event: React.MouseEvent<SVGRectElement>) => {
+    if (!chartGeometry || !data) return;
+    const { width, getPoint } = chartGeometry;
+
     const svgRect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
     if (!svgRect) return;
 
@@ -91,16 +130,29 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
       index: index,
       ...pointData,
     });
-  };
+  }, [chartGeometry, data, margin.left, margin.top]);
 
-  const handleMouseLeave = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  // Mouse çıkış olayı, bağımlılığı olmadığından asla yeniden oluşturulmaz.
+  const handleMouseLeave = useCallback(() => {
     setTooltip(null);
-  };
+  }, []);
 
-  let tooltipXOffset = 15;
-  if (tooltip && tooltip.index > data.length / 2) {
-      tooltipXOffset = -95;
+  // Tooltip'in konumu (sağ/sol)
+  const tooltipXOffset = useMemo(() => {
+     if (tooltip && data && tooltip.index > data.length / 2) {
+        return -95;
+     }
+     return 15;
+  }, [tooltip, data]);
+
+
+  if (!chartGeometry || !yAxisTicks || !data) {
+    return <div className={styles.chartContainer}>Yeterli veri yok.</div>;
   }
+  
+  const { width, height, getPoint } = chartGeometry;
+  const { maxPriceRawY, minPriceRawY } = yAxisTicks;
 
   return (
     <div className={styles.chartContainer}>
@@ -119,12 +171,10 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
           
           {/* Eksen Çizgileri */}
           <line className={styles.axis} x1="0" y1={height} x2={width} y2={height} /> 
-          {/* Dikey eksen çizgisi (isteğe bağlı) */}
-          {/* <line className={styles.axis} x1="0" y1="0" x2="0" y2={height} /> */}
           
           {/* Y Ekseni Etiketleri (margin.left kadar solda) */}
-          <text className={styles.axisLabel} x="-10" y={maxPriceRawY} dy="-0.32em">{maxPriceRaw.toFixed(2)}</text>
-          <text className={styles.axisLabel} x="-10" y={minPriceRawY} dy="0.32em">{minPriceRaw.toFixed(2)}</text>
+          <text className={styles.axisLabel} x="-10" y={maxPriceRawY} dy="-0.32em">{chartGeometry.maxPriceRaw.toFixed(2)}</text>
+          <text className={styles.axisLabel} x="-10" y={minPriceRawY} dy="0.32em">{chartGeometry.minPriceRaw.toFixed(2)}</text>
           <text className={styles.axisLabel} x="-10" y={height} dy="0.32em">0.00</text> 
 
           {/* X Ekseni Etiketleri (çizim alanının altında) */}

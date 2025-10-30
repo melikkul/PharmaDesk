@@ -1,4 +1,5 @@
 // components/profile/ProfileHeader.tsx
+// ### OPTİMİZASYON: 'React.memo' için 'React' import edildi ###
 import React from 'react';
 import styles from './ProfileHeader.module.css';
 import { PharmacyProfileData } from '../../data/dashboardData';
@@ -46,4 +47,7 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ pharmacy, isOwnProfile, o
   );
 };
 
-export default ProfileHeader;
+// ### OPTİMİZASYON: React.memo ###
+// Prop'ları (pharmacy, isOwnProfile, onStartChat) değişmediği sürece
+// bu bileşenin yeniden render olması engellendi.
+export default React.memo(ProfileHeader);

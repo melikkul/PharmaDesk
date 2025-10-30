@@ -1,6 +1,7 @@
 // src/app/(dashboard)/tekliflerim/InventoryTable.tsx
 'use client';
 
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
 import React, { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { MedicationItem, OfferStatus } from '@/data/dashboardData';
@@ -12,7 +13,6 @@ import pageStyles from './tekliflerim.module.css'; // Doğru göreli yol
 // =======================
 import filterStyles from './InventoryFilter.module.css'; // Bu zaten doğruydu (göreli)
 
-// ... (dosyanın geri kalanı aynı) ...
 // İkonlar
 const EditIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>;
 const DeleteIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>;
@@ -24,7 +24,13 @@ const SortDescIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill=
 const SortIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6l-4 4h8l-4-4zm0 12l-4-4h8l-4 4z"/></svg>;
 
 
-// Yardımcı Fonksiyonlar
+// ### OPTİMİZASYON: Yardımcı Fonksiyonlar Component Dışına Taşındı ###
+// Bu fonksiyonlar state'e veya prop'lara bağlı olmadıkları için
+// her render'da yeniden tanımlanmalarına gerek yoktur.
+
+/**
+ * MM/YY veya YYYY-MM-DD formatındaki tarihi Date objesine çevirir.
+ */
 const parseDate = (dateStr: string): Date | null => {
   if (!dateStr) return null;
   const parts = dateStr.split('/');
@@ -42,11 +48,17 @@ const parseDate = (dateStr: string): Date | null => {
   return null;
 };
 
+/**
+ * Tarih string'ini tr-TR formatına (GG.AA.YYYY) çevirir.
+ */
 const formatDate = (dateStr: string): string => {
     const date = parseDate(dateStr);
     return date ? date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
 };
 
+/**
+ * Durum bilgisine göre stilize edilmiş bir badge (etiket) döndürür.
+ */
 const getStatusBadge = (status: OfferStatus) => {
     switch (status) {
         case 'active': return <span className={`${filterStyles.badge} ${filterStyles.badgeSuccess}`}>Aktif</span>;
@@ -56,6 +68,8 @@ const getStatusBadge = (status: OfferStatus) => {
         default: return <span className={filterStyles.badge}>Bilinmiyor</span>;
     }
 };
+// ### Optimizasyon Sonu: Yardımcı Fonksiyonlar ###
+
 
 // Sıralama ve Filtreleme Tipleri
 type SortField = keyof MedicationItem | null;
@@ -68,7 +82,7 @@ interface FilterState {
 
 interface InventoryTableProps {
   data: MedicationItem[];
-  // Dışarıdan API çağrıları için fonksiyonlar (şimdilik simüle edilecek)
+  // Dışarıdan API çağrıları için fonksiyonlar
   onDeleteItems: (ids: number[]) => Promise<void>;
   onUpdateStatus: (ids: number[], status: OfferStatus) => Promise<void>;
 }
@@ -131,7 +145,6 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       }
     }
 
-
     // Sorting
     if (sortField) {
       filtered.sort((a, b) => {
@@ -176,35 +189,40 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     return filteredAndSortedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSortedData, currentPage]);
 
+  // ### OPTİMİZASYON: useCallback ###
   // Sayfa Değiştirme
-  const handlePageChange = (page: number) => {
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     setSelectedIds([]); // Sayfa değişince seçimi sıfırla
-  };
+  }, []); // Bağımlılığı yok
 
+  // ### OPTİMİZASYON: useCallback ###
   // Tümünü Seç / Seçimi Kaldır
-  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSelectAll = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
       setSelectedIds(paginatedData.map(item => item.id));
     } else {
       setSelectedIds([]);
     }
-  };
+  }, [paginatedData]); // 'paginatedData'ya bağımlı
 
+  // ### OPTİMİZASYON: useCallback ###
   // Tekil Seçim
-  const handleSelectItem = (id: number, checked: boolean) => {
+  const handleSelectItem = useCallback((id: number, checked: boolean) => {
     setSelectedIds(prev =>
       checked ? [...prev, id] : prev.filter(itemId => itemId !== id)
     );
-  };
+  }, []); // Bağımlılığı yok
 
+  // ### OPTİMİZASYON: useCallback ###
   // Sıralama İkonu ve Fonksiyonu
-  const renderSortIcon = (field: keyof MedicationItem) => {
+  const renderSortIcon = useCallback((field: keyof MedicationItem) => {
     if (sortField !== field) return <SortIcon />;
     return sortDirection === 'asc' ? <SortAscIcon /> : <SortDescIcon />;
-  };
+  }, [sortField, sortDirection]); // 'sortField' ve 'sortDirection' state'lerine bağımlı
 
-  const handleSort = (field: keyof MedicationItem) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleSort = useCallback((field: keyof MedicationItem) => {
     setSortField(prevField => {
       if (prevField === field) {
         // Aynı alana tıklandıysa yönü değiştir
@@ -217,22 +235,26 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       }
     });
      setCurrentPage(1); // Sıralama değişince ilk sayfaya dön
-  };
+  }, []); // Bağımlılığı yok
 
+  // ### OPTİMİZASYON: useCallback ###
   // Filtre Değişikliği
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleFilterChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1); // Filtre değişince ilk sayfaya dön
-  };
+  }, []); // Bağımlılığı yok
 
-  const clearFilters = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  const clearFilters = useCallback(() => {
     setFilters({ searchTerm: '', status: '', expireMonths: '' });
     setCurrentPage(1);
-  };
+  }, []); // Bağımlılığı yok
 
   // --- Toplu İşlem Fonksiyonları ---
-  const handleBatchDelete = async () => {
+
+  // ### OPTİMİZASYON: useCallback ###
+  const handleBatchDelete = useCallback(async () => {
     if (selectedIds.length === 0) return;
     if (window.confirm(`${selectedIds.length} adet teklifi kalıcı olarak silmek istediğinizden emin misiniz?`)) {
         setIsProcessing(true);
@@ -247,9 +269,10 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             setIsProcessing(false);
         }
     }
-  };
+  }, [selectedIds, onDeleteItems]); // 'selectedIds' ve 'onDeleteItems' prop'una bağımlı
 
-  const handleBatchUpdateStatus = async (status: OfferStatus) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleBatchUpdateStatus = useCallback(async (status: OfferStatus) => {
       if (selectedIds.length === 0) return;
       const statusText = status === 'active' ? 'aktif' : 'pasif';
       if (window.confirm(`${selectedIds.length} adet teklifin durumunu "${statusText}" olarak güncellemek istediğinizden emin misiniz?`)) {
@@ -265,10 +288,12 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             setIsProcessing(false);
         }
     }
-  };
+  }, [selectedIds, onUpdateStatus]); // 'selectedIds' ve 'onUpdateStatus' prop'una bağımlı
 
-  // Tekil İşlem Fonksiyonları (mevcuttakiler güncellendi)
-  const handleDelete = async (id: number, name: string) => {
+  // --- Tekil İşlem Fonksiyonları ---
+
+  // ### OPTİMİZASYON: useCallback ###
+  const handleDelete = useCallback(async (id: number, name: string) => {
     if (window.confirm(`${name} ürününü envanterden kalıcı olarak silmek istediğinizden emin misiniz?`)) {
         setIsProcessing(true);
         try {
@@ -277,16 +302,17 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
         } catch (error) { console.error("Silme başarısız:", error); }
         finally { setIsProcessing(false); }
     }
-  };
+  }, [onDeleteItems]); // 'onDeleteItems' prop'una bağımlı
 
-  const handleToggleStatus = async (id: number, currentStatus: OfferStatus) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleToggleStatus = useCallback(async (id: number, currentStatus: OfferStatus) => {
       const newStatus = currentStatus === 'active' ? 'paused' : 'active';
       setIsProcessing(true);
       try {
            await onUpdateStatus([id], newStatus);
       } catch (error) { console.error("Durum güncelleme başarısız:", error); }
       finally { setIsProcessing(false); }
-  };
+  }, [onUpdateStatus]); // 'onUpdateStatus' prop'una bağımlı
 
 
   return (

@@ -1,7 +1,8 @@
 // src/app/(dashboard)/sepet/page.tsx
 'use client';
 
-import React, { useState } from 'react';
+// ### OPTİMİZASYON: useMemo ve useCallback import edildi ###
+import React, { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
@@ -31,19 +32,41 @@ export default function SepetPage() {
 
   const [usePharmaDeskShipping, setUsePharmaDeskShipping] = useState(true);
 
-  const cartTotal = cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
-  const kargoUcreti = usePharmaDeskShipping ? KARGO_UCRETI : 0;
-  const genelToplam = cartTotal + kargoUcreti;
+  // ### OPTİMİZASYON: useMemo ###
+  // Ara toplam, 'cartItems' değişmediği sürece yeniden hesaplanmaz.
+  const cartTotal = useMemo(() => {
+    return cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
+  }, [cartItems]);
+
+  // ### OPTİMİZASYON: useMemo ###
+  // Kargo ücreti, 'usePharmaDeskShipping' değişmediği sürece yeniden hesaplanmaz.
+  const kargoUcreti = useMemo(() => {
+    return usePharmaDeskShipping ? KARGO_UCRETI : 0;
+  }, [usePharmaDeskShipping]);
+
+  // ### OPTİMİZASYON: useMemo ###
+  // Genel toplam, 'cartTotal' veya 'kargoUcreti' değişmediği sürece yeniden hesaplanmaz.
+  const genelToplam = useMemo(() => {
+    return cartTotal + kargoUcreti;
+  }, [cartTotal, kargoUcreti]);
 
   // --- Standart Panel State Yönetimi SİLİNDİ ---
   // --- State Yönetimi Sonu ---
 
-  const handleCompleteOrder = (e: React.FormEvent) => {
+  // ### OPTİMİZASYON: useCallback ###
+  // Form gönderme fonksiyonu memoize edildi.
+  const handleCompleteOrder = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     alert(`Sipariş tamamlandı (Genel Toplam: ${genelToplam.toFixed(2)} ₺)!`);
     clearCart();
     router.push('/dashboard');
-  };
+  }, [genelToplam, clearCart, router]); // Bağımlılıklar eklendi
+
+  // ### OPTİMİZASYON: useCallback ###
+  // Checkbox'ın 'onChange' fonksiyonu memoize edildi.
+  const handleShippingChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsePharmaDeskShipping(e.target.checked);
+  }, []); // Bağımlılığı yok
 
   return (
     // <div className="dashboard-container"> // SİLİNDİ
@@ -73,7 +96,7 @@ export default function SepetPage() {
                       <input 
                         type="checkbox" 
                         checked={usePharmaDeskShipping} 
-                        onChange={(e) => setUsePharmaDeskShipping(e.target.checked)} 
+                        onChange={handleShippingChange} // Memoize edilmiş fonksiyon kullanılıyor
                       />
                       <span className={`${toggleStyles.slider} ${toggleStyles.round}`}></span>
                     </label>

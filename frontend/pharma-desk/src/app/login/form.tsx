@@ -1,7 +1,8 @@
 "use client";
 
 import "./form.css";
-import { useState } from "react";
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import { useState, useCallback } from "react";
 
 export default function Form() {
   const [formData, setFormData] = useState({
@@ -9,10 +10,13 @@ export default function Form() {
     sifre: "",
   });
 
-  const handleInputChange = (e) => {
+  // ### OPTİMİZASYON: useCallback ###
+  // Form input fonksiyonu memoize edildi.
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    setFormData({ ...formData, [id]: value });
-  };
+    // 'setFormData'nın callback formunu kullanarak 'formData' bağımlılığından kurtulduk.
+    setFormData(prev => ({ ...prev, [id]: value }));
+  }, []); // Bağımlılığı yok
 
   return (
     <div className="container">

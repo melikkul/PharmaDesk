@@ -1,7 +1,8 @@
 // src/app/(dashboard)/islem-gecmisi/HistoryTable.tsx
 'use client';
 
-import React, { useState, useMemo } from 'react';
+// ### OPTİMİZASYON: 'useCallback' import edildi ###
+import React, { useState, useMemo, useCallback } from 'react';
 // Tipler ve Bileşenler
 import { TransactionHistoryItem, TransactionStatus, TransactionType } from '@/data/dashboardData';
 import DashboardCard from '@/components/DashboardCard';
@@ -20,8 +21,11 @@ const SortAscIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="
 const SortDescIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18l-6-6h12l-6 6z"/></svg>;
 const SortIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6l-4 4h8l-4-4zm0 12l-4-4h8l-4 4z"/></svg>;
 
-// ... (dosyanın geri kalanı aynı) ...
-// Yardımcı Fonksiyonlar
+
+// ### OPTİMİZASYON: Yardımcı Fonksiyonlar Component Dışına Taşındı ###
+// Bu fonksiyonlar state'e veya prop'lara bağlı olmadıkları için
+// her render'da yeniden tanımlanmalarına gerek yoktur.
+
 const parseDate = (dateStr: string): Date => new Date(dateStr);
 
 const formatDate = (dateStr: string): string => {
@@ -46,6 +50,8 @@ const getTransactionTypeBadge = (type: TransactionType) => {
         default: return <span>{type}</span>;
     }
 };
+// ### Optimizasyon Sonu: Yardımcı Fonksiyonlar ###
+
 
 // Sıralama ve Filtreleme Tipleri
 type SortField = keyof TransactionHistoryItem | null;
@@ -148,17 +154,20 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ data }) => {
     return filteredAndSortedData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [filteredAndSortedData, currentPage]);
 
-  const handlePageChange = (page: number) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
-  };
+  }, []); // Bağımlılığı yok
 
+  // ### OPTİMİZASYON: useCallback ###
   // Sıralama İkonu ve Fonksiyonu
-  const renderSortIcon = (field: keyof TransactionHistoryItem) => {
+  const renderSortIcon = useCallback((field: keyof TransactionHistoryItem) => {
     if (sortField !== field) return <SortIcon />;
     return sortDirection === 'asc' ? <SortAscIcon /> : <SortDescIcon />;
-  };
+  }, [sortField, sortDirection]); // 'sortField' ve 'sortDirection' state'lerine bağımlı
 
-  const handleSort = (field: keyof TransactionHistoryItem) => {
+  // ### OPTİMİZASYON: useCallback ###
+  const handleSort = useCallback((field: keyof TransactionHistoryItem) => {
     setSortField(prevField => {
       if (prevField === field) {
         setSortDirection(prevDir => (prevDir === 'asc' ? 'desc' : 'asc'));
@@ -169,19 +178,21 @@ const HistoryTable: React.FC<HistoryTableProps> = ({ data }) => {
       }
     });
     setCurrentPage(1);
-  };
+  }, []); // Bağımlılığı yok
 
+  // ### OPTİMİZASYON: useCallback ###
   // Filtre Değişikliği
-  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleFilterChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFilters(prev => ({ ...prev, [name]: value }));
     setCurrentPage(1);
-  };
+  }, []); // Bağımlılığı yok
 
-  const clearFilters = () => {
+  // ### OPTİMİZASYON: useCallback ###
+  const clearFilters = useCallback(() => {
     setFilters({ searchTerm: '', transactionType: '', status: '', dateStart: '', dateEnd: '' });
     setCurrentPage(1);
-  };
+  }, []); // Bağımlılığı yok
 
   return (
     <DashboardCard title="Tüm İşlemler">
