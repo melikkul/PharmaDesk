@@ -1,33 +1,27 @@
-import 'dotenv/config';
-import { pool, query } from '../../config/db.js';
+// 'import' yerine 'require' kullan
+const { pool } = require('../../config/db.js');
 
-const sql = `
-CREATE TABLE IF NOT EXISTS drugs (
-  id BIGSERIAL PRIMARY KEY,
-  name TEXT NOT NULL,
-  form TEXT,
-  strength TEXT,
-  price NUMERIC(10,2) DEFAULT 0
-);
-
-INSERT INTO drugs(name, form, strength, price) VALUES
-('Aspirin','tablet','100 mg', 89.90),
-('Paracetamol','tablet','500 mg', 74.50),
-('Ibuprofen','capsule','200 mg', 96.00)
-ON CONFLICT DO NOTHING;
-`;
-
-async function run() {
+const createTables = async () => {
+  const queryText = `
+    CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        username VARCHAR(50) UNIQUE NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        password_hash VARCHAR(255) NOT NULL,
+        role VARCHAR(20) NOT NULL CHECK (role IN ('admin', 'pharmacy', 'warehouse')),
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    );
+    -- ... (diğer tüm tablo CREATE komutları buraya) ...
+  `;
   try {
-    console.log("Running migration against:", process.env.DATABASE_URL?.replace(/:[^@]+@/,'://*****@'));
-    await pool.query(sql);
-    console.log("✅ Migration applied");
-  } catch (e) {
-    console.error("❌ Migration failed:", e?.message || e);
-    console.error(e?.stack || "");
-    process.exitCode = 1;
+    await pool.query(queryText);
+    console.log('Tables created successfully');
+  } catch (err) {
+    console.error('Error creating tables', err.stack);
   } finally {
     await pool.end();
   }
-}
-run();
+};
+
+createTables();

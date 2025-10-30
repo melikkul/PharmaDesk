@@ -1,5 +1,6 @@
 import pg from "pg";
 const { Pool } = pg;
+import 'dotenv/config';
 
 const URL =
   process.env.DATABASE_URL ||
@@ -14,9 +15,10 @@ if (!URL) {
 
 const useSSL = !/^(postgres:\/\/)?(localhost|127\.0\.0\.1|db)/i.test(URL);
 
+// "export const pool" olarak export et, "export default" değil
 export const pool = new Pool({
-  connectionString: URL,
-  ssl: useSSL ? { rejectUnauthorized: false } : false,
+  connectionString: process.env.DATABASE_URL,
+  ssl: useSSL, // SSL mantığını burada kullan
 });
 
 export async function ping() {
