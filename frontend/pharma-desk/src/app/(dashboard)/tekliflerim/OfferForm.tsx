@@ -4,6 +4,10 @@
 // ### OPTİMİZASYON: 'useCallback' import edildi ###
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useIMask, IMask } from 'react-imask';
+// === HATA DÜZELTME: 'AnyMasked' -> 'Masked' olarak değiştirildi ===
+import type { Masked } from 'imask';
+import type { InputMaskEventListener } from 'imask/esm/controls/input';
+// =======================================================================
 import { MedicationItem } from '@/data/dashboardData';
 import SettingsCard from '@/components/settings/SettingsCard';
 // === DÜZELTME BURADA ===
@@ -38,25 +42,11 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   });
   // --- SKT State Sonu ---
 
-  // ### OPTİMİZASYON: 'onAccept' fonksiyonu useCallback içine alındı ###
-  // Bu, IMask hook'unun gereksiz yere güncellenmesini engeller.
-  const handleSktAccept = useCallback((value: string, mask: IMask.InputMask<any>) => {
-      const unmasked = mask.unmaskedValue; // AAYYYY formatında
-      if (unmasked.length === 6) {
-          const month = unmasked.substring(0, 2);
-          const year = unmasked.substring(2, 6);
-          setValidSktYearMonth(`${year}-${month}`); // YYYY-MM state'ini güncelle
-      } else {
-          setValidSktYearMonth(null); // Tam değilse state'i null yap
-      }
-  }, []); // Bağımlılığı yok
-
-  // --- IMask Hook ---
   const {
-    ref: sktRef,
+    ref: sktRef, // Bu ref <input>'a bağlanacak
     setValue: setMaskedSktValue,
-    maskRef, // maskRef'i buradan alıyoruz
-  } = useIMask({
+    maskRef, // Bu ref maske örneğini (instance) tutar,
+  } = useIMask<HTMLInputElement>({
     mask: 'MM / YYYY',
     blocks: {
       MM: {
@@ -77,9 +67,27 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     },
     lazy: true,
     overwrite: true,
-    onAccept: handleSktAccept, // Memoize edilmiş fonksiyon kullanılıyor
   });
-  // --- IMask Olayları Sonu ---
+
+  // === HATA DÜZELTME: 'accept' olayı sadece 'value' parametresini döndürür. 'mask' kaldırıldı. ===
+  const handleSktAccept = useCallback(() => {
+      const mask = maskRef.current;
+      if (!mask) return;
+      const unmasked = mask.unmaskedValue; // AAYYYY formatında
+      if (unmasked.length === 6) {
+          const month = unmasked.substring(0, 2);
+          const year = unmasked.substring(2, 6);
+          setValidSktYearMonth(`${year}-${month}`); // YYYY-MM state'ini güncelle
+      } else {
+          setValidSktYearMonth(null); // Tam değilse state'i null yap
+      }
+  }, [maskRef]);
+  // ===================================================================================================
+
+  // YENİ: onAccept olayını maskRef'e bağla
+  useEffect(() => {
+    maskRef.current?.on('accept', handleSktAccept);
+  }, [handleSktAccept, maskRef]);
 
   // Başlangıçta veya `medication` değiştiğinde maskeyi ayarla
   useEffect(() => {
@@ -87,7 +95,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       const parts = medication.expirationDate.split('/');
       if (parts.length === 2) {
         const initialValue = `${parts[0].padStart(2, '0')}/${`20${parts[1]}`}`;
-        setMaskedSktValue(initialValue); // Maskelenmiş değeri ayarla
+        setMaskedSktValue(initialValue);
         setValidSktYearMonth(`20${parts[1]}-${parts[0].padStart(2, '0')}`);
       } else {
           setMaskedSktValue('');
@@ -98,10 +106,9 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       setValidSktYearMonth(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medication, setMaskedSktValue]); // setMaskedSktValue stabil olduğu için eklenebilir
+  }, [medication, setMaskedSktValue]);
 
 
-  // ### OPTİMİZASYON: useCallback ###
   // Input Değişikliklerini Yönetme (SKT hariç)
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
@@ -124,21 +131,18 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   }, []); // Bağımlılığı yok
 
 
-  // ### OPTİMİZASYON: useCallback ###
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
-    // === DÜZELTME BURADA ===
-    // 'isMaskComplete' kontrolü kaldırıldı, çünkü 'placeholderChar' nedeniyle
-    // yanıltıcı olabiliyor. 'validSktYearMonth' (onAccept'te 6 haneyi kontrol eden) yeterlidir.
     if (!validSktYearMonth) {
       alert("Lütfen geçerli bir Son Kullanma Tarihi girin (AA / YYYY). Maskenin tam dolduğundan emin olun.");
-      if (sktRef.current) {
-         setTimeout(() => sktRef.current?.focus(), 0);
+      // === HATA DÜZELTME: sktRef.current.focus() -> maskRef.current.el.focus() ===
+      if (maskRef.current) {
+         setTimeout(() => (maskRef.current?.el as unknown as HTMLElement)?.focus(), 0);
       }
+      // =======================================================================
       return;
     }
-    // =======================
 
     // SKT geçmiş tarihli mi kontrolü
     const today = new Date();
@@ -147,9 +151,11 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
 
     if (inputDate < startOfCurrentMonth) {
       alert("Son Kullanma Tarihi, içinde bulunulan aydan veya geçmiş bir aydan olamaz.");
-       if (sktRef.current) {
-           setTimeout(() => sktRef.current?.focus(), 0);
+       // === HATA DÜZELTME: sktRef.current.focus() -> maskRef.current.el.focus() ===
+       if (maskRef.current) {
+           setTimeout(() => (maskRef.current?.el as unknown as HTMLElement)?.focus(), 0);
       }
+      // =======================================================================
       return;
     }
 
@@ -172,7 +178,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     };
 
     onSave(dataToSave);
-  }, [formData, validSktYearMonth, sktRef, onSave, medication]); // 'maskRef' bağımlılıklardan kaldırıldı
+  }, [formData, validSktYearMonth, maskRef, onSave, medication]); // sktRef -> maskRef olarak değiştirildi
 
 
   return (
@@ -217,7 +223,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           <div className={formStyles.formGroup}>
             <label htmlFor="expirationDate">Son Kullanma Tarihi (AA / YYYY) *</label>
             <input
-              ref={sktRef}
+              ref={sktRef} // Bu ref <input>'a bağlanır
               type="text"
               id="expirationDate"
               placeholder="AA / YYYY"

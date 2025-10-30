@@ -37,6 +37,11 @@
     font-weight: 600;
     font-size: 18px;
     color: #8A97A8;
+    
+    /* YENİ: img tag'ı için stiller eklendi */
+    object-fit: cover; /* Resmin düzgün sığması için */
+    overflow: hidden; /* Taşmaları gizle */
+    border: none; /* Resimler için çerçeve olmasın */
 }
 
 .itemContent strong {

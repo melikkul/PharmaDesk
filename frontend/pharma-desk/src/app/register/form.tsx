@@ -30,7 +30,7 @@ export default function Form() {
     }
   }, []); // Bağımlılığı yok
 
-  const { ref: phoneRef } = useIMask({
+  const { ref: phoneRef } = useIMask<HTMLInputElement>({
     mask: '(\\0\\500) 000 00 00',
     lazy: false,
   });

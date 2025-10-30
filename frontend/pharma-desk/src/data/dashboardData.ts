@@ -610,7 +610,3 @@ export const shipmentsData: ShipmentItem[] = [
     ]
   },
 ];
-
-
-export { pharmacyData, offersData, balanceHistoryData, transfersData, initialNotifications, initialMessages, ilaclarShowroomData, otherPharmaciesData, priceHistoryData, warehouseOffersData, userMedicationsData, miadReportData, envanterReportData, performanceReportData, demandReportData, financialSummaryData, transactionHistoryData };
-export type { SellerInfo, ShowroomMedication, PharmacyProfileData, Offer, BalanceItem, TransferItem, ShipmentItem, Notification, Message, PriceData, WarehouseOffer, MedicationItem, TransactionHistoryItem, NotificationType, ShipmentStatus, TransferType, TransactionStatus, TransactionType, OfferStatus, TrackingEvent };

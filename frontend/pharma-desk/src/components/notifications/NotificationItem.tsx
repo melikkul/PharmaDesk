@@ -1,16 +1,20 @@
 // components/notifications/NotificationItem.tsx
-
 import React from 'react';
 import { NotificationIcon, ShipmentIcon } from '../ui/Icons';
 import styles from './NotificationItem.module.css';
 
-interface Notification {
-  id: number;
-  read: boolean;
-  type: string;
-  title: string;
-  message: string;
-}
+// --- HATA DÜZELTME: YEREL ARAYÜZ SİLİNDİ ---
+// interface Notification {
+//   id: number;
+//   read: boolean;
+//   type: string; // <-- Hatanın kaynağı buydu
+//   title: string;
+//   message: string;
+// }
+// --- ---
+
+// YENİ: Doğru tip 'dashboardData'dan import edildi
+import type { Notification, NotificationType } from '@/data/dashboardData';
 
 interface NotificationItemProps {
   item: Notification;
@@ -18,7 +22,8 @@ interface NotificationItemProps {
 }
 
 const NotificationItem: React.FC<NotificationItemProps> = ({ item, onClick }) => {
-    const getIcon = (type: string) => {
+    // getIcon fonksiyonu artık 'NotificationType' alabilir
+    const getIcon = (type: NotificationType) => {
         switch (type) {
             case 'shipment': return <ShipmentIcon />;
             case 'balance': return <NotificationIcon />;

@@ -5,7 +5,8 @@ const nextConfig = {
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8081/api/:path*", // Backend'inizin çalıştığı yer
+        // "localhost:8081" yerine Docker servis adını kullan: "backend:8081"
+        destination: "http://backend:8081/api/:path*", 
       },
     ];
   },

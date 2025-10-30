@@ -1,14 +1,18 @@
 // components/notifications/MessageItem.tsx
-
 import React from 'react';
 import styles from './MessageItem.module.css';
 
-interface Message {
-  id: number;
-  sender: string;
-  lastMessage: string;
-  read: boolean;
-}
+// YENİ: Doğru tip 'dashboardData'dan import edildi
+import type { Message } from '@/data/dashboardData'; 
+
+// --- HATA DÜZELTME: YEREL ARAYÜZ SİLİNDİ ---
+// interface Message {
+//   id: number;
+//   sender: string;
+//   lastMessage: string;
+//   read: boolean;
+// }
+// --- ---
 
 interface MessageItemProps {
   item: Message;
@@ -18,7 +22,12 @@ interface MessageItemProps {
 const MessageItem: React.FC<MessageItemProps> = ({ item, onClick }) => (
     <div className={`${styles.panelItem} ${!item.read ? styles.unread : ''}`} onClick={() => onClick(item)}>
         <div className={styles.itemIconWrapper}>
-             <div className={styles.avatarPlaceholderSm}>{item.sender.charAt(0)}</div>
+             {/* YENİ: Avatarı veya baş harfi göster */}
+             {item.avatar ? (
+                <img src={item.avatar} alt={item.sender} className={styles.avatarPlaceholderSm} />
+             ) : (
+                <div className={styles.avatarPlaceholderSm}>{item.sender.charAt(0)}</div>
+             )}
         </div>
         <div className={styles.itemContent}>
             <strong>{item.sender}</strong>
