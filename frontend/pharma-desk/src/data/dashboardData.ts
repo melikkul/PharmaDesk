@@ -1,4 +1,4 @@
-// src/data/dashboardData.ts
+// frontend/pharma-desk/src/data/dashboardData.ts
 
 export interface SellerInfo {
   pharmacyUsername: string;
@@ -51,16 +51,25 @@ export interface PharmacyProfileData {
 export type ShipmentStatus = 'pending' | 'shipped' | 'in_transit' | 'delivered' | 'cancelled';
 export type TransferType = 'inbound' | 'outbound';
 
+// YENİ: Kargo geçmişi için bir alt tip
+export interface TrackingEvent {
+  date: string; // ISO 8601 formatında (veya tam tarih/saat stringi)
+  status: string;
+  location: string;
+}
+
 export interface ShipmentItem {
   id: number;
   orderNumber: string;
   productName: string;
+  quantity: number; // <-- YENİ EKLENDİ
   trackingNumber: string;
-  date: string; // YYYY-MM-DD formatında
+  date: string; // YYYY-MM-DD formatında (Bu, 'son güncelleme' tarihi)
   transferType: TransferType; // Gelen / Giden
   counterparty: string; // Satıcı veya Alıcı Eczane
   shippingProvider: string; // Kargo Firması
   status: ShipmentStatus; // Kargo Durumu
+  trackingHistory?: TrackingEvent[]; // Kargo geçmişi
 }
 
 export interface Offer {
@@ -177,65 +186,6 @@ export const transfersData: TransferItem[] = [
     { id: 2, orderNumber: '202-14785236', productName: 'Parol', amount: 250.00 },
     { id: 3, orderNumber: '201-98765432', productName: 'Majezik', amount: 487.50 },
     { id: 4, orderNumber: '201-12345678', productName: 'Dolorex', amount: 450.00 },
-];
-
-// GÜNCELLENDİ: shipmentsData, Transferlerim sayfası için daha detaylı
-export const shipmentsData: ShipmentItem[] = [
-  { 
-    id: 1, 
-    orderNumber: '202-58963214', 
-    productName: 'Apranax', 
-    trackingNumber: '8521479632',
-    date: '2025-10-28',
-    transferType: 'outbound',
-    counterparty: 'Güneş Eczanesi',
-    shippingProvider: 'Yurtiçi Kargo',
-    status: 'delivered'
-  },
-  { 
-    id: 2, 
-    orderNumber: '202-14785236', 
-    productName: 'Parol', 
-    trackingNumber: '7412589632',
-    date: '2025-10-29',
-    transferType: 'outbound',
-    counterparty: 'Meltem Eczanesi',
-    shippingProvider: 'MNG Kargo',
-    status: 'in_transit'
-  },
-  { 
-    id: 3, 
-    orderNumber: '201-98765432', 
-    productName: 'Majezik', 
-    trackingNumber: '9632587412',
-    date: '2025-10-29',
-    transferType: 'inbound',
-    counterparty: 'Defne Eczanesi',
-    shippingProvider: 'Aras Kargo',
-    status: 'shipped'
-  },
-  { 
-    id: 4, 
-    orderNumber: '201-12345678', 
-    productName: 'Dolorex', 
-    trackingNumber: '5862734531',
-    date: '2025-10-30',
-    transferType: 'outbound',
-    counterparty: 'Güneş Eczanesi',
-    shippingProvider: 'PTT Kargo',
-    status: 'pending'
-  },
-  { 
-    id: 5, 
-    orderNumber: '200-78945612', 
-    productName: 'Benical Cold', 
-    trackingNumber: '1122334455',
-    date: '2025-10-25',
-    transferType: 'inbound',
-    counterparty: 'Meltem Eczanesi',
-    shippingProvider: 'Yurtiçi Kargo',
-    status: 'delivered'
-  },
 ];
 
 export type NotificationType = 'offer' | 'shipment' | 'balance' | 'message';
@@ -574,5 +524,93 @@ export const transactionHistoryData: TransactionHistoryItem[] = [
   },
 ];
 
+// GÜNCELLENDİ: shipmentsData, kargo geçmişi eklendi (SADECE 1 KERE)
+export const shipmentsData: ShipmentItem[] = [
+  { 
+    id: 1, 
+    orderNumber: '202-58963214', 
+    productName: 'Apranax', 
+    quantity: 10, // <-- YENİ EKLENDİ
+    trackingNumber: '8521479632',
+    date: '2025-10-28',
+    transferType: 'outbound',
+    counterparty: 'Güneş Eczanesi',
+    shippingProvider: 'Yurtiçi Kargo',
+    status: 'delivered',
+    trackingHistory: [
+      { date: '2025-10-27T10:15:00Z', status: 'Sipariş Alındı', location: 'Merkez Depo, Ankara' },
+      { date: '2025-10-27T16:30:00Z', status: 'Kargoya Verildi', location: 'Yenimahalle Şubesi, Ankara' },
+      { date: '2025-10-28T09:00:00Z', status: 'Dağıtımda', location: 'Kadıköy Dağıtım Merkezi, İstanbul' },
+      { date: '2025-10-28T14:45:00Z', status: 'Teslim Edildi', location: 'Alıcıya teslim edildi, İstanbul' }
+    ]
+  },
+  { 
+    id: 2, 
+    orderNumber: '202-14785236', 
+    productName: 'Parol', 
+    quantity: 50, // <-- YENİ EKLENDİ
+    trackingNumber: '7412589632',
+    date: '2025-10-29',
+    transferType: 'outbound',
+    counterparty: 'Meltem Eczanesi',
+    shippingProvider: 'MNG Kargo',
+    status: 'in_transit',
+    trackingHistory: [
+      { date: '2025-10-28T11:00:00Z', status: 'Sipariş Alındı', location: 'Merkez Depo, Ankara' },
+      { date: '2025-10-28T17:00:00Z', status: 'Kargoya Verildi', location: 'Çankaya Şubesi, Ankara' },
+      { date: '2025-10-29T08:30:00Z', status: 'Dağıtımda', location: 'Çankaya Dağıtım Merkezi, Ankara' }
+    ]
+  },
+  { 
+    id: 3, 
+    orderNumber: '201-98765432', 
+    productName: 'Majezik', 
+    quantity: 20, // <-- YENİ EKLENDİ
+    trackingNumber: '9632587412',
+    date: '2025-10-29',
+    transferType: 'inbound',
+    counterparty: 'Defne Eczanesi',
+    shippingProvider: 'Aras Kargo',
+    status: 'shipped',
+    trackingHistory: [
+      { date: '2025-10-28T14:00:00Z', status: 'Sipariş Alındı', location: 'Merkez Depo, Ankara' },
+      { date: '2025-10-29T09:00:00Z', status: 'Kargoya Verildi', location: 'Batıkent Şubesi, Ankara' }
+    ]
+  },
+  { 
+    id: 4, 
+    orderNumber: '201-12345678', 
+    productName: 'Dolorex', 
+    quantity: 15, // <-- YENİ EKLENDİ
+    trackingNumber: '5862734531',
+    date: '2025-10-30',
+    transferType: 'outbound',
+    counterparty: 'Güneş Eczanesi',
+    shippingProvider: 'PTT Kargo',
+    status: 'pending',
+     trackingHistory: [
+      { date: '2025-10-30T09:00:00Z', status: 'Sipariş Alındı', location: 'Merkez Depo, Ankara' }
+    ]
+  },
+  { 
+    id: 5, 
+    orderNumber: '200-78945612', 
+    productName: 'Benical Cold', 
+    quantity: 5, // <-- YENİ EKLENDİ
+    trackingNumber: '1122334455',
+    date: '2025-10-25',
+    transferType: 'inbound',
+    counterparty: 'Meltem Eczanesi',
+    shippingProvider: 'Yurtiçi Kargo',
+    status: 'delivered',
+     trackingHistory: [
+      { date: '2025-10-24T09:00:00Z', status: 'Sipariş Alındı', location: 'Merkez Depo, Ankara' },
+      { date: '2025-10-24T15:00:00Z', status: 'Kargoya Verildi', location: 'Çankaya Şubesi, Ankara' },
+      { date: '2025-10-25T11:30:00Z', status: 'Teslim Edildi', location: 'Alıcıya teslim edildi, Ankara' }
+    ]
+  },
+];
+
+
 export { pharmacyData, offersData, balanceHistoryData, transfersData, initialNotifications, initialMessages, ilaclarShowroomData, otherPharmaciesData, priceHistoryData, warehouseOffersData, userMedicationsData, miadReportData, envanterReportData, performanceReportData, demandReportData, financialSummaryData, transactionHistoryData };
-export type { SellerInfo, ShowroomMedication, PharmacyProfileData, Offer, BalanceItem, TransferItem, ShipmentItem, Notification, Message, PriceData, WarehouseOffer, MedicationItem, TransactionHistoryItem, NotificationType, ShipmentStatus, TransferType, TransactionStatus, TransactionType, OfferStatus };
+export type { SellerInfo, ShowroomMedication, PharmacyProfileData, Offer, BalanceItem, TransferItem, ShipmentItem, Notification, Message, PriceData, WarehouseOffer, MedicationItem, TransactionHistoryItem, NotificationType, ShipmentStatus, TransferType, TransactionStatus, TransactionType, OfferStatus, TrackingEvent };

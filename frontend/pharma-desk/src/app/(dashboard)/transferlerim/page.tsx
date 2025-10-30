@@ -46,7 +46,7 @@ export default function TransferlerimPage() {
     //   <main className="main-content"> // SİLİNDİ
         <div className={styles.pageContainer}>
           <div className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Transferlerim (Kargo Takibi)</h1>
+            <h1 className={styles.pageTitle}>Transferlerim</h1>
           </div>
 
           {isLoading ? (

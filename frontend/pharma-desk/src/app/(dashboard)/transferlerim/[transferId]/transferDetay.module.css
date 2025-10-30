@@ -1,0 +1,133 @@
+/* frontend/pharma-desk/src/app/(dashboard)/transferlerim/[transferId]/transferDetay.module.css */
+/* (Bu dosyada değişiklik yok, mevcut stiller yeni satırı destekliyor) */
+
+.detailGrid {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr; /* Sol sütun daha dar */
+    gap: 30px;
+    align-items: start;
+}
+
+/* Sol Sütun: Bilgi Listesi */
+.infoList {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.infoItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed var(--border-color);
+}
+.infoItem:last-child {
+    border-bottom: none;
+}
+
+.infoLabel {
+    color: var(--text-secondary);
+}
+
+.infoValue {
+    font-weight: 600;
+    color: var(--text-primary);
+    text-align: right;
+}
+
+
+/* Sağ Sütun: Kargo Zaman Çizelgesi */
+.trackingTimeline {
+    position: relative;
+    padding-left: 35px; /* İkonlar için boşluk */
+}
+
+/* Dikey bağlayıcı çizgi */
+.trackingTimeline::before {
+    content: '';
+    position: absolute;
+    left: 14px;
+    top: 15px;
+    bottom: 15px;
+    width: 2px;
+    background-color: var(--border-color);
+    z-index: 1;
+}
+
+.timelineItem {
+    position: relative;
+    margin-bottom: 25px;
+}
+.timelineItem:last-child {
+    margin-bottom: 0;
+}
+
+.timelineIcon {
+    position: absolute;
+    left: -50px; /* (35px padding) + (30px genişlik / 2) - (çizgi genişliği / 2) */
+    top: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background-color: var(--border-color);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+    transition: all 0.3s ease;
+}
+
+.timelineContent {
+    padding-top: 5px;
+}
+
+.timelineContent strong {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-secondary); /* Varsayılan renk */
+    transition: color 0.3s ease;
+}
+
+.timelineContent span {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    display: block;
+}
+
+.timelineContent p {
+    font-size: 14px;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+/* Tamamlanmış Adım */
+.timelineItem.completed .timelineIcon {
+    background-color: var(--active-link-bg);
+    color: white;
+}
+.timelineItem.completed .timelineContent strong {
+    color: var(--text-primary);
+}
+
+/* Aktif (En Son) Adım */
+.timelineItem.active .timelineIcon {
+    background-color: #3498DB; /* Mavi renk (Dağıtımda vb.) */
+    color: white;
+    transform: scale(1.1);
+    box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.2);
+}
+.timelineItem.active .timelineContent strong {
+    color: #3498DB;
+}
+
+/* Küçük ekranlar için */
+@media (max-width: 1200px) {
+    .detailGrid {
+        grid-template-columns: 1fr; /* Alt alta sırala */
+    }
+}
