@@ -17,7 +17,12 @@ WORKDIR /app
 
 # Sadece üretim bağımlılıklarını kur
 COPY package*.json ./
-RUN npm ci --omit=dev
+
+# === DEĞİŞİKLİK BAŞLANGICI ===
+# 'npm ci --omit=dev' komutu yerine builder'dan kopyala
+COPY --from=builder /app/node_modules ./node_modules
+RUN npm prune --production
+# === DEĞİŞİKLİK SONU ===
 
 # Builder aşamasından build edilmiş dosyaları kopyala
 COPY --from=builder /app/.next ./.next

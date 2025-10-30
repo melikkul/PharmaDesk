@@ -12,7 +12,7 @@ if (!URL) {
   );
 }
 
-const useSSL = !/^(postgres:\/\/)?(localhost|127\.0\.0\.1)/i.test(URL);
+const useSSL = !/^(postgres:\/\/)?(localhost|127\.0\.0\.1|db)/i.test(URL);
 
 export const pool = new Pool({
   connectionString: URL,

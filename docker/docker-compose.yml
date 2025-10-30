@@ -1,4 +1,18 @@
 services:
+  db: # YENİ: PostgreSQL Veritabanı Servisi
+    image: postgres:15-alpine
+    container_name: pharma_desk_db
+    ports:
+      - "5432:5432" # Veritabanına dışarıdan erişmek istersen (opsiyonel)
+    networks:
+      - pharmanet
+    environment:
+      POSTGRES_DB: pharmadesk_db
+      POSTGRES_USER: pharmadesk_user
+      POSTGRES_PASSWORD: melik123
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Verilerin kalıcı olması için
+
   backend:
     build: ./backend
     container_name: pharma_desk_backend
@@ -9,7 +23,10 @@ services:
     networks:
       - pharmanet
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      # GÜNCELLENDİ: Veritabanı bağlantısını Docker ağı içindeki 'db' servisine yönlendir
+      DATABASE_URL: postgresql://pharmadesk_user:mysecretpassword@db:5432/pharmadesk_db
+    depends_on:
+      - db # Backend'i başlatmadan önce 'db' servisinin başlamasını bekle
 
   frontend:
     build: ../frontend/pharma-desk
@@ -24,3 +41,6 @@ services:
 networks:
   pharmanet:
     driver: bridge
+
+volumes: # YENİ: Veritabanı verilerini saklamak için
+  postgres_data:
