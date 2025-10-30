@@ -1,5 +1,6 @@
 // src/components/cart/CartPanel.tsx
 import React from 'react';
+import Link from 'next/link'; // YENİ: Link import edildi
 import { useCart } from '../../context/CartContext';
 import SlidePanel from '../ui/SlidePanel';
 import CartItemComponent from './CartItem';
@@ -53,9 +54,11 @@ const CartPanel: React.FC<CartPanelProps> = ({ show, onClose }) => {
             </div>
             {/* Sepeti Boşalt butonu eklenebilir */}
             <button onClick={() => { if (window.confirm("Sepeti boşaltmak istediğinizden emin misiniz?")) { clearCart(); } }} className={styles.clearCartButton}>Sepeti Boşalt</button>
-            <button className={styles.checkoutButton}>
+            
+            {/* YENİ: Buton Link'e dönüştürüldü (ISTEK 4) */}
+            <Link href="/sepet" className={styles.checkoutButton} onClick={onClose}>
               Siparişi Tamamla
-            </button>
+            </Link>
           </div>
         </div>
       ) : (

@@ -62,6 +62,10 @@ interface OfferItemComponentProps {
 
 
 const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, seller, styles, QuantitySelector, maxStock }) => {
+    // DİKKAT: Buradaki 'medication' objesi, sayfanın ana 'medication' objesidir.
+    // Bu nedenle 'medication.price' ve 'medication.currentStock'
+    // bu satıcıya özel değil, ilacın ana bilgileridir.
+    
     const [offerQuantity, setOfferQuantity] = useState<number | string>(1);
     const canBuy = medication.currentStock > 0; // Stok var mı kontrolü
     // GÜNCELLENDİ: Etkin maksimum stok hesaplaması
@@ -128,6 +132,7 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = ({ medication, sel
 
     return (
         <div className={styles.offerItem}>
+            {/* DİKKAT: Burası ilacın ana fiyatını kullanır (medication.price) */}
             <span className={styles.offerPrice}>{medication.price.toFixed(2).replace('.', ',')} ₺</span>
             <div className={styles.offerSellerInfo}>
                 <span>{seller.pharmacyName}</span>
@@ -208,6 +213,9 @@ export default function IlacDetayPage() {
     }
 
     // GÜNCELLENDİ: Etkin maksimum stok hesaplaması
+    // DİKKAT: Burası ilacın ana stoğunu kullanır (medication.currentStock).
+    // İsteğiniz (Madde 3) mantık için buranın, aşağıdaki 'sellers' dizisindeki
+    // tüm stokların toplamı olması gerekirdi, ancak veri yapısı buna izin vermiyor.
     const canBuy = medication.currentStock > 0;
     const effectiveMaxStock = Math.min(medication.currentStock, MAX_ALLOWED_QUANTITY);
 
@@ -253,6 +261,10 @@ export default function IlacDetayPage() {
 
     // GÜNCELLENDİ: Ana sepete ekleme fonksiyonu
     const handleMainAddToCart = () => {
+        // DİKKAT: Burası, 3. Madde'deki isteğin (en ucuzdan alarak) yapılması gereken yerdir.
+        // Ancak mevcut veri yapısıyla, sadece ilk satıcıyı (sellers[0]) ve
+        // ilacın ana fiyatını/stoğunu kullanarak ekleme yapabilir.
+        
         if (!canBuy || isMainAdding || !medication.sellers[0]) return;
         
         // Sepete eklerken de geçerli miktarı kontrol et
@@ -260,6 +272,7 @@ export default function IlacDetayPage() {
          if (quantityToAdd < 1) return; // Geçersiz miktar eklemeyi engelle
 
         setIsMainAdding(true);
+        // DİKKAT: Sadece ilk satıcıdan (sellers[0]) ekleme yapılıyor.
         addToCart(medication, quantityToAdd, medication.sellers[0].pharmacyName);
 
         setTimeout(() => {
@@ -356,7 +369,7 @@ export default function IlacDetayPage() {
                             {medication.sellers.map(seller => (
                                 <OfferItemComponent
                                     key={seller.pharmacyUsername}
-                                    medication={medication}
+                                    medication={medication} // DİKKAT: Ana ilaç objesi (fiyat/stok)
                                     seller={seller}
                                     styles={styles}
                                     QuantitySelector={QuantitySelector}

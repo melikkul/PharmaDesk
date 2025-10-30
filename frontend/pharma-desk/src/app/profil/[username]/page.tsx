@@ -5,7 +5,7 @@ import React from 'react';
 import { useRouter, useParams } from 'next/navigation';
 
 // Veri ve Bileşenleri import ediyoruz
-import { pharmacyData, otherPharmaciesData, initialNotifications, initialMessages, userMedicationsData } from '../../../data/dashboardData';
+import { pharmacyData, otherPharmaciesData, initialNotifications, initialMessages, userMedicationsData, PharmacyProfileData, Message } from '../../../data/dashboardData'; // Tipler eklendi
 import Sidebar from '../../../components/Sidebar';
 import Header from '../../../components/Header';
 import ProfileHeader from '../../../components/profile/ProfileHeader';
@@ -25,7 +25,7 @@ import styles from './profile.module.css';
 
 // Tipleri tanımlıyoruz
 type Notification = typeof initialNotifications[0];
-type Message = typeof initialMessages[0];
+// type Message = typeof initialMessages[0]; // data/dashboardData'dan import edildi
 interface SelectedNotification extends Omit<Notification, 'read'> {
   detail?: string;
 }
@@ -77,6 +77,26 @@ export default function ProfilePage() {
       e.preventDefault();
       setMessages(prev => prev.map(m => ({ ...m, read: true })));
   };
+  
+  // YENİ: Profil sayfasından sohbet başlatma fonksiyonu
+  const handleStartChat = () => {
+    if (!pharmacy) return; // Eczane verisi yoksa başlatma
+    
+    // Eczane verisinden bir Mesaj objesi oluştur
+    const chatData: Message = {
+      id: 0, // ID 0 olabilir, ya da eczane ID'si
+      idFromProfile: pharmacy.username, // Eczaneyi tanımak için
+      sender: pharmacy.pharmacyName,
+      lastMessage: `Sorumlu: ${pharmacy.pharmacistInCharge}`, // İlk mesaj olarak eczacı adı
+      avatar: pharmacy.logoUrl,
+      read: true // Yeni başlatıldığı için 'read' sayılır
+    };
+    setSelectedChat(chatData);
+    setShowMessagesPanel(false); // Diğer panelleri kapat
+    setShowNotificationsPanel(false);
+    setShowCartPanel(false);
+  };
+
 
   const toggleNotificationsPanel = () => {
       setShowNotificationsPanel(!showNotificationsPanel);
@@ -120,7 +140,12 @@ export default function ProfilePage() {
       />
       <main className="main-content">
         <div className={styles.profileContainer}>
-          <ProfileHeader pharmacy={pharmacy} isOwnProfile={isOwnProfile} />
+          {/* GÜNCELLENDİ: onStartChat prop'u eklendi */}
+          <ProfileHeader 
+            pharmacy={pharmacy} 
+            isOwnProfile={isOwnProfile} 
+            onStartChat={handleStartChat} 
+          />
           <div className={styles.profileBody}>
             <div className={styles.detailsRow}>
               <ProfileDetails pharmacy={pharmacy} isOwnProfile={isOwnProfile} />

@@ -59,7 +59,10 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
         placeholderChar: '_',
       },
     },
-    lazy: true, // Placeholder sadece odaklanınca veya değer girilince görünür
+    // --- HATA DÜZELTMESİ: lazy: true -> lazy: false ---
+    // lazy: true, // Placeholder sadece odaklanınca veya değer girilince görünür
+    lazy: false, // Maskenin her zaman görünür olmasını ve state'i doğru tutmasını sağlar
+    // --- HATA DÜZELTMESİ SONU ---
     overwrite: true,
   },
   // --- onAccept olayı state'i güncellemek için ---

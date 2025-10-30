@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import Link from 'next/link'; // YENİ: Link import edildi
 import { ShipmentItem, ShipmentStatus, TransferType } from '@/data/dashboardData';
 import DashboardCard from '@/components/DashboardCard';
 import tableStyles from '@/components/dashboard/Table.module.css';
@@ -10,7 +11,9 @@ import pageStyles from './transferlerim.module.css';
 
 // İkonlar
 const FilterIcon = () => <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" /></svg>;
-const TrackingIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+// const TrackingIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>;
+// YENİ: Kamyon ikonu (ISTEK 6)
+const TruckIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>;
 const SortAscIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6l-6 6h12l-6-6z"/></svg>;
 const SortDescIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 18l-6-6h12l-6 6z"/></svg>;
 const SortIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6l-4 4h8l-4-4zm0 12l-4-4h8l-4 4z"/></svg>;
@@ -41,14 +44,14 @@ const getTransferType = (type: TransferType) => {
         <span style={{color: 'var(--negative-color)', fontWeight: 600}}>Satış</span>;
 };
 
-// Kargo Takip Linki (Örnek)
-const getTrackingUrl = (provider: string, trackingNumber: string) => {
-    if (provider.toLowerCase().includes('yurtiçi')) {
-        return `https://www.yurticikargo.com/tr/cargo-tracking?code=${trackingNumber}`;
-    }
-    // Diğer kargo firmaları için linkler eklenebilir
-    return `https://www.google.com/search?q=${provider}+${trackingNumber}+kargo+takip`;
-};
+// ISTEK 6: Bu fonksiyon artık kullanılmıyor
+// const getTrackingUrl = (provider: string, trackingNumber: string) => {
+//     if (provider.toLowerCase().includes('yurtiçi')) {
+//         return `https://www.yurticikargo.com/tr/cargo-tracking?code=${trackingNumber}`;
+//     }
+//     // Diğer kargo firmaları için linkler eklenebilir
+//     return `https://www.google.com/search?q=${provider}+${trackingNumber}+kargo+takip`;
+// };
 
 // Tipler
 type SortField = keyof ShipmentItem | null;
@@ -160,9 +163,10 @@ const TransfersTable: React.FC<TransfersTableProps> = ({ data }) => {
           </button>
         </div>
         {showFilters && (
-          <div className={filterStyles.filterControls} style={{ gridTemplateColumns: '1.5fr repeat(4, 1fr) auto', gap: '10px' }}>
+          // ISTEK 6: gridTemplateColumns 1.5fr repeat(4, 1fr) auto -> 1.5fr repeat(3, 1fr) auto
+          <div className={filterStyles.filterControls} style={{ gridTemplateColumns: '1.5fr repeat(3, 1fr) auto', gap: '10px' }}>
             <input
-              type="text" name="searchTerm" placeholder="Sipariş No, Kargo No, Ürün Adı..."
+              type="text" name="searchTerm" placeholder="Sipariş No, Takip No, Ürün Adı..."
               value={filters.searchTerm} onChange={handleFilterChange} className={filterStyles.filterInput}
             />
             <select name="transferType" value={filters.transferType} onChange={handleFilterChange} className={filterStyles.filterSelect}>
@@ -179,7 +183,8 @@ const TransfersTable: React.FC<TransfersTableProps> = ({ data }) => {
               <option value="cancelled">İptal Edildi</option>
             </select>
             <input type="date" name="dateStart" value={filters.dateStart} onChange={handleFilterChange} className={filterStyles.filterInput} />
-            <input type="date" name="dateEnd" value={filters.dateEnd} onChange={handleFilterChange} className={filterStyles.filterInput} />
+            {/* ISTEK 6: Bir tarih filtresi kaldırıldı (veya diğeri eklenebilir, şimdilik biri kaldı) */}
+            {/* <input type="date" name="dateEnd" value={filters.dateEnd} onChange={handleFilterChange} className={filterStyles.filterInput} /> */}
             <button onClick={clearFilters} className={filterStyles.clearButton}>Temizle</button>
           </div>
         )}
@@ -194,15 +199,16 @@ const TransfersTable: React.FC<TransfersTableProps> = ({ data }) => {
             <th onClick={() => handleSort('orderNumber')} className={tableStyles.sortableHeader}>Sipariş No {renderSortIcon('orderNumber')}</th>
             <th onClick={() => handleSort('counterparty')} className={tableStyles.sortableHeader}>Karşı Taraf {renderSortIcon('counterparty')}</th>
             <th onClick={() => handleSort('productName')} className={tableStyles.sortableHeader}>Ürün {renderSortIcon('productName')}</th>
-            <th onClick={() => handleSort('shippingProvider')} className={tableStyles.sortableHeader}>Kargo Firması {renderSortIcon('shippingProvider')}</th>
-            <th onClick={() => handleSort('trackingNumber')} className={tableStyles.sortableHeader}>Kargo No {renderSortIcon('trackingNumber')}</th>
+            {/* ISTEK 6: Kargo Firması kaldırıldı */}
+            {/* <th onClick={() => handleSort('shippingProvider')} className={tableStyles.sortableHeader}>Kargo Firması {renderSortIcon('shippingProvider')}</th> */}
+            <th onClick={() => handleSort('trackingNumber')} className={tableStyles.sortableHeader}>Takip No {renderSortIcon('trackingNumber')}</th>
             <th onClick={() => handleSort('status')} className={tableStyles.sortableHeader}>Durum {renderSortIcon('status')}</th>
-            <th>Takip</th>
+            <th>Detay</th>
           </tr>
         </thead>
         <tbody>
           {paginatedData.length === 0 && (
-            <tr><td colSpan={9} style={{ textAlign: 'center', padding: '20px' }}>Filtrelere uygun transfer bulunamadı.</td></tr>
+            <tr><td colSpan={8} style={{ textAlign: 'center', padding: '20px' }}>Filtrelere uygun transfer bulunamadı.</td></tr>
           )}
           {paginatedData.map(item => (
             <tr key={item.id}>
@@ -211,19 +217,19 @@ const TransfersTable: React.FC<TransfersTableProps> = ({ data }) => {
               <td>{item.orderNumber}</td>
               <td>{item.counterparty}</td>
               <td>{item.productName}</td>
-              <td>{item.shippingProvider}</td>
+              {/* ISTEK 6: Kargo Firması kaldırıldı */}
+              {/* <td>{item.shippingProvider}</td> */}
               <td>{item.trackingNumber}</td>
               <td>{getStatusBadge(item.status)}</td>
               <td className={pageStyles.actionCell}>
-                <a 
-                  href={getTrackingUrl(item.shippingProvider, item.trackingNumber)} 
-                  target="_blank" 
-                  rel="noopener noreferrer" 
+                {/* ISTEK 6: Link ve ikon güncellendi */}
+                <Link 
+                  href={`/transferlerim/${item.id}`} // İç sayfaya yönlendir
                   className={`${pageStyles.actionButton} ${pageStyles.trackButton}`}
-                  title="Kargo Takip"
+                  title="Kargo Detayı"
                 >
-                  <TrackingIcon />
-                </a>
+                  <TruckIcon />
+                </Link>
               </td>
             </tr>
           ))}

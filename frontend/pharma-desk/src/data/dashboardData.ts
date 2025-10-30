@@ -1,4 +1,4 @@
-// data/dashboardData.ts
+// src/data/dashboardData.ts
 
 export interface SellerInfo {
   pharmacyUsername: string;
@@ -9,12 +9,12 @@ export interface ShowroomMedication {
   name: string;
   manufacturer: string;
   imageUrl: string;
-  price: number;
+  price: number; // Sadece TEK bir ana fiyat var
   expirationDate: string;
   initialStock: number;
-  currentStock: number;
+  currentStock: number; // Sadece TEK bir ana stok var
   bonus: number;
-  sellers: SellerInfo[]; // Her ilacı satan eczanelerin listesi
+  sellers: SellerInfo[]; // Satıcılar sadece isim bilgisi içeriyor
 }
 
 
@@ -33,6 +33,18 @@ export interface PharmacyProfileData {
   group?: string; // YENİ: Grubum sayfası için eklendi
   city?: string; // YENİ: Grubum sayfasında filtreleme için
   district?: string; // YENİ: Grubum sayfasında filtreleme için
+  
+  // --- GRUBUM SAYFASI İÇİN EKLENEN YENİ ALANLAR ---
+  grupYuku: number;
+  alimSayisi: number;
+  alimTutari: number;
+  sistemKazanci: number;
+  teklifSayisi: number;
+  gonderiAdet: number;
+  gonderiTutari: number;
+  grubaKazandirdigi: number;
+  kayitTarihi: string; // YYYY-MM-DD formatında filtreleme için
+  // --- YENİ ALANLAR SONU ---
 }
 
 // GÜNCELLENDİ: ShipmentItem arayüzü Transferlerim sayfası için genişletildi
@@ -84,6 +96,8 @@ export interface Message {
   lastMessage: string;
   avatar: string | null;
   read: boolean;
+  // YENİ: ChatWindow'un PharmacyProfileData ile uyumlu olması için eklendi
+  idFromProfile?: string; // Eczane username'i
 }
 
 export interface PriceData {
@@ -128,7 +142,19 @@ export const pharmacyData: PharmacyProfileData = {
     licenseNumber: "12345/06",
     phone: "0312 123 45 67",
     username: "yildiz-eczanesi",
-    group: "Ankara Grubu" // YENİ
+    group: "Ankara Grubu", // YENİ
+    
+    // --- YENİ ALANLAR EKLENDİ ---
+    grupYuku: 1500.50,
+    alimSayisi: 120,
+    alimTutari: 45000.00,
+    sistemKazanci: 2500.00,
+    teklifSayisi: 45,
+    gonderiAdet: 110,
+    gonderiTutari: 42000.00,
+    grubaKazandirdigi: 1800.00,
+    kayitTarihi: '2023-10-01'
+    // --- YENİ ALANLAR SONU ---
 };
 
 export const offersData: Offer[] = [
@@ -292,7 +318,7 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
     {
         pharmacyName: "Güneş Eczanesi",
         pharmacistInCharge: "Ahmet Çelik",
-        balance: 0, // Başkasının bakiyesi görünmez
+        balance: -500.75, // Eksi bakiye
         logoUrl: null,
         coverImageUrl: '/cover-photo.jpg',
         about: "Kadıköy'ün en köklü eczanelerinden biriyiz.",
@@ -303,12 +329,24 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         licenseNumber: "54321/34",
         phone: "0216 123 45 67",
         username: "gunes-eczanesi",
-        group: "İstanbul Grubu" // YENİ
+        group: "İstanbul Grubu", // YENİ
+        
+        // --- YENİ ALANLAR EKLENDİ ---
+        grupYuku: -500.75,
+        alimSayisi: 80,
+        alimTutari: 32000.00,
+        sistemKazanci: 1800.00,
+        teklifSayisi: 20,
+        gonderiAdet: 75,
+        gonderiTutari: 30000.00,
+        grubaKazandirdigi: -300.00, // Eksi
+        kayitTarihi: '2024-03-15'
+        // --- YENİ ALANLAR SONU ---
     },
     {
         pharmacyName: "Meltem Eczanesi",
         pharmacistInCharge: "Fatma Aydın",
-        balance: 0,
+        balance: 1250.00,
         logoUrl: null,
         coverImageUrl: '/cover-photo.jpg',
         about: "Sağlığınız bizim için değerli.",
@@ -319,7 +357,19 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         licenseNumber: "98765/06",
         phone: "0312 987 65 43",
         username: "meltem-eczanesi",
-        group: "Ankara Grubu" // YENİ
+        group: "Ankara Grubu", // YENİ
+
+        // --- YENİ ALANLAR EKLENDİ ---
+        grupYuku: 1250.00,
+        alimSayisi: 150,
+        alimTutari: 55000.00,
+        sistemKazanci: 3100.00,
+        teklifSayisi: 60,
+        gonderiAdet: 140,
+        gonderiTutari: 51000.00,
+        grubaKazandirdigi: 2200.00,
+        kayitTarihi: '2023-11-20'
+        // --- YENİ ALANLAR SONU ---
     },
     {
         pharmacyName: "Defne Eczanesi",
@@ -336,7 +386,19 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         licenseNumber: "78912/06",
         phone: "0312 789 12 34",
         username: "defne-eczanesi",
-        group: "Ankara Grubu" // YENİ
+        group: "Ankara Grubu", // YENİ
+
+        // --- YENİ ALANLAR EKLENDİ ---
+        grupYuku: 0.00,
+        alimSayisi: 50,
+        alimTutari: 15000.00,
+        sistemKazanci: 900.00,
+        teklifSayisi: 15,
+        gonderiAdet: 45,
+        gonderiTutari: 14000.00,
+        grubaKazandirdigi: 500.00,
+        kayitTarihi: '2024-01-10'
+        // --- YENİ ALANLAR SONU ---
     }
 ];
 
