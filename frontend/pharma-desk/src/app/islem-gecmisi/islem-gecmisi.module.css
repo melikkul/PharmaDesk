@@ -1,0 +1,53 @@
+/* src/app/islem-gecmisi/islem-gecmisi.module.css */
+
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+}
+
+.pageTitle {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+}
+
+/* Eylem Butonları (Detay Görüntüle / Fatura İndir) */
+.actionCell {
+    display: flex;
+    gap: 8px;
+}
+
+.actionButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: color 0.2s, opacity 0.2s;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.actionButton:hover:not(:disabled) {
+    color: var(--text-primary);
+}
+.actionButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.viewButton:hover:not(:disabled) {
+    color: var(--active-link-bg);
+}
+
+.downloadButton:hover:not(:disabled) {
+    color: var(--sidebar-bg);
+}

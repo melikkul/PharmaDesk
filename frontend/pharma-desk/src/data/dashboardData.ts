@@ -1,13 +1,5 @@
 // data/dashboardData.ts
 
-export interface MedicationItem {
-  id: number;
-  productName: string;
-  stock: string;
-  price: number;
-  expirationDate: string;
-}
-
 export interface SellerInfo {
   pharmacyUsername: string;
   pharmacyName: string;
@@ -67,7 +59,7 @@ export interface ShipmentItem {
 export interface Notification {
   id: number;
   read: boolean;
-  type: string;
+  type: NotificationType;
   title: string;
   message: string;
 }
@@ -99,6 +91,7 @@ export interface MedicationItem {
   productName: string;
   barcode?: string; // Barkod alanı eklendi (opsiyonel)
   stock: string; // "Stok + MF" formatı korunuyor
+  costPrice?: number; // Maliyet fiyatı (opsiyonel)
   price: number;
   expirationDate: string; // MM/YYYY formatı korunuyor
   status: OfferStatus; // Durum alanı eklendi
@@ -149,10 +142,12 @@ export const shipmentsData: ShipmentItem[] = [
     { id: 4, orderNumber: '201-12345678', productName: 'Dolorex', trackingNumber: '5862734531' },
 ];
 
+export type NotificationType = 'offer' | 'shipment' | 'balance' | 'message';
+
 export const initialNotifications: Notification[] = [
-    { id: 1, read: false, type: 'offer', title: 'Yeni Teklif', message: 'Dolorex için yeni bir teklif aldınız.' },
-    { id: 2, read: true, type: 'shipment', title: 'Sipariş Kargolandı', message: '123-12312321 numaralı siparişiniz kargoya verildi.' },
-    { id: 3, read: false, type: 'balance', title: 'Bakiye Yüklendi', message: 'Hesabınıza 500.00 TL yüklendi.' }
+    { id: 1, read: false, type: 'offer', title: 'Yeni Teklif', message: 'Dolorex için yeni bir teklif aldınız. Detaylar için tıklayın.' },
+    { id: 2, read: true, type: 'shipment', title: 'Sipariş Kargolandı', message: '123-12312321 numaralı siparişiniz kargoya verildi. Kargo takip no: XYZ123' },
+    { id: 3, read: false, type: 'balance', title: 'Bakiye Yüklendi', message: 'Hesabınıza 500.00 TL yüklendi. Yeni bakiye: 15,500.00 TL' }
 ];
 
 export const initialMessages: Message[] = [
@@ -167,35 +162,50 @@ export const userMedicationsData: MedicationItem[] = [
         productName: 'Apranax Forte',
         stock: '50 + 5',
         price: 52.50,
+        barcode: '8699514090202',
         expirationDate: '12/2026',
+        status: 'active',
+        dateAdded: '2024-05-01',
     },
     {
         id: 2,
         productName: 'Parol 500mg',
         stock: '200 + 20',
         price: 25.00,
+        barcode: '8699525010018',
         expirationDate: '08/2027',
+        status: 'active',
+        dateAdded: '2024-05-10',
     },
     {
         id: 3,
         productName: 'Majezik 100mg',
         stock: '75 + 8',
         price: 48.75,
+        barcode: '8699540091215',
         expirationDate: '11/2025',
+        status: 'paused',
+        dateAdded: '2024-04-15',
     },
     {
         id: 4,
         productName: 'Dolorex',
         stock: '100 + 12',
         price: 45.00,
+        barcode: '8699514010019',
         expirationDate: '01/2028',
+        status: 'active',
+        dateAdded: '2024-03-20',
     },
     {
         id: 6,
         productName: 'Aspirin 100mg',
         stock: '300 + 50',
         price: 15.00,
+        barcode: '8699546010017',
         expirationDate: '09/2027',
+        status: 'out_of_stock',
+        dateAdded: '2024-02-10',
     },
 ];
 
@@ -327,6 +337,86 @@ export const financialSummaryData: PriceData[] = [
     { day: 'Mayıs', price: 17000 },
     { day: 'Haziran', price: 21000 },
     { day: 'Temmuz', price: 19000 },
+];
+
+export type TransactionStatus = 'Tamamlandı' | 'İşlemde' | 'İptal Edildi';
+export type TransactionType = 'Alış' | 'Satış' | 'Bakiye Yükleme' | 'İade';
+
+export interface TransactionHistoryItem {
+  id: string; // Sipariş/İşlem ID'si
+  date: string; // YYYY-MM-DD formatı
+  type: TransactionType;
+  productName?: string; // Bakiye yüklemede bu boş olabilir
+  counterparty?: string; // Satışta 'Alıcı: ...', Alışta 'Satıcı: ...'
+  amount: number; // Pozitif (Satış, Bakiye), Negatif (Alış, İade)
+  status: TransactionStatus;
+}
+
+// YENİ: Örnek İşlem Geçmişi Verisi
+export const transactionHistoryData: TransactionHistoryItem[] = [
+  {
+    id: 'S-10589',
+    date: '2025-10-28',
+    type: 'Satış',
+    productName: 'Parol 500mg',
+    counterparty: 'Alıcı: Güneş Eczanesi',
+    amount: 510.00,
+    status: 'Tamamlandı'
+  },
+  {
+    id: 'A-77412',
+    date: '2025-10-27',
+    type: 'Alış',
+    productName: 'Dolorex',
+    counterparty: 'Satıcı: Meltem Eczanesi',
+    amount: -241.15,
+    status: 'Tamamlandı'
+  },
+  {
+    id: 'BKY-0012',
+    date: '2025-10-26',
+    type: 'Bakiye Yükleme',
+    productName: undefined,
+    counterparty: 'Banka Transferi',
+    amount: 5000.00,
+    status: 'Tamamlandı'
+  },
+  {
+    id: 'S-10588',
+    date: '2025-10-25',
+    type: 'Satış',
+    productName: 'Apranax Forte',
+    counterparty: 'Alıcı: Meltem Eczanesi',
+    amount: 263.75,
+    status: 'İşlemde'
+  },
+  {
+    id: 'S-10587',
+    date: '2025-10-24',
+    type: 'Satış',
+    productName: 'Majezik 100mg',
+    counterparty: 'Alıcı: Güneş Eczanesi',
+    amount: 390.00,
+    status: 'İptal Edildi'
+  },
+   {
+    id: 'A-77411',
+    date: '2025-10-23',
+    type: 'Alış',
+    productName: 'Benical Cold',
+    counterparty: 'Satıcı: Güneş Eczanesi',
+    amount: -652.00,
+    status: 'Tamamlandı'
+  },
+   {
+    id: 'IADE-001',
+    date: '2025-10-22',
+    type: 'İade',
+    productName: 'Dolorex',
+    counterparty: 'Satıcı: Meltem Eczanesi',
+    amount: 241.15,
+    status: 'Tamamlandı'
+  },
 ];
 
 export { pharmacyData, offersData, balanceHistoryData, transfersData, shipmentsData, initialNotifications, initialMessages, ilaclarShowroomData, otherPharmaciesData, priceHistoryData, warehouseOffersData };

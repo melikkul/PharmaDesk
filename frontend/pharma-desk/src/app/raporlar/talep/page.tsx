@@ -49,7 +49,12 @@ export default function TalepRaporuPage() {
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showCartPanel, setShowCartPanel] = useState(false);
 
-  const handleLogout = () => { if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) router.push('/anasayfa'); };
+  const handleLogout = () => { 
+    if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
+      // TODO: Gerçek bir uygulamada burada session/token temizleme işlemi yapılmalı
+      router.push('/'); 
+    }
+  };
   const handleNotificationClick = (notification: Notification) => { setSelectedNotification(notification); setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n)); setShowNotificationsPanel(false); };
   const markAllNotificationsAsRead = (e: React.MouseEvent) => { e.preventDefault(); setNotifications(prev => prev.map(n => ({ ...n, read: true }))); };
   const handleMessageClick = (message: Message) => { setSelectedChat(message); setMessages(prev => prev.map(m => m.id === message.id ? { ...m, read: true } : m)); setShowMessagesPanel(false); };
@@ -69,8 +74,8 @@ export default function TalepRaporuPage() {
         onMessageClick={toggleMessagesPanel}
         onNotificationClick={toggleNotificationsPanel}
         onCartClick={toggleCartPanel}
-        unreadNotificationCount={unreadNotificationCount}
-        unreadMessageCount={unreadMessageCount}
+        unreadNotificationCount={{ count: unreadNotificationCount }}
+        unreadMessageCount={{ count: unreadMessageCount }}
         onLogout={handleLogout}
       />
 

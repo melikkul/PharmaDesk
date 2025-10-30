@@ -1,17 +1,16 @@
-// src/app/tekliflerim/page.tsx
+// src/app/islem-gecmisi/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 // Alias kullanıldı
 import '../dashboard/dashboard.css';
-import styles from './tekliflerim.module.css';
+import styles from './islem-gecmisi.module.css'; // Yeni CSS modülü
 
 // ANA BİLEŞENLER (Alias kullanıldı)
 import Sidebar from '@/components/Sidebar';
 import Header from '@/components/Header';
-import InventoryTable from './InventoryTable'; // Bu aynı dizinde olduğu için relative kalabilir
+import HistoryTable from './HistoryTable'; // Bu aynı dizinde olduğu için relative kalabilir
 
 // BİLDİRİM & MESAJ BİLEŞENLERİ (Alias kullanıldı)
 import SlidePanel from '@/components/ui/SlidePanel';
@@ -24,11 +23,10 @@ import CartPanel from '@/components/cart/CartPanel';
 // VERİLER (Alias kullanıldı)
 import {
   pharmacyData,
-  userMedicationsData as initialUserMedications, // Başlangıç verisi için yeniden adlandırıldı
+  transactionHistoryData as initialTransactionHistory, // Yeni veri
   initialNotifications,
   initialMessages,
-  MedicationItem, // Tip import edildi
-  OfferStatus // Tip import edildi
+  TransactionHistoryItem // Yeni Tip
 } from '@/data/dashboardData';
 
 // Tipler
@@ -36,14 +34,12 @@ type Notification = typeof initialNotifications[0];
 type Message = typeof initialMessages[0];
 type SelectedNotification = Notification & { detail?: string };
 
-// İkonlar
-const AddIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 
-export default function TekliflerimPage() {
+export default function IslemGecmisiPage() {
   const router = useRouter();
 
-  // --- Envanter State Yönetimi ---
-  const [inventory, setInventory] = useState<MedicationItem[]>([]);
+  // --- Geçmiş State Yönetimi ---
+  const [history, setHistory] = useState<TransactionHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true); // Yükleme durumu
 
   // --- Bildirim/Mesaj/Sepet State Yönetimi ---
@@ -57,47 +53,17 @@ export default function TekliflerimPage() {
 
   // --- Veri Yükleme (Simülasyon) ---
   useEffect(() => {
-    // Normalde burada API'den veri çekilir
-    console.log("Teklifler yükleniyor...");
+    console.log("İşlem geçmişi yükleniyor...");
     setTimeout(() => {
-        setInventory(initialUserMedications);
+        setHistory(initialTransactionHistory);
         setIsLoading(false);
-        console.log("Teklifler yüklendi.");
-    }, 500); // 0.5 saniye gecikme ekle
+        console.log("İşlem geçmişi yüklendi.");
+    }, 500);
   }, []);
 
-  // --- API Çağrı Simülasyonları ---
-  const handleDeleteItems = async (ids: number[]) => {
-      // API'ye silme isteği gönder
-      console.log(`API Çağrısı: ${ids.join(', ')} ID'li teklifler siliniyor...`);
-      // Simülasyon için 0.5 saniye bekle
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setInventory(prev => prev.filter(item => !ids.includes(item.id)));
-      console.log(`${ids.length} teklif silindi.`);
-      // Gerçek uygulamada hata yönetimi de olmalı
-  };
-
-  const handleUpdateStatus = async (ids: number[], status: OfferStatus) => {
-      // API'ye durum güncelleme isteği gönder
-      console.log(`API Çağrısı: ${ids.join(', ')} ID'li tekliflerin durumu "${status}" olarak güncelleniyor...`);
-      // Simülasyon için 0.5 saniye bekle
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setInventory(prev =>
-          prev.map(item =>
-              ids.includes(item.id) ? { ...item, status: status } : item
-          )
-      );
-      console.log(`${ids.length} teklifin durumu güncellendi.`);
-       // Gerçek uygulamada hata yönetimi de olmalı
-  };
 
   // --- Diğer Handler Fonksiyonları (Aynı kalıyor) ---
-  const handleLogout = () => { 
-    if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
-      // TODO: Gerçek bir uygulamada burada session/token temizleme işlemi yapılmalı
-      router.push('/'); 
-    }
-  };
+  const handleLogout = () => { if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) router.push('/anasayfa'); };
   const handleNotificationClick = (notification: Notification) => { setSelectedNotification(notification); setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n)); setShowNotificationsPanel(false); };
   const markAllNotificationsAsRead = (e: React.MouseEvent) => { e.preventDefault(); setNotifications(prev => prev.map(n => ({ ...n, read: true }))); };
   const handleMessageClick = (message: Message) => { setSelectedChat(message); setMessages(prev => prev.map(m => m.id === message.id ? { ...m, read: true } : m)); setShowMessagesPanel(false); };
@@ -118,29 +84,22 @@ export default function TekliflerimPage() {
         onMessageClick={toggleMessagesPanel}
         onNotificationClick={toggleNotificationsPanel}
         onCartClick={toggleCartPanel}
-        unreadNotificationCount={{ count: unreadNotificationCount }}
-        unreadMessageCount={{ count: unreadMessageCount }}
+        unreadNotificationCount={unreadNotificationCount}
+        unreadMessageCount={unreadMessageCount}
         onLogout={handleLogout}
       />
 
       <main className="main-content">
         <div className={styles.pageContainer}>
           <div className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Tekliflerim / Envanter</h1>
-            <Link href="/tekliflerim/yeni" className={styles.primaryButton}>
-              <AddIcon />
-              <span>Yeni Teklif Ekle</span>
-            </Link>
+            <h1 className={styles.pageTitle}>İşlem Geçmişi</h1>
+            {/* Bu sayfada 'Yeni Ekle' butonu yok */}
           </div>
 
           {isLoading ? (
-             <div style={{ textAlign: 'center', padding: '50px' }}>Teklifler yükleniyor...</div>
+             <div style={{ textAlign: 'center', padding: '50px' }}>İşlem geçmişi yükleniyor...</div>
           ) : (
-            <InventoryTable
-                data={inventory}
-                onDeleteItems={handleDeleteItems}
-                onUpdateStatus={handleUpdateStatus}
-            />
+            <HistoryTable data={history} />
           )}
         </div>
       </main>
