@@ -7,8 +7,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js",
-    "migrate": "node ../db/migrations/000_init_schema.js",
-    "seed": "node ../db/seeds/005_seed_minimal.js",
+    "migrate": "node db/migrations/000_init_schema.js",
+    "seed": "node db/seeds/005_seed_minimal.js",
     "db:ping": "node -e \"import('dotenv/config'); import('./config/db.js').then(m=>m.ping().then(x=>console.log(x)).catch(e=>console.error(e)))\""
   },
   "dependencies": {

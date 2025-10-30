@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { pool } from "../config/db.js";
+import { pool, query } from '../../config/db.js';
 
 const sql = `
 CREATE TABLE IF NOT EXISTS drugs (
