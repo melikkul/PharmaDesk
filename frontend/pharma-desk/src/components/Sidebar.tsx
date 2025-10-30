@@ -11,7 +11,7 @@ const Sidebar = () => (
       <ul>
         <li><a href="/ilaclar">İLAÇLAR</a></li>
         <li><a href="/tekliflerim">TEKLİFLERİM</a></li>
-        <li><a href="#">RAPORLAR</a></li>
+        <li><a href="/raporlar">RAPORLAR</a></li>
         <li><a href="#">İŞLEM GEÇMİŞİ</a></li>
         <li><a href="#">TRANSFERLERİM</a></li>
         <li><a href="#">GRUBUM</a></li>

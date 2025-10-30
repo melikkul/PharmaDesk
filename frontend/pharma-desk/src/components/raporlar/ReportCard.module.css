@@ -1,0 +1,59 @@
+/* src/components/raporlar/ReportCard.module.css */
+.reportCard {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    text-decoration: none;
+    color: var(--text-primary);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.reportCard:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.cardIcon {
+    flex-shrink: 0;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #F4F7FC;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--active-link-bg);
+}
+
+.cardContent {
+    flex-grow: 1;
+}
+
+.cardContent h3 {
+    margin: 0 0 5px 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.cardContent p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.cardArrow {
+    font-size: 24px;
+    font-weight: 300;
+    color: var(--text-secondary);
+    transition: transform 0.2s;
+}
+
+.reportCard:hover .cardArrow {
+    color: var(--active-link-bg);
+    transform: translateX(5px);
+}

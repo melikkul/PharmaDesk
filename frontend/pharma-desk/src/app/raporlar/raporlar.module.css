@@ -1,0 +1,39 @@
+/* src/app/raporlar/raporlar.module.css */
+
+.pageContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.pageHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    /* Raporlar için başlığı ayarlar gibi kartın içine alabiliriz */
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.pageTitle {
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.reportGrid {
+    display: grid;
+    /* Sütun sayısını 2'ye sabitleyelim */
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+}
+
+/* Küçük ekranlar için (örn: 1400px altı) */
+@media (max-width: 1400px) {
+    .reportGrid {
+        grid-template-columns: 1fr; /* Kartları alt alta sırala */
+    }
+}

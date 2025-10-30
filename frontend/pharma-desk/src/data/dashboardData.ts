@@ -259,5 +259,75 @@ export const warehouseOffersData: WarehouseOffer[] = [
     { id: 8, warehouseName: 'Novartis Depo', price: 46.75, stockInfo: 'Sınırlı Stok' },
 ];
 
+// Miad Raporu için
+export interface MiadReportItem extends MedicationItem {
+  daysRemaining: number;
+  totalValue: number;
+  costValue: number; // Maliyet eklendi
+}
+
+export const miadReportData: MiadReportItem[] = [
+  { ...userMedicationsData[2], daysRemaining: 85, totalValue: 3656.25, costValue: 3000 }, // Majezik
+  { ...userMedicationsData[0], daysRemaining: 420, totalValue: 2625, costValue: 2000 }, // Apranax
+  { ...userMedicationsData[1], daysRemaining: 1020, totalValue: 5000, costValue: 4000 }, // Parol
+];
+
+// Envanter Raporu için
+export interface EnvanterReportItem extends MedicationItem {
+  costPrice: number; // Maliyet fiyatı
+  totalCostValue: number;
+  totalSalesValue: number;
+  category: string; // Kategori
+}
+
+export const envanterReportData: EnvanterReportItem[] = [
+  { ...userMedicationsData[0], costPrice: 40.00, totalCostValue: 2000.00, totalSalesValue: 2625.00, category: 'Ağrı Kesici' },
+  { ...userMedicationsData[1], costPrice: 20.00, totalCostValue: 4000.00, totalSalesValue: 5000.00, category: 'Ateş Düşürücü' },
+  { ...userMedicationsData[2], costPrice: 40.00, totalCostValue: 3000.00, totalSalesValue: 3656.25, category: 'Ağrı Kesici' },
+  { ...userMedicationsData[3], costPrice: 35.00, totalCostValue: 3500.00, totalSalesValue: 4500.00, category: 'Ağrı Kesici' },
+  { ...userMedicationsData[4], costPrice: 10.00, totalCostValue: 3000.00, totalSalesValue: 4500.00, category: 'Vitamin' },
+];
+
+// Performans Raporu için
+export interface PerformanceReportItem extends MedicationItem {
+  views: number;
+  salesCount: number;
+  conversionRate: number; // (salesCount / views) * 100
+}
+
+export const performanceReportData: PerformanceReportItem[] = [
+  { ...userMedicationsData[1], views: 1500, salesCount: 75, conversionRate: 5.0 }, // Parol
+  { ...userMedicationsData[0], views: 800, salesCount: 50, conversionRate: 6.25 }, // Apranax
+  { ...userMedicationsData[3], views: 1200, salesCount: 40, conversionRate: 3.33 }, // Dolorex
+  { ...userMedicationsData[2], views: 300, salesCount: 5, conversionRate: 1.67 }, // Majezik
+];
+
+// Piyasa Talep Raporu için
+export interface DemandReportItem {
+  id: number;
+  searchTerm: string;
+  searchCount: number;
+  inventoryStatus: 'Stokta Var' | 'Stokta Yok';
+}
+
+export const demandReportData: DemandReportItem[] = [
+  { id: 1, searchTerm: 'Buscopan Plus', searchCount: 120, inventoryStatus: 'Stokta Yok' },
+  { id: 2, searchTerm: 'Parol', searchCount: 95, inventoryStatus: 'Stokta Var' },
+  { id: 3, searchTerm: 'Augmentin 1000mg', searchCount: 88, inventoryStatus: 'Stokta Yok' },
+  { id: 4, searchTerm: 'Benexol B12', searchCount: 70, inventoryStatus: 'Stokta Yok' },
+  { id: 5, searchTerm: 'Dolorex', searchCount: 50, inventoryStatus: 'Stokta Var' },
+];
+
+// Finansal Özet Grafiği için
+export const financialSummaryData: PriceData[] = [
+    { day: 'Ocak', price: 12000 },
+    { day: 'Şubat', price: 15000 },
+    { day: 'Mart', price: 13500 },
+    { day: 'Nisan', price: 18000 },
+    { day: 'Mayıs', price: 17000 },
+    { day: 'Haziran', price: 21000 },
+    { day: 'Temmuz', price: 19000 },
+];
+
 export { pharmacyData, offersData, balanceHistoryData, transfersData, shipmentsData, initialNotifications, initialMessages, ilaclarShowroomData, otherPharmaciesData, priceHistoryData, warehouseOffersData };
 export type { SellerInfo, ShowroomMedication, PharmacyProfileData, Offer, BalanceItem, TransferItem, ShipmentItem, Notification, Message, PriceData, WarehouseOffer };
