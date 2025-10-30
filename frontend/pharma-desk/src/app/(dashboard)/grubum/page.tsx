@@ -135,7 +135,8 @@ export default function GrubumPage() {
             >
               <option value="all">Tüm Durumlar</option>
               <option value="positive">Artıda Olanlar</option>
-              <option value_grupYuku="negative">Ekside Olanlar</option>
+              {/* === DÜZELTME BURADA: value_grupYuku -> value === */}
+              <option value="negative">Ekside Olanlar</option>
             </select>
              <input
               type="date"

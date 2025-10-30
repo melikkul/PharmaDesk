@@ -21,9 +21,9 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const [formData, setFormData] = useState({
     productName: medication?.productName || '',
     barcode: medication?.barcode || '',
-    stock: medication?.stock.split(' + ')[0] || '0',
-    bonus: medication?.stock.split(' + ')[1] || '0',
-    price: medication?.price ? String(medication.price).replace('.', ',') : '0',
+    stock: medication?.stock.split(' + ')[0] || '',
+    bonus: medication?.stock.split(' + ')[1] || '',
+    price: medication?.price ? String(medication.price).replace('.', ',') : '',
   });
 
   // --- YENİ: SKT için ayrı state (YYYY-MM formatında) ---
@@ -55,7 +55,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const {
     ref: sktRef,
     setValue: setMaskedSktValue,
-    maskRef,
+    maskRef, // maskRef'i buradan alıyoruz
   } = useIMask({
     mask: 'MM / YYYY',
     blocks: {
@@ -75,11 +75,9 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
         placeholderChar: '_',
       },
     },
-    lazy: false,
+    lazy: true,
     overwrite: true,
-  },
-  {
-      onAccept: handleSktAccept, // Memoize edilmiş fonksiyon kullanılıyor
+    onAccept: handleSktAccept, // Memoize edilmiş fonksiyon kullanılıyor
   });
   // --- IMask Olayları Sonu ---
 
@@ -130,15 +128,17 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
 
-    const isMaskComplete = maskRef.current?.masked.isComplete ?? false;
-
-    if (!validSktYearMonth || !isMaskComplete) {
+    // === DÜZELTME BURADA ===
+    // 'isMaskComplete' kontrolü kaldırıldı, çünkü 'placeholderChar' nedeniyle
+    // yanıltıcı olabiliyor. 'validSktYearMonth' (onAccept'te 6 haneyi kontrol eden) yeterlidir.
+    if (!validSktYearMonth) {
       alert("Lütfen geçerli bir Son Kullanma Tarihi girin (AA / YYYY). Maskenin tam dolduğundan emin olun.");
       if (sktRef.current) {
          setTimeout(() => sktRef.current?.focus(), 0);
       }
       return;
     }
+    // =======================
 
     // SKT geçmiş tarihli mi kontrolü
     const today = new Date();
@@ -172,7 +172,8 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     };
 
     onSave(dataToSave);
-  }, [formData, validSktYearMonth, maskRef, sktRef, onSave, medication]); // Bağımlı olduğu tüm state ve prop'lar
+  }, [formData, validSktYearMonth, sktRef, onSave, medication]); // 'maskRef' bağımlılıklardan kaldırıldı
+
 
   return (
     <form onSubmit={handleSubmit}>
@@ -247,7 +248,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
               inputMode="numeric"
               min="0"
               required
-              placeholder="0"
+              placeholder="Örn: 10"
             />
           </div>
 
@@ -261,7 +262,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
               inputMode="numeric"
               min="0"
               required
-              placeholder="0"
+              placeholder="Örn: 1"
             />
           </div>
         </div>
