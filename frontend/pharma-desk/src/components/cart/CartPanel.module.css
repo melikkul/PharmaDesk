@@ -16,18 +16,15 @@
     border-top: 2px solid var(--border-color);
     background-color: #fcfcfc;
     flex-shrink: 0;
-    /* Flexbox ve Gap ile boşluk ayarı */
     display: flex;
     flex-direction: column;
-    gap: 10px; /* Butonlar ve toplam fiyat arası boşluk */
+    gap: 10px;
 }
 
 .totalPrice {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    /* GÜNCELLENDİ: margin-bottom kaldırıldı, gap ile yönetilecek */
-    /* margin-bottom: 15px; */
 }
 
 .totalPrice span {
@@ -52,8 +49,12 @@
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.2s;
-    /* YENİ: Sıralamayı belirlemek için order eklendi (isteğe bağlı) */
-    order: 2; /* Siparişi Tamamla en sonda */
+    order: 2;
+    
+    /* === DÜZELTMELER BURADA === */
+    text-align: center; /* Metni ortalamak için eklendi */
+    text-decoration: none; /* Link alt çizgisini kaldırmak için eklendi */
+    /* ========================== */
 }
 
 .checkoutButton:hover {
@@ -71,10 +72,8 @@
     border-radius: 8px;
     cursor: pointer;
     transition: background-color 0.2s, color 0.2s;
-    /* GÜNCELLENDİ: margin-top kaldırıldı, gap ile yönetilecek */
-    /* margin-top: 10px; */
-     /* YENİ: Sıralamayı belirlemek için order eklendi (isteğe bağlı) */
-    order: 1; /* Sepeti Boşalt önce */
+    order: 1; 
+    text-align: center; /* Bu da ortalansın */
 }
 
 .clearCartButton:hover {

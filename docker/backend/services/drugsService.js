@@ -23,8 +23,10 @@ export const DrugsService = {
   async create(payload) {
     const { value, error } = createSchema.validate(payload);
     if (error) throw new Error(error.message);
-    const out = await DrugsRepo.create(value);
-    return await this.get(out.id);
+    
+    // Optimizasyon: Repo artık tam nesneyi döndürüyor, 'get' çağrısına gerek yok.
+    const newItem = await DrugsRepo.create(value);
+    return new Drug(newItem);
   },
 
   async update(id, payload) {

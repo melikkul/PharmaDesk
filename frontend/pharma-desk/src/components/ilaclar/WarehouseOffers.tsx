@@ -2,7 +2,10 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 import type { WarehouseOffer } from '../../data/dashboardData';
-import styles from '../../app/ilaclar/[ilacAdi]/ilacDetay.module.css';
+// === DÜZELTME BURADA ===
+// Hatalı yol: import styles from '../../app/ilaclar/[ilacAdi]/ilacDetay.module.css';
+import styles from '@/app/(dashboard)/ilaclar/[ilacAdi]/ilacDetay.module.css'; // Yeni doğru yol
+// =======================
 
 // İkonlar (Basit SVG)
 const ArrowLeft = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>;
@@ -68,10 +71,15 @@ const WarehouseOffers: React.FC<WarehouseOffersProps> = ({ data }) => {
 
     // Bileşen yüklendiğinde ve pencere boyutu değiştiğinde kaydırma durumunu kontrol et
     useEffect(() => {
-        checkScrollState();
+        // Bileşen mount edildiğinde hemen durumu kontrol et
+        const timer = setTimeout(checkScrollState, 100); // DOM'un oturması için küçük bir gecikme
         window.addEventListener('resize', checkScrollState);
-        return () => window.removeEventListener('resize', checkScrollState);
-    }, []);
+        
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', checkScrollState);
+        };
+    }, [data]); // data değiştiğinde de kontrol et
 
     // Kaydırma olayını dinle
     const handleScroll = () => {

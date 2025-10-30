@@ -19,9 +19,10 @@ export const DrugsRepo = {
   },
 
   async create({ name, form, strength, price }) {
-    const sql = `INSERT INTO drugs(name, form, strength, price) VALUES($1,$2,$3,$4) RETURNING id`;
+    // Optimizasyon: Sadece 'id' yerine tüm yeni satırı döndür
+    const sql = `INSERT INTO drugs(name, form, strength, price) VALUES($1,$2,$3,$4) RETURNING *`;
     const r = await pool.query(sql, [name, form, strength, price]);
-    return r.rows[0];
+    return r.rows[0]; // Tam nesneyi döndür
   },
 
   async update(id, { name, form, strength, price }) {
