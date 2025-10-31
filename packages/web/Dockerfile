@@ -36,7 +36,7 @@ COPY --from=builder /app/public ./public
 
 # next.config.ts (veya .js) dosyasını kopyala
 # DİKKAT: Dosya adınız .ts ise böyle bırakın, .mjs ise 'next.config.mjs' yapın.
-COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/next.config.mjs ./
 
 EXPOSE 3000
 

@@ -3,7 +3,7 @@ services:
     image: postgres:15-alpine
     container_name: pharma_desk_db
     ports:
-      - "5432:5432"
+      - "5433:5432"
     networks:
       - pharmanet
     environment:
