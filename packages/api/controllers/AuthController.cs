@@ -1,4 +1,4 @@
-using Backend.DTOs;
+using Backend.Dtos;
 using Backend.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,21 +18,29 @@ namespace Backend.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest req)
         {
-            var token = await _authService.RegisterAsync(req);
-            if (token == null)
-                return BadRequest("Bu e-posta zaten kayıtlı.");
-
-            return Ok(new { Token = token });
+            try
+            {
+                var token = await _authService.RegisterAsync(req);
+                return Ok(new { Token = token });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
 
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest req)
         {
-            var token = await _authService.LoginAsync(req);
-            if (token == null)
-                return Unauthorized("E-posta veya şifre hatalı.");
-
-            return Ok(new { Token = token });
+            try
+            {
+                var token = await _authService.LoginAsync(req);
+                return Ok(new { Token = token });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { error = ex.Message });
+            }
         }
     }
 }

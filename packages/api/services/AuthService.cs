@@ -1,60 +1,65 @@
+using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Backend.Data;
-using Backend.DTOs;
+using Backend.Dtos;
 using Backend.Models;
 using Backend.Utils;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Services
 {
     public class AuthService
     {
-        private readonly AppDbContext _context;
-        private readonly IConfiguration _config;
-        private readonly PasswordHasher<User> _hasher = new();
+        private readonly AppDbContext _db;
+        private readonly string _jwtKey;
 
-        public AuthService(AppDbContext context, IConfiguration config)
+        public AuthService(AppDbContext db, IConfiguration cfg)
         {
-            _context = context;
-            _config = config;
+            _db = db;
+            _jwtKey = cfg["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key missing.");
+            if (_jwtKey.Length < 32)
+                throw new InvalidOperationException($"Jwt:Key too short (len={_jwtKey.Length}). Needs >= 32 bytes.");
         }
 
-        public async Task<string?> RegisterAsync(RegisterRequest req)
+        private static string Hash(string input)
         {
-            if (await _context.Users.AnyAsync(u => u.Email == req.Email))
-                return null;
+            using var sha = SHA256.Create();
+            return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(input)));
+        }
+
+        public async Task<string> RegisterAsync(RegisterRequest req)
+        {
+            var exists = await _db.Users.AnyAsync(x => x.Email == req.Email);
+            if (exists)
+                throw new InvalidOperationException("Bu e-posta zaten kayıtlı.");
 
             var user = new User
             {
                 GLN = req.GLN,
                 Email = req.Email,
-                PasswordHash = _hasher.HashPassword(null!, req.Password),
+                PasswordHash = Hash(req.Password),
                 PharmacyName = req.PharmacyName,
-                PhoneNumber = req.PhoneNumber,
-                City = req.City,
-                District = req.District,
-                Address1 = req.Address1,
-                Address2 = req.Address2,
-                PostalCode = req.PostalCode,
-                ServicePackage = req.ServicePackage
+                Role = "User",
+                CreatedAt = DateTime.UtcNow
             };
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+            _db.Users.Add(user);
+            await _db.SaveChangesAsync();
 
-            return JwtHelper.GenerateToken(user, _config["Jwt:Key"]!);
+            return JwtHelper.GenerateToken(user, _jwtKey);
         }
 
-        public async Task<string?> LoginAsync(LoginRequest req)
+        public async Task<string> LoginAsync(LoginRequest req)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == req.Email);
-            if (user == null) return null;
+            var user = await _db.Users.SingleOrDefaultAsync(x => x.Email == req.Email);
+            if (user is null)
+                throw new InvalidOperationException("Kullanıcı bulunamadı.");
 
-            var result = _hasher.VerifyHashedPassword(user, user.PasswordHash, req.Password);
-            if (result == PasswordVerificationResult.Failed)
-                return null;
+            if (!string.Equals(user.PasswordHash, Hash(req.Password), StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Geçersiz şifre.");
 
-            return JwtHelper.GenerateToken(user, _config["Jwt:Key"]!);
+            return JwtHelper.GenerateToken(user, _jwtKey);
         }
     }
 }
