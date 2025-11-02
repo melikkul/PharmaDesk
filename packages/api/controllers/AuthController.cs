@@ -42,5 +42,15 @@ namespace Backend.Controllers
                 return BadRequest(new { error = ex.Message });
             }
         }
+
+        [HttpPost("admin/login")]
+        public async Task<IActionResult> AdminLogin([FromBody] LoginRequest req)
+        {
+            var token = await _authService.LoginAsync(req, requiredRole: "Admin");
+            if (token == null)
+                return Unauthorized(new { error = "Admin yetkisi gerekli veya bilgiler hatalı." });
+
+            return Ok(new { token });
+        }
     }
 }

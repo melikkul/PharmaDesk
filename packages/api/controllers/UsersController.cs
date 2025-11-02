@@ -64,14 +64,14 @@ namespace Backend.Controllers
             var user = await _db.Users.SingleOrDefaultAsync(x => x.Id == uid);
             if (user is null) return NotFound();
 
-            user.PhoneNumber   = req.PhoneNumber ?? user.PhoneNumber;
-            user.City          = req.City ?? user.City;
-            user.District      = req.District ?? user.District;
-            user.Address1      = req.Address1 ?? user.Address1;
-            user.Address2      = req.Address2 ?? user.Address2;
-            user.PostalCode    = req.PostalCode ?? user.PostalCode;
-            user.ServicePackage= req.ServicePackage ?? user.ServicePackage;
-            user.PharmacyName  = req.PharmacyName ?? user.PharmacyName;
+            user.PhoneNumber = req.PhoneNumber ?? user.PhoneNumber;
+            user.City = req.City ?? user.City;
+            user.District = req.District ?? user.District;
+            user.Address1 = req.Address1 ?? user.Address1;
+            user.Address2 = req.Address2 ?? user.Address2;
+            user.PostalCode = req.PostalCode ?? user.PostalCode;
+            user.ServicePackage = req.ServicePackage ?? user.ServicePackage;
+            user.PharmacyName = req.PharmacyName ?? user.PharmacyName;
             user.ProfileImagePath = req.ProfileImagePath ?? user.ProfileImagePath;
 
             await _db.SaveChangesAsync();
@@ -88,19 +88,65 @@ namespace Backend.Controllers
             var user = await _db.Users.SingleOrDefaultAsync(x => x.Id == uid);
             if (user is null) return NotFound();
 
-            static string Hash(string s)
-            {
-                using var sha = System.Security.Cryptography.SHA256.Create();
-                return Convert.ToHexString(sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s)));
-            }
-
-            if (!string.Equals(user.PasswordHash, Hash(req.OldPassword), StringComparison.OrdinalIgnoreCase))
+    
+            if (!BCrypt.Net.BCrypt.Verify(req.OldPassword, user.PasswordHash))
                 return BadRequest(new { error = "Eski şifre hatalı." });
 
-            user.PasswordHash = Hash(req.NewPassword);
+    
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpPost("make-admin")]
+        [Authorize]
+        public async Task<IActionResult> MakeAdmin()
+        {
+            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            if (!env.Equals("Development", StringComparison.OrdinalIgnoreCase))
+                return Forbid();
+
+            var id = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var u = await _db.Users.FindAsync(id);
+
+            if (u == null) return NotFound();
+            u.Role = "Admin";
+            await _db.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpPost("me/avatar")]
+        [Authorize]
+        public async Task<IActionResult> UploadAvatar(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+                return BadRequest("Dosya yok.");
+
+            if (!file.ContentType.StartsWith("image/"))
+                return BadRequest("Sadece resim yükleyin.");
+
+            if (file.Length > 2 * 1024 * 1024)
+                return BadRequest("Maksimum 2MB.");
+
+            var webroot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var uploads = Path.Combine(webroot, "uploads");
+            Directory.CreateDirectory(uploads);
+
+            var ext = Path.GetExtension(file.FileName);
+            var name = $"{Guid.NewGuid()}{ext}";
+            var fullPath = Path.Combine(uploads, name);
+            await using (var fs = System.IO.File.Create(fullPath))
+                await file.CopyToAsync(fs);
+
+            var id = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier)!.Value);
+            var u = await _db.Users.FindAsync(id);
+            if (u == null) return NotFound();
+
+            u.ProfileImagePath = $"/uploads/{name}";
             await _db.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(new { url = u.ProfileImagePath });
         }
     }
 }

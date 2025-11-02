@@ -1,8 +1,11 @@
 using Backend.Data;
 using Backend.Services;
+using Backend.Models;
+using BCrypt.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.AspNetCore.Http.Features;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -73,6 +76,11 @@ builder.Services.AddCors(opt =>
               .AllowCredentials());
 });
 
+builder.Services.Configure<FormOptions>(o =>
+{
+    o.MultipartBodyLengthLimit = 5 * 1024 * 1024;
+});
+
 var app = builder.Build();
 
 // auto migrate
@@ -80,13 +88,27 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
+
+    if (!db.Users.Any(u => u.Role == "Admin"))
+    {
+        db.Users.Add(new User {
+            GLN = "9999999999999",
+            Email = "admin@pharma.com",
+            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+            PharmacyName = "PharmaDesk HQ",
+            Role = "Admin"
+        });
+        db.SaveChanges();
+    }
 }
+
 
 // middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseStaticFiles();
 }
 
 app.MapGet("/health", () => Results.Ok(new { ok = true }));

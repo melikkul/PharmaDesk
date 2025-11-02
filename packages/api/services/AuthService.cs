@@ -1,5 +1,3 @@
-using System.Security.Claims;
-using System.Security.Cryptography;
 using System.Text;
 using Backend.Data;
 using Backend.Dtos;
@@ -22,23 +20,16 @@ namespace Backend.Services
                 throw new InvalidOperationException($"Jwt:Key too short (len={_jwtKey.Length}). Needs >= 32 bytes.");
         }
 
-        private static string Hash(string input)
-        {
-            using var sha = SHA256.Create();
-            return Convert.ToHexString(sha.ComputeHash(Encoding.UTF8.GetBytes(input)));
-        }
-
-        public async Task<string> RegisterAsync(RegisterRequest req)
+        public async Task<string?> RegisterAsync(RegisterRequest req)
         {
             var exists = await _db.Users.AnyAsync(x => x.Email == req.Email);
-            if (exists)
-                throw new InvalidOperationException("Bu e-posta zaten kayıtlı.");
+            if (exists) return null;
 
             var user = new User
             {
                 GLN = req.GLN,
                 Email = req.Email,
-                PasswordHash = Hash(req.Password),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
                 PharmacyName = req.PharmacyName,
                 Role = "User",
                 CreatedAt = DateTime.UtcNow
@@ -50,14 +41,17 @@ namespace Backend.Services
             return JwtHelper.GenerateToken(user, _jwtKey);
         }
 
-        public async Task<string> LoginAsync(LoginRequest req)
+        public async Task<string?> LoginAsync(LoginRequest req, string? requiredRole = null)
         {
-            var user = await _db.Users.SingleOrDefaultAsync(x => x.Email == req.Email);
-            if (user is null)
-                throw new InvalidOperationException("Kullanıcı bulunamadı.");
+            var user = await _db.Users.SingleOrDefaultAsync(u => u.Email == req.Email);
+            if (user == null) return null;
 
-            if (!string.Equals(user.PasswordHash, Hash(req.Password), StringComparison.OrdinalIgnoreCase))
-                throw new InvalidOperationException("Geçersiz şifre.");
+            if (!BCrypt.Net.BCrypt.Verify(req.Password, user.PasswordHash))
+                return null;
+
+            if (!string.IsNullOrEmpty(requiredRole) &&
+                !string.Equals(user.Role, requiredRole, StringComparison.OrdinalIgnoreCase))
+                return null;
 
             return JwtHelper.GenerateToken(user, _jwtKey);
         }
