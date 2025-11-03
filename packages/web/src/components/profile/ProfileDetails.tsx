@@ -46,10 +46,12 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ pharmacy, isOwnProfile 
          </div>
          <div className={styles.cardBody}>
             <ul className={styles.infoList}>
+                {/* --- DEĞİŞİKLİK BURADA --- */}
                 <li>
                     <LicenseIcon />
-                    <span><strong>Ruhsat No:</strong> {pharmacy.licenseNumber}</span>
+                    <span><strong>GLN:</strong> {pharmacy.gln}</span>
                 </li>
+                {/* --- DEĞİŞİKLİK SONU --- */}
                 <li>
                     <LocationIcon />
                     <span><strong>Adres:</strong> {pharmacy.location}</span>

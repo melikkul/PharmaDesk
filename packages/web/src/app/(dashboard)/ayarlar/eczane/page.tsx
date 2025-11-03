@@ -18,10 +18,12 @@ const EczaneBilgileriPage = () => {
             <label htmlFor="pharmacyName">Eczane Adı</label>
             <input type="text" id="pharmacyName" defaultValue="Yıldız Eczanesi" />
           </div>
+          {/* --- DEĞİŞİKLİK BURADA --- */}
           <div className={styles.formGroup}>
-            <label htmlFor="licenseNo">Ruhsat Numarası</label>
-            <input type="text" id="licenseNo" defaultValue="12345/06" />
+            <label htmlFor="gln">GLN (Global Location Number)</label>
+            <input type="text" id="gln" defaultValue="8680001000016" />
           </div>
+          {/* --- DEĞİŞİKLİK SONU --- */}
            <div className={styles.formGroup}>
             <label htmlFor="taxNo">Vergi Numarası</label>
             <input type="text" id="taxNo" defaultValue="9876543210" />

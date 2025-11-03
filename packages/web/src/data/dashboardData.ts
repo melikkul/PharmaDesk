@@ -27,7 +27,7 @@ export interface PharmacyProfileData {
   about: string;
   location: string; // Adres (örn: "Örnek Mah. No: 1, Çankaya, Ankara")
   registrationDate: string;
-  licenseNumber: string;
+  gln: string; // <-- DEĞİŞİKLİK: licenseNumber -> gln
   phone: string;
   username: string; // URL için benzersiz eczane kimliği
   group?: string; // YENİ: Grubum sayfası için eklendi
@@ -148,7 +148,7 @@ export const pharmacyData: PharmacyProfileData = {
     city: "Ankara", // YENİ
     district: "Çankaya", // YENİ
     registrationDate: "Ekim 2025",
-    licenseNumber: "12345/06",
+    gln: "8680001000016", // <-- DEĞİŞİKLİK: licenseNumber -> gln
     phone: "0312 123 45 67",
     username: "yildiz-eczanesi",
     group: "Ankara Grubu", // YENİ
@@ -276,7 +276,7 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         city: "İstanbul", // YENİ
         district: "Kadıköy", // YENİ
         registrationDate: "Mart 2024",
-        licenseNumber: "54321/34",
+        gln: "8680001000023", // <-- DEĞİŞİKLİK: licenseNumber -> gln
         phone: "0216 123 45 67",
         username: "gunes-eczanesi",
         group: "İstanbul Grubu", // YENİ
@@ -304,7 +304,7 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         city: "Ankara", // YENİ
         district: "Çankaya", // YENİ
         registrationDate: "Kasım 2023",
-        licenseNumber: "98765/06",
+        gln: "8680001000030", // <-- DEĞİŞİKLİK: licenseNumber -> gln
         phone: "0312 987 65 43",
         username: "meltem-eczanesi",
         group: "Ankara Grubu", // YENİ
@@ -333,7 +333,7 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         city: "Ankara", // YENİ
         district: "Yenimahalle", // YENİ
         registrationDate: "Ocak 2024",
-        licenseNumber: "78912/06",
+        gln: "8680001000047", // <-- DEĞİŞİKLİK: licenseNumber -> gln
         phone: "0312 789 12 34",
         username: "defne-eczanesi",
         group: "Ankara Grubu", // YENİ
