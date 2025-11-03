@@ -1,0 +1,174 @@
+/* src/app/(dashboard)/envanterim/InventoryFilter.module.css */
+
+.filterContainer {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    margin-bottom: 25px;
+    border: 1px solid var(--border-color);
+}
+
+.filterHeader {
+    padding: 15px 20px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+}
+
+.filterToggleButton {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: color 0.2s;
+}
+
+.filterToggleButton:hover {
+    color: var(--text-primary);
+}
+
+.filterControls {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 100px; /* 4 sütunlu grid */
+    gap: 15px;
+    padding: 20px;
+}
+
+.filterInput,
+.filterSelect {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background-color: var(--main-bg);
+    font-size: 14px;
+}
+
+.clearButton {
+    padding: 10px 15px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--text-secondary);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.clearButton:hover {
+    background-color: var(--negative-color);
+}
+
+/* Badge Stilleri */
+.badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.badgeSuccess {
+    background-color: rgba(39, 174, 96, 0.1);
+    color: #27AE60;
+}
+
+.badgeWarning {
+    background-color: rgba(243, 156, 18, 0.1);
+    color: #F39C12;
+}
+
+.badgeDanger {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #E74C3C;
+}
+
+.badgeSecondary {
+    background-color: rgba(128, 139, 150, 0.1);
+    color: #808B96;
+}
+
+/* Toplu İşlem Stilleri */
+.batchActions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.batchActions span {
+    font-size: 14px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+.batchButton {
+    background: var(--main-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+.batchButton svg {
+    width: 14px;
+    height: 14px;
+}
+.batchButton:hover:not(:disabled) {
+    background-color: var(--sidebar-bg);
+    border-color: var(--sidebar-bg);
+    color: white;
+}
+.batchButton.batchButtonDanger:hover:not(:disabled) {
+     background-color: var(--negative-color);
+     border-color: var(--negative-color);
+     color: white;
+}
+.batchButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Sayfalama Stilleri */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    margin-top: -1px; /* Tablo borderı ile birleşsin */
+}
+.pagination button {
+    padding: 8px 15px;
+    border: 1px solid var(--border-color);
+    background-color: var(--card-bg);
+    color: var(--text-primary);
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s, color 0.2s;
+}
+.pagination button:hover:not(:disabled) {
+    background-color: var(--main-bg);
+}
+.pagination button:disabled {
+    color: var(--text-secondary);
+    background-color: var(--main-bg);
+    cursor: not-allowed;
+}
+.pagination span {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}

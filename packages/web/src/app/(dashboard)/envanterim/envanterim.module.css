@@ -1,4 +1,4 @@
-/* src/app/tekliflerim/tekliflerim.module.css */
+/* src/app/(dashboard)/envanterim/envanterim.module.css */
 
 .pageContainer {
     display: flex;
@@ -44,16 +44,11 @@
     cursor: not-allowed;
 }
 
-
-/* --- YENİ: SEKMELER (TABS) İLE İLGİLİ CSS KALDIRILDI --- */
-/* .tabContainer, .tabButton, .tabContent vb. stiller silindi */
-
-
-/* --- TABLO İÇİ EYLEM BUTONLARI (OffersTable ve FullInventoryTable kullanır) --- */
+/* --- TABLO İÇİ EYLEM BUTONLARI --- */
 
 .actionCell {
     display: flex;
-    gap: 8px; /* Butonlar arası boşluk biraz azaltıldı */
+    gap: 8px; 
 }
 
 .actionButton {
@@ -63,14 +58,13 @@
     color: var(--text-secondary);
     transition: color 0.2s, opacity 0.2s;
     padding: 4px;
-    display: flex; /* İkonu ortalamak için */
+    display: flex; 
     align-items: center;
     justify-content: center;
 }
 .actionButton:hover:not(:disabled) {
     color: var(--text-primary);
 }
-/* YENİ: Disabled durum stili */
 .actionButton:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -85,7 +79,6 @@
     color: var(--negative-color);
 }
 
-/* YENİ: Envanter tablosundaki "Teklif Ver" butonu için stil */
 .offerButton {
     padding: 5px 10px;
     font-size: 13px;

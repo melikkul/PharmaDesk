@@ -34,7 +34,7 @@
     color: var(--text-secondary);
 }
 
-/* YENİ: Düzenleme ikonu stili */
+/* Düzenleme ikonu stili */
 .editIcon {
     color: var(--text-secondary);
     transition: color 0.2s;
@@ -58,7 +58,7 @@
     margin: 0;
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 10px; /* Liste elemanları arasındaki boşluk azaltıldı */
 }
 
 .infoList li {
@@ -66,6 +66,9 @@
     align-items: center;
     gap: 15px;
     font-size: 14px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .infoList svg {
@@ -73,7 +76,59 @@
     flex-shrink: 0;
 }
 
+/* DEĞİŞİKLİK: Etiketlerin (strong) hizalanması için */
 .infoList strong {
     color: var(--text-secondary);
     font-weight: 500;
+    min-width: 45px; /* "GLN:", "Adres:", "Katılım:" etiketlerini hizalar */
+    display: inline-block; /* min-width'in çalışması için */
+}
+
+/* --- YENİ EKLENEN STİLLER --- */
+
+/* DEĞİŞİKLİK: flex-grow: 1 kaldırıldı */
+.infoList li span {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* "GLN:" ve numara arası boşluk */
+    /* flex-grow: 1; <-- Satırın sonuna kadar uzamayı sağlayan bu kural kaldırıldı */
+}
+
+/* Sadece GLN numarasını içeren tıklanabilir span */
+.copyableGln {
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    position: relative;
+    padding: 4px 8px;
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+    display: inline-flex; /* Önemli: İçeriğe göre sığdırır */
+    align-items: center;
+}
+
+/* Hover efekti sadece bu span üzerinde */
+.copyableGln:hover {
+    background-color: var(--main-bg); /* #f4f7fc */
+}
+
+/* "Kopyalandı!" yazısının stili */
+.copiedText {
+    font-weight: 600;
+    color: var(--positive-color); /* Yeşil renk */
+    padding: 4px 8px; /* copyableGln ile aynı hizada dursun */
+    display: inline-flex; /* Hizalama için */
+}
+
+/* Kopyalama ikonu (ipucu) */
+.copyIconHint {
+    color: var(--text-secondary);
+    opacity: 0; /* Normalde gizli */
+    transition: opacity 0.2s;
+    margin-left: 6px; /* Numara ile arasına boşluk */
+}
+
+/* Hover durumunda kopyalama ikonunu göster */
+.copyableGln:hover .copyIconHint {
+    opacity: 0.7;
 }

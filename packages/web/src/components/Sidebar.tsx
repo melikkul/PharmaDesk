@@ -42,6 +42,14 @@ const Sidebar = () => {
               İLAÇLAR
             </Link>
           </li>
+           <li>
+            <Link 
+              href="/envanterim" 
+              className={isActive('/envanterim') ? styles.active : ''}
+            >
+              ENVANTERİM
+            </Link>
+          </li>
           <li>
             <Link 
               href="/tekliflerim" 

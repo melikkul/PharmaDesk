@@ -37,6 +37,12 @@ services:
       - backend
     networks:
       - pharmanet
+    # --- YENİ EKLENEN BÖLÜM ---
+    # Bu değişken, Next.js'e Docker içindeyken
+    # 'backend' servisine bağlanmasını söyler.
+    environment:
+      - API_BASE_URL=http://backend:8081
+    # --- YENİ BÖLÜM SONU ---
 
   frontend-admin:  # <-- YENİ SERVİS EKLENDİ
     build: ./packages/admin # <-- YOL GÜNCELLENDİ

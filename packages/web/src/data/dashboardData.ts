@@ -202,12 +202,14 @@ export const initialMessages: Message[] = [
     { id: 3, sender: 'Destek Ekibi', lastMessage: 'Yeni kampanya detayları için tıklayın.', avatar: null, read: false }
 ];
 
+// BU, KULLANICININ TEKLİF SAYFASINDA GÖRDÜĞÜ, SATIŞA KOYDUĞU İLAÇLARDIR
 export const userMedicationsData: MedicationItem[] = [
     {
         id: 1,
         productName: 'Apranax Forte',
         stock: '50 + 5',
         price: 52.50,
+        costPrice: 40.00,
         barcode: '8699514090202',
         expirationDate: '12/2026',
         status: 'active',
@@ -218,6 +220,7 @@ export const userMedicationsData: MedicationItem[] = [
         productName: 'Parol 500mg',
         stock: '200 + 20',
         price: 25.00,
+        costPrice: 20.00,
         barcode: '8699525010018',
         expirationDate: '08/2027',
         status: 'active',
@@ -228,6 +231,7 @@ export const userMedicationsData: MedicationItem[] = [
         productName: 'Majezik 100mg',
         stock: '75 + 8',
         price: 48.75,
+        costPrice: 40.00,
         barcode: '8699540091215',
         expirationDate: '11/2025',
         status: 'paused',
@@ -238,6 +242,7 @@ export const userMedicationsData: MedicationItem[] = [
         productName: 'Dolorex',
         stock: '100 + 12',
         price: 45.00,
+        costPrice: 35.00,
         barcode: '8699514010019',
         expirationDate: '01/2028',
         status: 'active',
@@ -248,6 +253,7 @@ export const userMedicationsData: MedicationItem[] = [
         productName: 'Aspirin 100mg',
         stock: '300 + 50',
         price: 15.00,
+        costPrice: 10.00,
         barcode: '8699546010017',
         expirationDate: '09/2027',
         status: 'out_of_stock',
@@ -255,10 +261,63 @@ export const userMedicationsData: MedicationItem[] = [
     },
 ];
 
+// YENİ: BU, "ECZANEM" UYGULAMASINDAN GELEN TÜM ENVANTERİ SİMÜLE EDER
+export const fullInventoryData: MedicationItem[] = [
+    // userMedicationsData içindeki (teklif verilen) ilaçlar:
+    ...userMedicationsData,
+    
+    // Henüz teklif VERİLMEMİŞ diğer envanter ilaçları:
+    {
+        id: 7,
+        productName: 'Minoset Plus 250mg/150mg',
+        stock: '80 + 0',
+        price: 22.40, // Bu, varsayılan satış fiyatı olabilir (teklif fiyatı değil)
+        costPrice: 18.00,
+        barcode: '8699516090204',
+        expirationDate: '05/2027',
+        status: 'active', // Bu 'active' envanter durumu (teklif değil)
+        dateAdded: '2024-01-15',
+    },
+    {
+        id: 8,
+        productName: 'Benical Cold 20 Tablet',
+        stock: '40 + 4',
+        price: 65.20,
+        costPrice: 50.00,
+        barcode: '8699546090011',
+        expirationDate: '10/2025',
+        status: 'active',
+        dateAdded: '2024-01-10',
+    },
+    {
+        id: 9,
+        productName: 'Augmentin BID 1000mg',
+        stock: '25 + 0',
+        price: 105.00,
+        costPrice: 85.00,
+        barcode: '8699522090226',
+        expirationDate: '02/2026',
+        status: 'active',
+        dateAdded: '2024-03-05',
+    },
+    {
+        id: 10,
+        productName: 'Nurofen Cold & Flu',
+        stock: '60 + 10',
+        price: 70.50,
+        costPrice: 55.00,
+        barcode: '8699566090605',
+        expirationDate: '07/2027',
+        status: 'active',
+        dateAdded: '2024-04-01',
+    }
+];
+
+
 export const ilaclarShowroomData: ShowroomMedication[] = [
   { id: 1, name: 'Dolorex', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/j1umlb5.png', price: 48.23, expirationDate: '2026-12', initialStock: 60, currentStock: 60, bonus: 5, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }] },
   { id: 2, name: 'Parol', manufacturer: 'Atabay', imageUrl: 'https://i.hizliresim.com/21s3irj.png', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
-  { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/gle5dcm.png', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }, { pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/gle5dcm.png', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eçzanesi' }, { pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
   { id: 9, name: 'Minoset Plus', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/mm5sy8z.png', price: 22.40, expirationDate: '2027-05', initialStock: 40, currentStock: 0, bonus: 0, sellers: [] },
   { id: 5, name: 'Benical Cold', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/jrqzrdq.png', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
   { id: 6, name: 'Aspirin 100mg', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/tkz0vdm.png', price: 15.00, expirationDate: '2027-09', initialStock: 300, currentStock: 150, bonus: 50, sellers: [] },

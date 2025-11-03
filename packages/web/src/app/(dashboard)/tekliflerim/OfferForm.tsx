@@ -1,119 +1,113 @@
 // src/app/(dashboard)/tekliflerim/OfferForm.tsx
 'use client';
 
-// ### OPTİMİZASYON: 'useCallback' import edildi ###
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useIMask, IMask } from 'react-imask';
-// === HATA DÜZELTME: 'AnyMasked' -> 'Masked' olarak değiştirildi ===
 import type { Masked } from 'imask';
-import type { InputMaskEventListener } from 'imask/esm/controls/input';
-// =======================================================================
 import { MedicationItem } from '@/data/dashboardData';
 import SettingsCard from '@/components/settings/SettingsCard';
-// === DÜZELTME BURADA ===
-// Hatalı yol: import formStyles from '@/app/ayarlar/profil/profil.module.css';
-import formStyles from '@/app/(dashboard)/ayarlar/profil/profil.module.css'; // Yeni doğru yol
-// =======================
+import formStyles from '@/app/(dashboard)/ayarlar/profil/profil.module.css';
 
+// YENİ: Form verisi için bir tip
+type FormData = {
+  productName: string;
+  barcode: string;
+  stock: string;
+  bonus: string;
+  price: string;
+};
+
+// YENİ: Opsiyonel defaultValues prop'u eklendi
 interface OfferFormProps {
-  medication?: MedicationItem;
+  medication?: MedicationItem; // Düzenleme için
+  defaultValues?: Partial<FormData & { expirationDate: string }>; // Envanterden "Teklif Ver" için
   onSave: (formData: any) => void;
   isSaving?: boolean;
 }
 
-const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) => {
-  const [formData, setFormData] = useState({
-    productName: medication?.productName || '',
-    barcode: medication?.barcode || '',
-    stock: medication?.stock.split(' + ')[0] || '',
-    bonus: medication?.stock.split(' + ')[1] || '',
-    price: medication?.price ? String(medication.price).replace('.', ',') : '',
+const OfferForm: React.FC<OfferFormProps> = ({ medication, defaultValues, onSave, isSaving }) => {
+  
+  // GÜNCELLENDİ: useState artık 'medication' (düzenleme) veya 'defaultValues' (yeni) kullanır
+  const [formData, setFormData] = useState<FormData>({
+    productName: medication?.productName || defaultValues?.productName || '',
+    barcode: medication?.barcode || defaultValues?.barcode || '',
+    stock: (medication?.stock.split(' + ')[0] || defaultValues?.stock) || '',
+    bonus: (medication?.stock.split(' + ')[1] || defaultValues?.bonus) || '0', // Bonus varsayılan 0 olsun
+    price: (medication?.price ? String(medication.price).replace('.', ',') : defaultValues?.price) || '',
   });
 
-  // --- YENİ: SKT için ayrı state (YYYY-MM formatında) ---
+  // GÜNCELLENDİ: SKT için başlangıç değeri
   const [validSktYearMonth, setValidSktYearMonth] = useState<string | null>(() => {
-    if (medication?.expirationDate) {
-      const parts = medication.expirationDate.split('/');
+    const skt = medication?.expirationDate || defaultValues?.expirationDate;
+    if (skt) {
+      const parts = skt.split('/');
       if (parts.length === 2) {
         return `20${parts[1]}-${parts[0].padStart(2, '0')}`;
       }
     }
     return null;
   });
-  // --- SKT State Sonu ---
 
   const {
-    ref: sktRef, // Bu ref <input>'a bağlanacak
+    ref: sktRef,
     setValue: setMaskedSktValue,
-    maskRef, // Bu ref maske örneğini (instance) tutar,
+    maskRef,
   } = useIMask<HTMLInputElement>({
     mask: 'MM / YYYY',
     blocks: {
-      MM: {
-        mask: IMask.MaskedRange,
-        from: 1,
-        to: 12,
-        maxLength: 2,
-        autofix: true,
-        placeholderChar: '_',
-      },
-      YYYY: {
-        mask: IMask.MaskedRange,
-        from: new Date().getFullYear(),
-        to: new Date().getFullYear() + 20,
-        maxLength: 4,
-        placeholderChar: '_',
-      },
+      MM: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2, autofix: true, placeholderChar: '_' },
+      YYYY: { mask: IMask.MaskedRange, from: new Date().getFullYear(), to: new Date().getFullYear() + 20, maxLength: 4, placeholderChar: '_' },
     },
     lazy: true,
     overwrite: true,
   });
 
-  // === HATA DÜZELTME: 'accept' olayı sadece 'value' parametresini döndürür. 'mask' kaldırıldı. ===
   const handleSktAccept = useCallback(() => {
       const mask = maskRef.current;
       if (!mask) return;
-      const unmasked = mask.unmaskedValue; // AAYYYY formatında
+      const unmasked = mask.unmaskedValue; // AAYYYY
       if (unmasked.length === 6) {
           const month = unmasked.substring(0, 2);
           const year = unmasked.substring(2, 6);
-          setValidSktYearMonth(`${year}-${month}`); // YYYY-MM state'ini güncelle
+          setValidSktYearMonth(`${year}-${month}`); 
       } else {
-          setValidSktYearMonth(null); // Tam değilse state'i null yap
+          setValidSktYearMonth(null); 
       }
   }, [maskRef]);
-  // ===================================================================================================
 
-  // YENİ: onAccept olayını maskRef'e bağla
   useEffect(() => {
     maskRef.current?.on('accept', handleSktAccept);
+    return () => {
+      maskRef.current?.off('accept', handleSktAccept);
+    }
   }, [handleSktAccept, maskRef]);
 
   // Başlangıçta veya `medication` değiştiğinde maskeyi ayarla
   useEffect(() => {
-    if (medication?.expirationDate) {
-      const parts = medication.expirationDate.split('/');
+    const skt = medication?.expirationDate || defaultValues?.expirationDate;
+    if (skt) {
+      const parts = skt.split('/');
       if (parts.length === 2) {
-        const initialValue = `${parts[0].padStart(2, '0')}/${`20${parts[1]}`}`;
-        setMaskedSktValue(initialValue);
-        setValidSktYearMonth(`20${parts[1]}-${parts[0].padStart(2, '0')}`);
-      } else {
-          setMaskedSktValue('');
-          setValidSktYearMonth(null);
+        const initialValue = `${parts[0].padStart(2, '0')}/${defaultValues ? parts[1] : `20${parts[1]}`}`; // defaultValues YYYY formatında gelebilir
+        // YYYY-MM formatından (envanter) gelen SKT'yi düzelt
+        if(defaultValues?.expirationDate) {
+           setMaskedSktValue(defaultValues.expirationDate); 
+           const [m, y] = defaultValues.expirationDate.split('/');
+           setValidSktYearMonth(`20${y}-${m.padStart(2, '0')}`);
+        } else if (medication?.expirationDate) {
+           setMaskedSktValue(initialValue);
+           setValidSktYearMonth(`20${parts[1]}-${parts[0].padStart(2, '0')}`);
+        }
       }
-    } else {
-      setMaskedSktValue('');
-      setValidSktYearMonth(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [medication, setMaskedSktValue]);
+  }, [medication, defaultValues, setMaskedSktValue]);
 
 
   // Input Değişikliklerini Yönetme (SKT hariç)
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { id, value } = e.target;
-
-    if (id === 'expirationDate') return; // SKT'yi atla
+    if (id === 'expirationDate') return; 
 
     if (id === 'price') {
         let val = value.replace(/[^0-9,]/g, '');
@@ -121,14 +115,12 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
         if (parts.length > 2) val = `${parts[0]},${parts[1]}`;
         setFormData(prev => ({ ...prev, [id]: val }));
     } else if (id === 'stock' || id === 'bonus' || id === 'barcode') {
-        // Barkod, stok ve bonus için sadece rakamları al
         const numericValue = value.replace(/[^0-9]/g, '');
         setFormData(prev => ({ ...prev, [id]: numericValue }));
     } else {
-      // Diğer alanlar (productName)
       setFormData(prev => ({ ...prev, [id]: value }));
     }
-  }, []); // Bağımlılığı yok
+  }, []); 
 
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
@@ -136,26 +128,21 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
 
     if (!validSktYearMonth) {
       alert("Lütfen geçerli bir Son Kullanma Tarihi girin (AA / YYYY). Maskenin tam dolduğundan emin olun.");
-      // === HATA DÜZELTME: sktRef.current.focus() -> maskRef.current.el.focus() ===
       if (maskRef.current) {
          setTimeout(() => (maskRef.current?.el as unknown as HTMLElement)?.focus(), 0);
       }
-      // =======================================================================
       return;
     }
 
-    // SKT geçmiş tarihli mi kontrolü
     const today = new Date();
     const inputDate = new Date(`${validSktYearMonth}-01T00:00:00`);
     const startOfCurrentMonth = new Date(today.getFullYear(), today.getMonth(), 1);
 
     if (inputDate < startOfCurrentMonth) {
       alert("Son Kullanma Tarihi, içinde bulunulan aydan veya geçmiş bir aydan olamaz.");
-       // === HATA DÜZELTME: sktRef.current.focus() -> maskRef.current.el.focus() ===
        if (maskRef.current) {
            setTimeout(() => (maskRef.current?.el as unknown as HTMLElement)?.focus(), 0);
       }
-      // =======================================================================
       return;
     }
 
@@ -178,13 +165,13 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     };
 
     onSave(dataToSave);
-  }, [formData, validSktYearMonth, maskRef, onSave, medication]); // sktRef -> maskRef olarak değiştirildi
+  }, [formData, validSktYearMonth, maskRef, onSave, medication]);
 
 
   return (
     <form onSubmit={handleSubmit}>
       <SettingsCard
-        title={medication ? "Teklifi Düzenle" : "Yeni Teklif Ekle"}
+        title={medication ? "Teklifi Düzenle" : "Yeni Teklif Oluştur"}
         description="İlaç detaylarını, stok, fiyat ve barkod bilgilerini girin."
         footer={
           <button type="submit" className={`${formStyles.btn} ${formStyles.btnPrimary}`} disabled={isSaving}>
@@ -202,7 +189,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
               onChange={handleInputChange}
               placeholder="Örn: Parol 500mg Tablet"
               required
-              disabled={!!medication} // Düzenleme modunda ilaç adı değiştirilemez
+              disabled={!!medication || !!defaultValues?.productName} // Düzenleme veya envanterden ekleme modunda değiştirilemez
             />
           </div>
 
@@ -217,6 +204,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
               maxLength={13}
               pattern="\d*"
               inputMode='numeric'
+              disabled={!!medication || !!defaultValues?.barcode} // Düzenleme veya envanterden ekleme modunda değiştirilemez
             />
           </div>
 
