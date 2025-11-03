@@ -1,0 +1,284 @@
+/* packages/web/src/app/(dashboard)/tekliflerim/OfferForm.module.css */
+
+/* --- TAB STİLLERİ (Ayarlar Menüsü Gibi) --- */
+.tabContainer {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
+    margin-bottom: 25px;
+    background-color: #F4F7FC; /* Arka plan rengi */
+    padding: 5px;
+    border-radius: 10px;
+}
+
+.tabButton {
+    flex: 1; /* Butonlar eşit genişlesin */
+    padding: 12px 15px;
+    border: none;
+    background-color: transparent;
+    cursor: pointer;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    border-radius: 8px;
+    transition: background-color 0.2s, color 0.2s;
+    text-align: center;
+}
+
+.tabButton:hover:not(.active) {
+    background-color: #e9eef5; /* Hafif hover rengi */
+    color: var(--text-primary);
+}
+
+.tabButton.active {
+    background-color: #ffffff; /* Aktif olan beyaz */
+    color: var(--active-link-bg);
+    font-weight: 700;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+/* --- TAB STİLLERİ SONU --- */
+
+
+.formGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px; /* Gap artırıldı */
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.formGroup.fullWidth {
+    grid-column: 1 / -1;
+}
+
+.formGroup label {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+}
+
+.formGroup input,
+.formGroup textarea,
+.formGroup select {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: var(--font-family);
+    transition: border-color 0.2s, box-shadow 0.2s;
+    background-color: #fff; /* Select için eklendi */
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus,
+.formGroup select:focus {
+    outline: none;
+    border-color: var(--active-link-bg);
+    box-shadow: 0 0 0 3px rgba(26, 188, 156, 0.2);
+}
+
+.formGroup input:disabled,
+.formGroup input:read-only {
+    background-color: #f8f9fa; /* main-bg'ye yakın bir renk */
+    color: var(--text-secondary);
+    cursor: not-allowed;
+}
+
+
+/* Checkbox Stilleri */
+.checkboxWrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.checkboxWrapper input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.checkboxWrapper label {
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--text-primary);
+    cursor: pointer;
+}
+
+.subtleText {
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.infoBox {
+    background-color: #F4F7FC;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px dashed var(--border-color);
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.infoBox h4 {
+    margin: 0;
+    font-size: 16px;
+    color: var(--text-primary);
+}
+.infoBox p {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Barem Tablosu Stilleri */
+.baremTableWrapper {
+    grid-column: 1 / -1;
+    max-height: 300px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+.baremTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+.baremTable th,
+.baremTable td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 14px;
+}
+.baremTable th {
+    background-color: #F4F7FC;
+    font-weight: 600;
+    position: sticky;
+    top: 0;
+}
+.baremTable tbody tr {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.baremTable tbody tr:hover {
+    background-color: #fdfdfd;
+}
+.baremTable tbody tr.selected {
+    background-color: #e8f6f3;
+    box-shadow: inset 3px 0 0 0 var(--active-link-bg);
+}
+.baremTable .textRight {
+    text-align: right;
+}
+.baremTable .fontBold {
+    font-weight: 600;
+}
+.baremTable .profit {
+    color: var(--positive-color);
+    font-weight: 600;
+}
+
+/* Tutar Bilgisi */
+.priceSummary {
+    grid-column: 1 / -1;
+    background-color: #F4F7FC;
+    padding: 20px;
+    border-radius: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+.priceItem {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.priceItem label {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+.priceItem span {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+.priceItem span.total {
+    color: var(--active-link-bg);
+    font-size: 24px;
+}
+.priceItem span.remaining {
+    color: #F39C12;
+}
+
+/* Buton Stilleri */
+.btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.btn:hover:not(:disabled) {
+    opacity: 0.85;
+}
+.btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+.btnPrimary {
+    background-color: var(--sidebar-bg);
+    color: white;
+}
+
+
+/* --- YENİ: Autocomplete Stilleri --- */
+.autocompleteWrapper {
+    position: relative;
+    /* 'formGroup'un bir parçası olduğu için fullWidth'i devralır */
+    grid-column: 1 / -1; 
+}
+
+.autocompleteList {
+    position: absolute;
+    top: 100%; /* Input'un hemen altına */
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid var(--border-color);
+    border-top: none;
+    border-radius: 0 0 8px 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    z-index: 10;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.autocompleteItem {
+    padding: 12px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.autocompleteItem:hover {
+    background-color: #f4f7fc;
+}
+
+.autocompleteItem small {
+    color: var(--text-secondary);
+    font-size: 12px;
+    display: block; /* Alt satıra geç */
+    margin-top: 2px;
+}
+/* --- Autocomplete Stilleri Sonu --- */

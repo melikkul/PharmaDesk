@@ -136,6 +136,50 @@ export interface MedicationItem {
   dateAdded: string; // Eklenme tarihi (YYYY-MM-DD)
 }
 
+// =================================================================
+// --- YENİ EKLENEN VERİLER: DEPO BAREMLERİ ---
+// =================================================================
+
+/** Depo Barem Veri Yapısı */
+export interface WarehouseBarem {
+  id: string; // Benzersiz barem kimliği (örn: 'selcuk-d-10-1')
+  warehouseName: string; // Depo adı
+  productName: string; // İlaç adı
+  basePrice: number; // İlacın TEKİL depo fiyatı (kârlılık hesaplaması ve limit için)
+  quantity: number; // Barem için gereken minimum adet
+  bonus: number; // (MF) Mal fazlası
+  netPrice: number; // Bu baremdeki NET birim fiyat
+  profitPercentage: number; // Kârlılık yüzdesi
+}
+
+/** * İlaç adına göre (veya barkod) backend'den çekilecek
+ * depo baremlerini simüle eden mock veri.
+ */
+export const warehouseBaremsData: WarehouseBarem[] = [
+  // Dolorex için örnek baremler
+  { id: 'dolorex-1', warehouseName: 'Selçuk Ecza', productName: 'Dolorex', basePrice: 90.00, quantity: 10, bonus: 1, netPrice: 81.81, profitPercentage: 9.09 },
+  { id: 'dolorex-2', warehouseName: 'Selçuk Ecza', productName: 'Dolorex', basePrice: 90.00, quantity: 20, bonus: 4, netPrice: 75.00, profitPercentage: 16.67 },
+  { id: 'dolorex-3', warehouseName: 'Alliance', productName: 'Dolorex', basePrice: 90.00, quantity: 20, bonus: 3, netPrice: 78.26, profitPercentage: 13.04 },
+  { id: 'dolorex-4', warehouseName: 'Selçuk Ecza', productName: 'Dolorex', basePrice: 90.00, quantity: 35, bonus: 15, netPrice: 63.00, profitPercentage: 30.00 },
+  { id: 'dolorex-5', warehouseName: 'Hedef Ecza', productName: 'Dolorex', basePrice: 90.00, quantity: 66, bonus: 34, netPrice: 59.40, profitPercentage: 34.00 },
+  
+  // Parol için örnek baremler
+  { id: 'parol-1', warehouseName: 'Selçuk Ecza', productName: 'Parol 500mg', basePrice: 30.00, quantity: 50, bonus: 5, netPrice: 27.27, profitPercentage: 9.09 },
+  { id: 'parol-2', warehouseName: 'Alliance', productName: 'Parol 500mg', basePrice: 30.00, quantity: 100, bonus: 15, netPrice: 26.08, profitPercentage: 13.04 },
+  
+  // Diğer İlaçlar
+  { id: 'apranax-1', warehouseName: 'Selçuk Ecza', productName: 'Apranax Forte', basePrice: 55.00, quantity: 20, bonus: 2, netPrice: 50.00, profitPercentage: 9.09 },
+  { id: 'majezik-1', warehouseName: 'Hedef Ecza', productName: 'Majezik 100mg', basePrice: 50.00, quantity: 30, bonus: 3, netPrice: 45.45, profitPercentage: 9.09 },
+  { id: 'aspirin-1', warehouseName: 'Alliance', productName: 'Aspirin 100mg', basePrice: 18.00, quantity: 100, bonus: 10, netPrice: 16.36, profitPercentage: 9.09 },
+  { id: 'minoset-1', warehouseName: 'Selçuk Ecza', productName: 'Minoset Plus 250mg/150mg', basePrice: 25.00, quantity: 50, bonus: 5, netPrice: 22.72, profitPercentage: 9.09 },
+  { id: 'benical-1', warehouseName: 'Hedef Ecza', productName: 'Benical Cold 20 Tablet', basePrice: 70.00, quantity: 25, bonus: 2, netPrice: 64.81, profitPercentage: 7.41 },
+  { id: 'augmentin-1', warehouseName: 'Alliance', productName: 'Augmentin BID 1000mg', basePrice: 110.00, quantity: 15, bonus: 1, netPrice: 103.12, profitPercentage: 6.25 },
+  { id: 'nurofen-1', warehouseName: 'Selçuk Ecza', productName: 'Nurofen Cold & Flu', basePrice: 75.00, quantity: 30, bonus: 3, netPrice: 68.18, profitPercentage: 9.09 },
+];
+// =================================================================
+// --- YENİ VERİ SONU ---
+// =================================================================
+
 
 export const pharmacyData: PharmacyProfileData = {
     pharmacyName: "Yıldız Eczanesi",
@@ -262,6 +306,7 @@ export const userMedicationsData: MedicationItem[] = [
 ];
 
 // YENİ: BU, "ECZANEM" UYGULAMASINDAN GELEN TÜM ENVANTERİ SİMÜLE EDER
+// --- GÜNCELLEME: 'export' eklendi ---
 export const fullInventoryData: MedicationItem[] = [
     // userMedicationsData içindeki (teklif verilen) ilaçlar:
     ...userMedicationsData,
@@ -316,12 +361,22 @@ export const fullInventoryData: MedicationItem[] = [
 
 export const ilaclarShowroomData: ShowroomMedication[] = [
   { id: 1, name: 'Dolorex', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/j1umlb5.png', price: 48.23, expirationDate: '2026-12', initialStock: 60, currentStock: 60, bonus: 5, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }] },
-  { id: 2, name: 'Parol', manufacturer: 'Atabay', imageUrl: 'https://i.hizliresim.com/21s3irj.png', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 2, name: 'Parol 500mg', manufacturer: 'Atabay', imageUrl: 'https://i.hizliresim.com/21s3irj.png', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
   { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/gle5dcm.png', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eçzanesi' }, { pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
-  { id: 9, name: 'Minoset Plus', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/mm5sy8z.png', price: 22.40, expirationDate: '2027-05', initialStock: 40, currentStock: 0, bonus: 0, sellers: [] },
-  { id: 5, name: 'Benical Cold', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/jrqzrdq.png', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 9, name: 'Minoset Plus 250mg/150mg', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/mm5sy8z.png', price: 22.40, expirationDate: '2027-05', initialStock: 40, currentStock: 0, bonus: 0, sellers: [] },
+  { id: 5, name: 'Benical Cold 20 Tablet', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/jrqzrdq.png', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
   { id: 6, name: 'Aspirin 100mg', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/tkz0vdm.png', price: 15.00, expirationDate: '2027-09', initialStock: 300, currentStock: 150, bonus: 50, sellers: [] },
 ];
+
+// --- YENİ: SİSTEMDEKİ TÜM İLAÇLARIN LİSTESİ ---
+// (Ortak Alım ve Talep Aç sekmeleri için kullanılır)
+const allNames = new Set([
+    ...warehouseBaremsData.map(b => b.productName),
+    ...ilaclarShowroomData.map(i => i.name),
+    ...fullInventoryData.map(i => i.productName)
+]);
+export const allDrugNames: string[] = Array.from(allNames);
+// --- YENİ VERİ SONU ---
 
 export const otherPharmaciesData: PharmacyProfileData[] = [
     {

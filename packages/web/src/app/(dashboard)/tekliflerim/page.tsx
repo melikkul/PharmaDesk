@@ -71,7 +71,7 @@ export default function TekliflerimPage() {
         {/* Sadece 'Manuel Teklif Ekle' butonu kaldı */}
         <Link href="/tekliflerim/yeni" className={styles.primaryButton}>
           <AddIcon />
-          <span>Manuel Teklif Ekle</span>
+          <span>Teklif Ekle</span>
         </Link>
       </div>
 

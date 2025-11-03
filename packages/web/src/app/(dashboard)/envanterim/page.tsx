@@ -1,90 +1,73 @@
-// src/app/(dashboard)/envanterim/page.tsx
+// packages/web/src/app/(dashboard)/envanterim/page.tsx
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
-import '@/app/(dashboard)/dashboard/dashboard.css';
-import styles from './envanterim.module.css'; // Yeni CSS dosyası
+import React, { useState } from 'react';
+import FullInventoryTable from './FullInventoryTable';
+import { fullInventoryData } from '@/data/dashboardData';
+import styles from './envanterim.module.css';
 
-// Yeni konumundan import et
-import FullInventoryTable from './FullInventoryTable'; 
+// Toplu alarm modal'ı import edildi
+import SetBulkAlarmModal from './SetBulkAlarmModal';
 
-// VERİLER
-import {
-  userMedicationsData, // Teklifleri de almamız gerek (karşılaştırma için)
-  fullInventoryData, // Bu, Eczanem'den gelen tüm envanter
-  MedicationItem
-} from '@/data/dashboardData';
+// Toplu alarm ikonu
+const AlarmsIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+    <path d="M2 8c0-3.31 2.69-6 6-6s6 2.69 6 6c0 7-3 9-3 9H5s-3-2-3-9z"></path>
+    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+    <path d="M21 11.5v-1a6 6 0 0 0-5.45-5.96"></path>
+  </svg>
+);
 
-// İkon
-const SyncIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>;
 
 export default function EnvanterimPage() {
+  // Toplu alarm modal'ı için state
+  const [isBulkAlarmModalOpen, setIsBulkAlarmModalOpen] = useState(false);
 
-  // --- State Yönetimi ---
-  const [offers, setOffers] = useState<MedicationItem[]>([]);
-  const [inventory, setInventory] = useState<MedicationItem[]>([]);
-  
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // --- Veri Yükleme (Simülasyon) ---
-  useEffect(() => {
-    console.log("Genel envanter ve mevcut teklifler yükleniyor...");
-    setTimeout(() => {
-        setOffers(userMedicationsData); // Teklifte olanları bilmek için
-        setInventory(fullInventoryData); // Tüm envanteri yükle
-        setIsLoading(false);
-        console.log("Envanter yüklendi.");
-    }, 500);
-  }, []);
+  // Normalde burada API'den gelen tam envanter verisi olur
+  const inventoryData = fullInventoryData;
 
-  // Hangi ilaçların zaten teklif olarak eklendiğini bilmek için bir Set oluştur
-  const offerBarcodeSet = useMemo(() => {
-      return new Set(offers.map(offer => offer.barcode));
-  }, [offers]);
-
-  // Envanter Eşitleme Simülasyonu
-  const handleSyncInventory = async () => {
-      setIsLoading(true);
-      console.log("API Çağrısı: Eczanem uygulamasından envanter eşitleniyor...");
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      // Simülasyon: Yeni bir veri ekle
-      const newItem: MedicationItem = {
-        id: 99,
-        productName: "Yeni Eşitlenen İlaç",
-        barcode: '9999999999999',
-        stock: '50 + 0',
-        costPrice: 100.00,
-        price: 120.00,
-        expirationDate: '12/2028',
-        status: 'active', 
-        dateAdded: new Date().toISOString().split('T')[0],
-      };
-      setInventory(prev => [newItem, ...prev]);
-      setIsLoading(false);
-      alert("Envanter başarıyla eşitlendi!");
+  // Toplu alarmı kaydetme fonksiyonu
+  const handleSaveBulkAlarm = (minStock: number) => {
+    console.log(`TOPLU ALARM KURULDU: Varsayılan limit ${minStock} olarak ayarlandı.`);
+    
+    // Bu noktada backend'e bu varsayılan limit kaydedilir.
+    // Backend, tüm ilaçları kontrol ederken, özel alarmı olmayan
+    // ilaçlar için bu varsayılan limiti baz alır.
+    
+    alert(`Varsayılan stok alarmı ${minStock} adet olarak ayarlandı.`);
+    setIsBulkAlarmModalOpen(false); // Modalı kapat
   };
 
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Genel Envanterim</h1>
+        <h1 className={styles.pageTitle}>Envanterim</h1>
         
-        <button onClick={handleSyncInventory} className={styles.primaryButton} disabled={isLoading}>
-          <SyncIcon />
-          <span>{isLoading ? 'Yükleniyor...' : 'Eczanem ile Eşitle'}</span>
+        {/* Toplu Alarm Butonu */}
+        <button 
+          className={styles.secondaryButton} 
+          onClick={() => setIsBulkAlarmModalOpen(true)}
+        >
+          <AlarmsIcon />
+          <span>Toplu Alarm Ayarla</span>
         </button>
       </div>
 
-      <div>
-        {isLoading ? (
-          <div style={{ textAlign: 'center', padding: '50px' }}>Genel envanter yükleniyor...</div>
-        ) : (
-          <FullInventoryTable
-              data={inventory}
-              offerBarcodeSet={offerBarcodeSet}
-          />
-        )}
-      </div>
+      {/* Burada normalde filtre bileşenleri olur. 
+        <InventoryFilter /> 
+      */}
+
+      <FullInventoryTable data={inventoryData} />
+
+      {/* Toplu alarm modal'ını burada render et */}
+      {isBulkAlarmModalOpen && (
+        <SetBulkAlarmModal
+          onClose={() => setIsBulkAlarmModalOpen(false)}
+          onSave={handleSaveBulkAlarm}
+        />
+      )}
     </div>
   );
 }

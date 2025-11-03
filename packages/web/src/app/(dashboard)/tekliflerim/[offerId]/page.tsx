@@ -1,26 +1,17 @@
 // src/app/(dashboard)/tekliflerim/[offerId]/page.tsx
 'use client';
 
-// ### OPTİMİZASYON: 'useCallback' import edildi ###
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-// DÜZELTME: dashboard.css yolunu (dashboard) içine al
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from '../tekliflerim.module.css';
 
 // ANA BİLEŞENLER
-import OfferForm from '../OfferForm'; 
-
-// BİLDİRİM & MESAJ BİLEŞENLERİ (TÜMÜ SİLİNDİ)
+import OfferForm from '../OfferForm'; // Yenilenen ana form
 
 // VERİLER
-import {
-  userMedicationsData,
-  MedicationItem
-} from '@/data/dashboardData';
-
-// Tipler (TÜMÜ SİLİNDİ)
+import { userMedicationsData, MedicationItem } from '@/data/dashboardData';
 
 const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
 
@@ -30,22 +21,17 @@ export default function DuzenleTeklifPage() {
   const { offerId } = params as { offerId: string };
 
   const [medicationToEdit, setMedicationToEdit] = useState<MedicationItem | null | undefined>(undefined); 
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
       console.log(`API Çağrısı: ${offerId} ID'li teklif detayları getiriliyor...`);
+      // Simülasyon: API'den veriyi bul
       setTimeout(() => {
           const foundMedication = userMedicationsData.find(m => m.id.toString() === offerId);
           setMedicationToEdit(foundMedication || null);
       }, 300);
   }, [offerId]);
 
-  // --- Bildirim/Mesaj/Sepet State'leri SİLİNDİ ---
-  // --- Handler Fonksiyonları SİLİNDİ ---
-
-  // --- Form Kaydetme Durumu ---
-  const [isSaving, setIsSaving] = useState(false);
-
-  // ### OPTİMİZASYON: useCallback ###
   // Form Kaydetme Fonksiyonu (Simülasyon)
   const handleUpdateOffer = useCallback(async (formData: any) => {
       if (!medicationToEdit) return;
@@ -55,34 +41,27 @@ export default function DuzenleTeklifPage() {
       console.log("Teklif başarıyla güncellendi.");
       setIsSaving(false);
       router.push('/tekliflerim');
-  }, [medicationToEdit, offerId, router]); // Bağımlılıklar eklendi
+  }, [medicationToEdit, offerId, router]);
 
   return (
-    // <div className="dashboard-container"> // SİLİNDİ
-    //   <Sidebar /> // SİLİNDİ
-    //   <Header /> // SİLİNDİ
-    //   <main className="main-content"> // SİLİNDİ
-        <div className={styles.pageContainer}>
-          <div className={styles.pageHeader}>
-            <h1 className={styles.pageTitle}>Teklifi Düzenle</h1>
-            <Link href="/tekliflerim" className={styles.primaryButton} style={{backgroundColor: 'var(--text-secondary)'}}>
-              <BackIcon />
-              <span>Geri Dön</span>
-            </Link>
-          </div>
+    <div className={styles.pageContainer}>
+      <div className={styles.pageHeader}>
+        <h1 className={styles.pageTitle}>Stoktan Teklifi Düzenle</h1>
+        <Link href="/tekliflerim" className={styles.primaryButton} style={{backgroundColor: 'var(--text-secondary)'}}>
+          <BackIcon />
+          <span>Geri Dön</span>
+        </Link>
+      </div>
 
-          {medicationToEdit === undefined && <p>Teklif yükleniyor...</p>}
-          {medicationToEdit === null && <p>Düzenlenecek teklif bulunamadı.</p>}
-          {medicationToEdit && (
-            <OfferForm
-                medication={medicationToEdit}
-                onSave={handleUpdateOffer}
-                isSaving={isSaving}
-            />
-          )}
-        </div>
-    //   </main> // SİLİNDİ
-    //   {/* --- Panel ve Modal Alanı SİLİNDİ --- */}
-    // </div> // SİLİNDİ
+      {medicationToEdit === undefined && <p>Teklif yükleniyor...</p>}
+      {medicationToEdit === null && <p>Düzenlenecek teklif bulunamadı.</p>}
+      {medicationToEdit && (
+        <OfferForm
+            medication={medicationToEdit} // Düzenleme modunu tetikler
+            onSave={handleUpdateOffer}
+            isSaving={isSaving}
+        />
+      )}
+    </div>
   );
 }

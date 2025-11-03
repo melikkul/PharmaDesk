@@ -1,5 +1,4 @@
-/* src/app/tekliflerim/tekliflerim.module.css */
-
+/* packages/web/src/app/(dashboard)/tekliflerim/tekliflerim.module.css */
 .pageContainer {
     display: flex;
     flex-direction: column;
@@ -10,104 +9,35 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 15px;
+    margin-bottom: 25px; /* YENİ: Başlık ile alt içerik arasına boşluk eklendi */
 }
 
 .pageTitle {
     font-size: 28px;
     font-weight: 700;
     margin: 0;
+    color: var(--text-primary);
 }
 
 .primaryButton {
-    padding: 12px 24px;
-    border: none;
-    border-radius: 8px;
-    background-color: var(--active-link-bg);
-    color: white;
-    font-weight: 600;
-    font-size: 15px;
-    cursor: pointer;
-    text-decoration: none;
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    transition: background-color 0.2s;
-}
-
-.primaryButton:hover:not(:disabled) {
-    background-color: #16a085;
-}
-
-.primaryButton:disabled {
-    background-color: var(--text-secondary);
-    cursor: not-allowed;
-}
-
-
-/* --- YENİ: SEKMELER (TABS) İLE İLGİLİ CSS KALDIRILDI --- */
-/* .tabContainer, .tabButton, .tabContent vb. stiller silindi */
-
-
-/* --- TABLO İÇİ EYLEM BUTONLARI (OffersTable ve FullInventoryTable kullanır) --- */
-
-.actionCell {
-    display: flex;
-    gap: 8px; /* Butonlar arası boşluk biraz azaltıldı */
-}
-
-.actionButton {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--text-secondary);
-    transition: color 0.2s, opacity 0.2s;
-    padding: 4px;
-    display: flex; /* İkonu ortalamak için */
-    align-items: center;
-    justify-content: center;
-}
-.actionButton:hover:not(:disabled) {
-    color: var(--text-primary);
-}
-/* YENİ: Disabled durum stili */
-.actionButton:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-
-.editButton:hover:not(:disabled) {
-    color: var(--active-link-bg);
-}
-
-.deleteButton:hover:not(:disabled) {
-    color: var(--negative-color);
-}
-
-/* YENİ: Envanter tablosundaki "Teklif Ver" butonu için stil */
-.offerButton {
-    padding: 5px 10px;
-    font-size: 13px;
-    font-weight: 600;
-    background-color: var(--sidebar-bg);
+    background-color: var(--active-link-bg);
     color: white;
-    border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+    padding: 10px 16px;
+    border-radius: 8px;
     text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.offerButton:hover {
-    background-color: var(--active-link-bg);
+    font-weight: 600;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
 }
 
-.offerButton.isOffer {
-    background-color: var(--active-link-bg);
+.primaryButton:hover {
+    background-color: #17a086;
 }
-.offerButton.isOffer:hover {
-    background-color: #16a085;
+
+.primaryButton svg {
+    width: 16px;
+    height: 16px;
 }
