@@ -1,24 +1,6 @@
 /* --- Google Fonts'tan Montserrat Fontunu İçe Aktarma --- */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap');
 
-/* --- Genel Stiller ve Sıfırlama --- */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    /* İçe aktarılan Montserrat fontu burada kullanılıyor */
-    font-family: 'Montserrat', sans-serif;
-    background-color: #f8f9fa;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    color: #495057;
-}
-
 /* --- Ana Taşıyıcı --- */
 .container {
     display: flex;
@@ -27,42 +9,40 @@ body {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
     max-width: 1200px;
     width: 95%;
+    min-height: 80%;
     overflow: hidden;
 }
 
 /* --- Form Alanı (Sol Taraf) --- */
 .form-panel {
-    flex: 1;
-    padding: 60px 80px;
+    /* Değeri 1'den küçülttükçe form alanı daralır. 0.8 veya 0.9 gibi bir değerle başlayabilirsiniz. */
+    flex: 0.5; 
+    justify-content: center;
+    padding: 40px 60px;
     display: flex;
     flex-direction: column;
 }
 
-.form-panel h1 {
+.title {
     font-size: 28px;
     font-weight: 600;
     margin-bottom: 40px;
     color: #343a40;
 }
 
-form {
+.form {
     width: 100%;
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 25px; /* Alanlar arasındaki boşluğu artırdık */
 }
 
-.input-group-row {
-    display: flex;
-    gap: 20px;
-}
-
-.input-wrapper {
+.inputWrapper {
     position: relative;
     width: 100%;
 }
 
-.input-wrapper i {
+.inputIcon {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -70,17 +50,17 @@ form {
     color: #adb5bd;
 }
 
-.input-wrapper i:first-of-type {
+.inputIcon:first-of-type {
     left: 20px;
 }
 
-.input-wrapper .password-toggle {
+.passwordToggle {
     right: 20px;
     cursor: pointer;
 }
 
 /* --- Input ve Yüzen Etiket Stilleri --- */
-.input-wrapper label {
+.label {
     position: absolute;
     top: 50%;
     left: 50px;
@@ -93,32 +73,15 @@ form {
     padding: 0 5px;
 }
 
-.input-wrapper label.no-icon-label {
-    left: 50px; /* İkon olmayan inputlar için etiketi sola yasla */
-}
-
-/* YENİ KURAL 1: Butonları içeren taşıyıcı */
-.bottom-buttons-container {
-    display: flex;
-    justify-content: space-between; /* Butonları iki uca yaslar */
-    align-items: center;
-    width: 100%;
-    margin-top: auto; /* Taşıyıcıyı en alta iter */
-    padding-top: 20px; /* Üstündeki elemanlarla boşluk */
-}
-
 /* Yüzen etiket animasyonunu tetikleyen seçiciler */
-input:focus + label,
-input:not(:placeholder-shown) + label {
+.input:focus + .label,
+.input:not(:placeholder-shown) + .label {
     top: 0;
     font-size: 15px;
     color: #1f9a8b;
 }
 
-input[type="text"],
-input[type="email"],
-input[type="tel"],
-input[type="password"] {
+.input {
     width: 100%;
     padding: 15px 20px 15px 50px; /* İkon için solda boşluk */
     border: 2px solid #CBD5E0;
@@ -127,26 +90,43 @@ input[type="password"] {
     font-size: 15px;
     outline: none;
     transition: border-color 0.3s, box-shadow 0.3s;
-    background-color: transparent; /* Placeholder'ın görünmesi için */
+    background-color: transparent;
 }
 
-/* Placeholder'ı gizlemek için kullanılır, böylece :not(:placeholder-shown) çalışır */
 input::placeholder {
     color: transparent;
 }
 
-input.no-icon {
-    padding-left: 50px;
-}
-
-input:focus {
+.input:focus {
     border-color: #20c997;
     box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.1);
 }
 
+/* --- Şifremi Unuttum Bağlantısı --- */
+.forgot-password {
+    align-self: flex-end; /* Kendisini formun sağına yaslar */
+    margin-top: -15px; /* Şifre alanıyla arasındaki boşluğu azaltır */
+    margin-bottom: 20px; /* Butonlarla arasına boşluk koyar */
+    font-size: 14px;
+    color: #6c757d;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.forgot-password:hover {
+    color: #343a40;
+    text-decoration: underline;
+}
+
+/* --- Yeni Buton Taşıyıcısı --- */
+.actionButtonsContainer {
+    display: flex;
+    gap: 20px; /* Butonlar arasına boşluk koyar */
+    width: 100%;
+}
+
 /* --- Butonlar --- */
 .btn {
-    text-decoration: none;
     padding: 15px 20px;
     border: none;
     border-radius: 30px;
@@ -155,7 +135,17 @@ input:focus {
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
+    flex: 1; /* Butonların eşit genişlikte olmasını sağlar */
 }
+
+/* *** STİL DÜZELTMESİ BURADA *** */
+/* Link olarak kullanılan butonların stilini düzeltir */
+.actionButtonsContainer a.btn {
+  text-decoration: none;
+  text-align: center;
+  /* padding'den dolayı dikey hizalama zaten sağlanıyor */
+}
+/* *** DÜZELTME SONU *** */
 
 .btn-primary {
     background-color: #1f9a8b; /* Görseldeki yeşil tonu */
@@ -166,17 +156,6 @@ input:focus {
     background-color: #1a8376;
     transform: translateY(-2px);
     box-shadow: 0 4px 15px rgba(31, 154, 139, 0.2);
-}
-
-.btn-secondary {
-    background-color: transparent;
-    color: #6c757d;
-    border: 1px solid #ced4da;
-}
-
-.btn-secondary:hover {
-    background-color: #f1f5f9;
-    border-color: #adb5bd;
 }
 
 /* --- Görsel Alanı (Sağ Taraf) --- */
@@ -201,16 +180,16 @@ input:focus {
         max-width: 500px;
     }
     .image-panel {
-        display: none; /* Küçük ekranlarda görseli gizle */
+        display: none;
     }
     .form-panel {
-        padding: 40px;
+        padding: 20px;
     }
 }
 
 @media (max-width: 576px) {
-    .input-group-row {
-        flex-direction: column;
+    .actionButtonsContainer {
+        flex-direction: column; /* Küçük ekranlarda butonları alt alta getir */
     }
     .form-panel {
         padding: 30px 25px;

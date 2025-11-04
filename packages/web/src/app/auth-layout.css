@@ -1,0 +1,20 @@
+/* packages/web/src/app/auth-layout.css */
+
+/* body stilini artık burada, global olarak değil, bu layout'un kök div'i üzerinden yönetiyoruz */
+.auth-container {
+    font-family: 'Montserrat', sans-serif;
+    background-color: #f8f9fa;
+    display: flex;
+    flex-direction: column; /* Logo üstte, içerik altta */
+    justify-content: flex-start; /* İçeriği yukarıdan başlat */
+    align-items: center;
+    min-height: 100vh;
+    width: 100%;
+    color: #495057;
+    padding-top: 20px; /* Logoya üstten boşluk */
+}
+
+.auth-logo-container {
+    width: 343px;
+    margin-bottom: 20px; /* Logo ile form arasına boşluk */
+}

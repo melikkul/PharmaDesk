@@ -24,10 +24,11 @@ body {
     background-color: #fff;
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-    max-width: 1200px;
+    max-width: 1300px;
     width: 95%;
-    min-height: 80%;
+    min-height: 90%;
     overflow: hidden;
+    padding: 20px;
 }
 
 /* --- Form Alanı (Sol Taraf) --- */
@@ -145,7 +146,9 @@ input:focus {
 
 /* --- Butonlar --- */
 .btn {
+    text-decoration: none;
     padding: 15px 20px;
+    text-align: center;
     border: none;
     border-radius: 30px;
     font-family: 'Montserrat', sans-serif;

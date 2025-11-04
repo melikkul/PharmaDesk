@@ -53,12 +53,12 @@ export default function Form() {
           </a>
 
           <div className="action-buttons-container">
-            <button type="button" className="btn btn-primary">
-              Giriş
-            </button>
-            <button type="button" className="btn btn-primary">
-              Kayıt
-            </button>
+            <a href="./dashboard" type="button" className="btn btn-primary">
+            Giriş
+            </a>
+            <a href="./register" type="button" className="btn btn-primary">
+            Kayıt
+            </a>
           </div>
         </form>
       </div>

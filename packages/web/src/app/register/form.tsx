@@ -3,18 +3,28 @@
 import "./form.css";
 import Register from "../../../public/Login.png";
 import { useIMask } from "react-imask";
-// ### OPTİMİZASYON: 'useCallback' import edildi ###
-import { useState, useCallback } from "react";
+// ### OPTİMİZASYON: 'useCallback' ve 'useEffect' import edildi ###
+import { useState, useCallback, FormEvent, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { text } from "stream/consumers";
 
 export default function Form() {
   const [formData, setFormData] = useState({
     isim: "",
     soyisim: "",
     email: "",
-    glu: "",
+    gln: "", // GLU yerine GLN
     sifre: "",
     tekrarSifre: "",
   });
+  const router = useRouter();
+
+  // Sayfa yüklendiğinde doğrudan /anasayfa'ya yönlendir
+  useEffect(() => {
+    // Bu sayfa doğrudan açıldığında /anasayfa'ya yönlendirir.
+    // Eğer kayıt formunun gösterilmesi gerekiyorsa bu satırı kaldırın.
+    router.replace('/anasayfa');
+  }, [router]);
 
   // ### OPTİMİZASYON: useCallback ###
   // Form input fonksiyonu memoize edildi.
@@ -23,24 +33,62 @@ export default function Form() {
     
     // 'setFormData'nın callback formunu kullanarak 'formData' bağımlılığından kurtulduk.
     if (id === 'isim' || id === 'soyisim') {
-      const filteredValue = value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
+      const filteredValue = value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, ''); // Sadece harf ve boşluk
       setFormData(prev => ({ ...prev, [id]: filteredValue }));
     } else {
       setFormData(prev => ({ ...prev, [id]: value }));
     }
   }, []); // Bağımlılığı yok
 
-  const { ref: phoneRef } = useIMask<HTMLInputElement>({
+  const { ref: phoneRef, value: phoneValue } = useIMask<HTMLInputElement>({
     mask: '(\\0\\500) 000 00 00',
     lazy: false,
   });
+
+  // YENİ: GLN Numarası için IMask
+  const { ref: glnRef, value: glnValue } = useIMask<HTMLInputElement>({
+    mask: '0000000000000', // 13 haneli GLN formatı
+    lazy: true, // DEĞİŞİKLİK: Placeholder'ları gizlemek için lazy: true yapıldı
+    overwrite: true,
+  });
+
+  const handleSubmit = useCallback(async (e: FormEvent) => {
+    e.preventDefault(); // Sayfanın yeniden yüklenmesini engelle
+
+    // Basit validasyon
+    if (!formData.isim || !formData.soyisim || !formData.email || !glnValue || !formData.sifre || !formData.tekrarSifre) {
+      alert("Lütfen tüm alanları doldurunuz.");
+      return;
+    }
+    // YENİ: GLN formatı kontrolü
+    if (glnValue.replace(/[^0-9]/g, '').length !== 13) {
+      alert("Lütfen tüm alanları doldurunuz.");
+      return;
+    }
+
+    if (formData.sifre !== formData.tekrarSifre) {
+      alert("Şifreler uyuşmuyor.");
+      return;
+    }
+
+    // Burada form verilerini bir API'ye gönderme veya başka bir işlem yapabilirsiniz.
+    console.log("Form Verileri:", {
+      ...formData,
+      telefon: phoneValue, // Maskelenmiş telefon numarasını ekle
+      gln: glnValue, // Maskelenmiş GLN numarasını ekle
+    });
+
+    // TODO: API çağrısı burada yapılmalı
+    // Başarılı olursa ikinci adıma yönlendir
+    router.push('/register/step2');
+  }, [formData, router, phoneValue, glnValue]); // formData, router, phoneValue ve glnValue bağımlılıklarını ekledik
 
   return (
     <div className="container">
       {/* --- DEĞİŞTİRİLEN SATIR --- */}
       <div className="form-panel" onDrop={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
         <h1>Kayıt Ekranı</h1>
-        <form action="#">
+        <form onSubmit={handleSubmit}>
           <div className="input-group-row">
             <div className="input-wrapper">
               <i className="fa-regular fa-user"></i>
@@ -67,8 +115,8 @@ export default function Form() {
           </div>
 
           <div className="input-wrapper">
-            <input type="text" id="glu" placeholder=" " className="no-icon" value={formData.glu} onChange={handleInputChange} />
-            <label htmlFor="glu" className="no-icon-label">GLU Numarası</label>
+            <input ref={glnRef} type="text" id="gln" placeholder=" " className="no-icon" onChange={handleInputChange} />
+            <label htmlFor="gln" className="no-icon-label">GLN Numarası</label>
           </div>
 
           <div className="input-group-row">
@@ -91,13 +139,8 @@ export default function Form() {
         </form>
 
         <div className="bottom-buttons-container">
-          <button type="button" className="btn btn-secondary">
-            Geri Dön
-          </button>
-          <a href="./login"><button type="button" className="btn btn-secondary">
-            Giriş Yap
-          </button></a>
-          
+          <a href="./login" type="button" className="btn btn-secondary">
+          Geri Dön</a>          
         </div>
       </div>
 

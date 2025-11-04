@@ -1,0 +1,130 @@
+/* packages/web/src/app/(auth)/register/step2/form-step2.css */
+
+.step2-container {
+    display: flex;
+    background-color: #fff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    width: 100%;
+    min-width: 600px; /* Daha dar bir panel */
+    overflow: hidden;
+}
+
+.step2-panel {
+    flex: 1;
+    padding: 40px 60px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.step2-panel h1 {
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #343a40;
+    text-align: center;
+}
+
+.subtitle {
+    font-size: 16px;
+    color: #6c757d;
+    margin-bottom: 40px;
+    text-align: center;
+}
+
+.step2-panel form {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+.input-wrapper-step2 {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.input-wrapper-step2 label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.input-wrapper-step2 select,
+.input-wrapper-step2 textarea {
+    width: 100%;
+    padding: 15px 20px;
+    border: 2px solid #CBD5E0;
+    border-radius: 30px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 15px;
+    outline: none;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    background-color: #fff;
+    box-sizing: border-box; /* YENİ: Genişlik hesaplamasını tutarlı hale getirir */
+}
+
+/* YENİ: Select kutusunun varsayılan okunu gizle ve özel bir ok ekle */
+.input-wrapper-step2 select {
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+    background-position: right 1rem center; /* Oku sağdan 1rem (16px) içeri alır */
+    background-repeat: no-repeat;
+    background-size: 1.5em;
+    padding-right: 3rem; /* Okun metinle üst üste binmemesi için sağ boşluğu artır */
+}
+
+/* YENİ: Textarea için istenen stil değişiklikleri */
+.input-wrapper-step2 textarea {
+    resize: none; /* Kutuyu büyütme özelliğini kapatır */
+    height: 110px; /* Yaklaşık 3 satır + padding için yükseklik */
+    overflow-y: auto; /* İçerik sığmazsa dikey scrollbar gösterir */
+    /* padding-right: 15px; */ /* Scrollbar gizlendiği için bu kurala gerek kalmadı */
+    -ms-overflow-style: none;  /* IE ve Edge için scrollbar'ı gizle */
+    scrollbar-width: none;  /* Firefox için scrollbar'ı gizle */
+}
+
+/* YENİ: Webkit tabanlı tarayıcılar (Chrome, Safari) için scrollbar'ı gizle */
+.input-wrapper-step2 textarea::-webkit-scrollbar {
+    display: none;
+}
+
+.input-wrapper-step2 select:focus,
+.input-wrapper-step2 textarea:focus {
+    border-color: #20c997;
+    box-shadow: 0 0 0 3px rgba(32, 201, 151, 0.1);
+}
+
+.action-buttons-container-step2 {
+    margin-top: 20px;
+}
+
+.btn-step2 {
+    width: 100%;
+    text-decoration: none;
+    padding: 15px 180px;
+    border: none;
+    border-radius: 30px;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-primary-step2 {
+    background-color: #1f9a8b;
+    color: white;
+}
+
+.btn-primary-step2:hover {
+    background-color: #1a8376;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(31, 154, 139, 0.2);
+}
