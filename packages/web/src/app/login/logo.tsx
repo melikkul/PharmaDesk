@@ -4,7 +4,8 @@ import "./logo.css";
 
 export default function Logo() {
   return(
-    <div className="loginAll"><Image className="logo" src={logoImage} alt="Pharma Desk Logo" /></div>
+    <div className="loginAll">
+      <a href="./anasayfa"><Image className="logo" src={logoImage} alt="Pharma Desk Logo" /></a></div>
     
   );
 }

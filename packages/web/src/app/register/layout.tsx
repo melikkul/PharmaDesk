@@ -13,7 +13,9 @@ export default function AuthLayout({
   return (
     <div className="auth-container">
       <div className="auth-logo-container">
-        <Image src={logoImage} alt="PharmaDesk Logo" width={343} height={134} priority />
+        <a href="/anasayfa">
+          <Image src={logoImage} alt="PharmaDesk Logo" width={343} height={134} priority />
+        </a>
       </div>
       <main className="auth-main-content">{children}</main>
     </div>

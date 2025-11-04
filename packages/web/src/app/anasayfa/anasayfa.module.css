@@ -1,10 +1,262 @@
+/* EczaTrend'den ilham alan renk paleti - PharmaDesk Yeşil Teması */
+:root {
+    --primary-color: #2D8B57; /* Ana Yeşil */
+    --primary-dark: #1F603C;  /* Koyu Yeşil (Hover) */
+    --secondary-color: #F4F7F6; /* Açık Gri Arka Plan */
+    --dark-color: #333333;    /* Koyu Metin */
+    --light-color: #666666;   /* Açık Metin */
+    --white-color: #FFFFFF;
+    --border-color: #E0E0E0;
+}
+
+.pageContainer {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--dark-color);
+    background-color: var(--white-color);
+    overflow-x: hidden;
+}
+
 .container {
-    padding: 40px;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 1. Navbar Stilleri */
+.navbar {
+    background-color: var(--white-color);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+    padding: 10px 0;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.navbar .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* DEĞİŞİKLİK: Bu sınıf artık doğrudan Image bileşenine uygulanıyor */
+.navbarLogo { 
+    cursor: pointer;
+}
+
+/* Logo linki için ek stil */
+.navbarLogoLink {
+    display: inline-block; /* Resmin etrafındaki boşluğu kaldırır */
+    text-decoration: none; /* Link alt çizgisini kaldırır */
+}
+
+.navLinks a {
+    margin-left: 15px;
+    text-decoration: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+/* 2. Buton Stilleri */
+.btnPrimary {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+    border: 2px solid var(--primary-color);
+}
+.btnPrimary:hover {
+    background-color: var(--primary-dark);
+    border-color: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.btnOutline {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 2px solid var(--primary-color);
+}
+.btnOutline:hover {
+    background-color: var(--primary-color);
+    color: var(--white-color);
+}
+
+.btnWhite {
+    background-color: var(--white-color);
+    color: var(--primary-color);
+    border: 2px solid var(--white-color);
+    font-weight: 600;
+}
+.btnWhite:hover {
+    background-color: transparent;
+    color: var(--white-color);
+    border-color: var(--white-color);
+}
+
+.btnLarge {
+    padding: 14px 28px;
+    font-size: 1.1rem;
+}
+
+/* 3. Hero Bölümü Stilleri */
+.heroSection {
+    background-color: var(--secondary-color);
+    padding: 80px 0;
+}
+
+.heroSection .container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 40px;
+}
+
+.heroContent {
+    flex: 1;
+}
+
+.heroTitle {
+    font-size: 2.8rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 20px;
+    color: var(--dark-color);
+}
+
+.heroSubtitle {
+    font-size: 1.2rem;
+    color: var(--light-color);
+    margin-bottom: 30px;
+}
+
+.heroImagePlaceholder {
+    flex: 1;
+    height: 400px;
+    background-color: var(--border-color);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: var(--light-color);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+}
+
+/* 4. Özellikler Bölümü Stilleri */
+.featuresSection {
+    padding: 80px 0;
+    background-color: var(--white-color);
+}
+
+.sectionTitle {
+    font-size: 2.5rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.featuresGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.featureBox {
+    background-color: var(--white-color);
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.featureBox:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+}
+
+.featureIcon {
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+}
+
+.featureTitle {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+/* 5. CTA Bölümü Stilleri */
+.ctaSection {
+    padding: 60px 0;
+    background-color: var(--primary-color);
+    color: var(--white-color);
     text-align: center;
 }
 
-.title {
-    font-size: 60px;
-    font-weight: bold;
-    color: #34495E;
+.ctaTitle {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 15px;
+}
+
+.ctaText {
+    font-size: 1.1rem;
+    margin-bottom: 30px;
+    opacity: 0.9;
+}
+
+/* 6. Footer Stilleri */
+.footer {
+    padding: 40px 0;
+    background-color: var(--dark-color);
+    color: var(--white-color);
+    text-align: center;
+}
+
+.footerLinks {
+    margin-top: 15px;
+}
+
+.footerLinks a {
+    color: var(--white-color);
+    text-decoration: none;
+    margin: 0 15px;
+    opacity: 0.8;
+    transition: opacity 0.3s ease;
+}
+
+.footerLinks a:hover {
+    opacity: 1;
+}
+
+/* Mobil Uyumluluk */
+@media (max-width: 992px) {
+    .heroSection .container {
+        flex-direction: column-reverse;
+        text-align: center;
+    }
+    .heroImagePlaceholder {
+        width: 100%;
+        max-width: 500px;
+        height: 300px;
+    }
+    .heroTitle {
+        font-size: 2.2rem;
+    }
+    .featuresGrid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .navbar .container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    .navLinks {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+    }
 }

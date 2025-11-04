@@ -19,12 +19,12 @@ export default function Form() {
   });
   const router = useRouter();
 
-  // Sayfa yüklendiğinde doğrudan /anasayfa'ya yönlendir
-  useEffect(() => {
-    // Bu sayfa doğrudan açıldığında /anasayfa'ya yönlendirir.
-    // Eğer kayıt formunun gösterilmesi gerekiyorsa bu satırı kaldırın.
-    router.replace('/anasayfa');
-  }, [router]);
+  // // Sayfa yüklendiğinde doğrudan /anasayfa'ya yönlendir
+  // useEffect(() => {
+  //   // Bu sayfa doğrudan açıldığında /anasayfa'ya yönlendirir.
+  //   // Eğer kayıt formunun gösterilmesi gerekiyorsa bu satırı kaldırın.
+  //   router.replace('/anasayfa');
+  // }, [router]);
 
   // ### OPTİMİZASYON: useCallback ###
   // Form input fonksiyonu memoize edildi.
@@ -139,8 +139,9 @@ export default function Form() {
         </form>
 
         <div className="bottom-buttons-container">
-          <a href="./login" type="button" className="btn btn-secondary">
-          Geri Dön</a>          
+          <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
+            Geri Dön
+          </button>
         </div>
       </div>
 

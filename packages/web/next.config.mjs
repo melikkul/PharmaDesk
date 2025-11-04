@@ -4,6 +4,7 @@ const API_URL = process.env.API_BASE_URL || 'http://localhost:8081';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // API yönlendirmeleri için rewrites
   async rewrites() {
     return [
       // API isteklerini dinamik URL'e yönlendir
@@ -12,5 +13,17 @@ const nextConfig = {
       { source: "/health", destination: `${API_URL}/health` }
     ];
   },
+  
+  // Ana sayfayı /anasayfa'ya yönlendirmek için redirects
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/anasayfa',
+        permanent: true, // Kalıcı yönlendirme (SEO için önerilir)
+      },
+    ]
+  },
 };
+
 export default nextConfig;

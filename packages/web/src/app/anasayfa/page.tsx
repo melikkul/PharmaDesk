@@ -12,22 +12,19 @@ export default function Anasayfa() {
             {/* 1. Navigasyon Çubuğu */}
             <nav className={styles.navbar}>
                 <div className={styles.container}>
-                    <Link href="/anasayfa" passHref>
+                    <Link href="/anasayfa" className={styles.navbarLogoLink}>
                         <Image 
                             src="/logoYesil.png" // public klasörünüzdeki logonuz
                             alt="PharmaDesk Logo" 
-                            width={180} 
-                            height={40} 
+                            width={270} 
+                            height={60} 
                             className={styles.navbarLogo}
+                            style={{ objectFit: 'contain' }} // EKLENDİ: En-boy oranını korur
                         />
                     </Link>
                     <div className={styles.navLinks}>
-                        <Link href="/login" passHref legacyBehavior>
-                            <a className={styles.btnOutline}>Giriş Yap</a>
-                        </Link>
-                        <Link href="/register" passHref legacyBehavior>
-                            <a className={styles.btnPrimary}>Kayıt Ol</a>
-                        </Link>
+                        <Link href="/login" className={styles.btnOutline}>Giriş Yap</Link>
+                        <Link href="/register" className={styles.btnPrimary}>Kayıt Ol</Link>
                     </div>
                 </div>
             </nav>
@@ -42,11 +39,7 @@ export default function Anasayfa() {
                         <p className={styles.heroSubtitle}>
                             İhtiyaç fazlası ilaçlarınızı kolayca takas edin, miad riskini azaltın ve karlılığınızı artırın.
                         </p>
-                        <Link href="/register" passHref legacyBehavior>
-                            <a className={`${styles.btnPrimary} ${styles.btnLarge}`}>
-                                Hemen Ücretsiz Başlayın
-                            </a>
-                        </Link>
+                        <Link href="/register" className={`${styles.btnPrimary} ${styles.btnLarge}`}>Hemen Ücretsiz Başlayın</Link>
                     </div>
                     <div className={styles.heroImagePlaceholder}>
                         {/* Buraya bir görsel veya video ekleyebilirsiniz */}
@@ -89,11 +82,7 @@ export default function Anasayfa() {
                     <p className={styles.ctaText}>
                         PharmaDesk ile eczanenizi geleceğe taşıyın, stok maliyetlerinizi düşürün.
                     </p>
-                    <Link href="/register" passHref legacyBehavior>
-                        <a className={`${styles.btnWhite} ${styles.btnLarge}`}>
-                            Şimdi Kayıt Olun
-                        </a>
-                    </Link>
+                    <Link href="/register" className={`${styles.btnWhite} ${styles.btnLarge}`}>Şimdi Kayıt Olun</Link>
                 </div>
             </section>
 
@@ -102,9 +91,9 @@ export default function Anasayfa() {
                 <div className={styles.container}>
                     <p>&copy; {new Date().getFullYear()} PharmaDesk. Tüm Hakları Saklıdır.</p>
                     <div className={styles.footerLinks}>
-                        <Link href="/hakkimizda" legacyBehavior><a>Hakkımızda</a></Link>
-                        <Link href="/kvkk" legacyBehavior><a>KVKK</a></Link>
-                        <Link href="/iletisim" legacyBehavior><a>İletişim</a></Link>
+                        <Link href="/hakkimizda">Hakkımızda</Link>
+                        <Link href="/kvkk">KVKK</Link>
+                        <Link href="/iletisim">İletişim</Link>
                     </div>
                 </div>
             </footer>
