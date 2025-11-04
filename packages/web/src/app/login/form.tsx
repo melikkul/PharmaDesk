@@ -48,7 +48,7 @@ export default function Form() {
             <i className="fa-regular fa-eye-slash password-toggle"></i>
           </div>
 
-          <a href="./register" className="forgot-password">
+          <a href="./sifremi-unuttum" className="forgot-password">
             Şifremi Unuttum
           </a>
 
