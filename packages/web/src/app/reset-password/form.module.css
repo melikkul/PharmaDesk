@@ -1,0 +1,86 @@
+/* Bu dosyanın içeriği 'packages/web/src/app/login/form.module.css' 
+   dosyanız ile aynıdır. */
+   
+.formContainer {
+  background-color: #ffffff;
+  padding: 2.5rem;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  width: 100%;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.form h2 {
+  text-align: center;
+  color: #333;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.input {
+  padding: 12px 15px;
+  border: 1px solid #dcdcdc;
+  border-radius: 6px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary-color, #2D8B57);
+  box-shadow: 0 0 0 2px rgba(45, 139, 87, 0.2);
+}
+
+.button {
+  padding: 12px 15px;
+  background-color: var(--primary-color, #2D8B57);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: background-color 0.3s ease;
+}
+
+.button:hover {
+  background-color: var(--primary-dark, #1F603C);
+}
+
+.links {
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.9rem;
+}
+
+.links a {
+  color: var(--primary-color, #2D8B57);
+  text-decoration: none;
+}
+
+.links a:hover {
+  text-decoration: underline;
+}
+
+.errorMessage {
+  color: #dc2626; /* Kırmızı */
+  font-size: 0.875rem;
+  text-align: center;
+}
+
+.successMessage {
+  color: #16a34a; /* Yeşil */
+  font-size: 0.875rem;
+  text-align: center;
+}

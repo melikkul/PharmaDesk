@@ -2,15 +2,12 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import styles from './reset-password.module.css';
+import styles from './form.module.css'; // Ortak stili kullan
 import Link from 'next/link';
 
-// Suspense içinde sarmalanacak ana component
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const router = useRouter();
-  
-  // URL'den 'token' parametresini oku
   const token = searchParams.get('token');
 
   const [password, setPassword] = useState('');
@@ -36,27 +33,18 @@ function ResetPasswordForm() {
       return;
     }
 
-    // --- BURADA API'NİZE İSTEK ATACAKSINIZ ---
+    // --- API ÇAĞRISI BURADA YAPILACAK ---
     try {
-      // Örnek API isteği (bu endpoint'i .NET API'de oluşturmalısınız)
-      // const response = await fetch('http://localhost:5000/api/auth/reset-password', {
+      console.log('Yeni şifre ayarlanıyor, token:', token);
+      // const response = await fetch('/api/auth/reset-password', {
       //   method: 'POST',
       //   headers: { 'Content-Type': 'application/json' },
       //   body: JSON.stringify({ token, password }),
       // });
+      // if (!response.ok) throw new Error('Şifre sıfırlanamadı.');
 
-      // if (!response.ok) {
-      //   const data = await response.json();
-      //   throw new Error(data.message || 'Şifre sıfırlanamadı.');
-      // }
-
-      // Geçici olarak başarılı senaryoyu simüle ediyoruz:
-      console.log('Yeni şifre ayarlandı. Token:', token);
-      await new Promise(resolve => setTimeout(resolve, 1000)); // 1 saniye bekle
-      
+      // Başarılı simülasyonu
       setMessage('Şifreniz başarıyla güncellendi. Giriş sayfasına yönlendiriliyorsunuz...');
-      
-      // Kullanıcıyı 3 saniye sonra login'e yönlendir
       setTimeout(() => {
         router.push('/login');
       }, 3000);
@@ -66,57 +54,60 @@ function ResetPasswordForm() {
     }
   };
 
-  // Token yoksa formu hiç gösterme
   if (!token) {
     return (
-      <div className={styles.form}>
-        <h2>Geçersiz İstek</h2>
-        <p className={styles.errorMessage}>Sıfırlama bağlantısı geçersiz veya süresi dolmuş.</p>
-        <div className={styles.links}>
-          <Link href="/login">Giriş Yap'a Geri Dön</Link>
+      <div className={styles.formContainer}>
+        <div className={styles.form}>
+          <h2>Geçersiz İstek</h2>
+          <p className={styles.errorMessage}>
+            Sıfırlama bağlantısı geçersiz veya süresi dolmuş.
+          </p>
+          <div className={styles.links}>
+            <Link href="/login">Giriş Yap'a Geri Dön</Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  // Token varsa yeni şifre formunu göster
   return (
-    <form className={styles.form} onSubmit={handleSubmit}>
-      <h2>Yeni Şifre Belirle</h2>
-      
-      <div className={styles.inputGroup}>
-        <input
-          type="password"
-          placeholder="Yeni Şifre"
-          className={styles.input}
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-      </div>
-      
-      <div className={styles.inputGroup}>
-        <input
-          type="password"
-          placeholder="Yeni Şifre (Tekrar)"
-          className={styles.input}
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          required
-        />
-      </div>
+    <div className={styles.formContainer}>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        <h2>Yeni Şifre Belirle</h2>
 
-      <button type="submit" className={styles.button}>
-        Şifreyi Güncelle
-      </button>
+        <div className={styles.inputGroup}>
+          <input
+            type="password"
+            placeholder="Yeni Şifre"
+            className={styles.input}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <div className={styles.inputGroup}>
+          <input
+            type="password"
+            placeholder="Yeni Şifre (Tekrar)"
+            className={styles.input}
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            required
+          />
+        </div>
 
-      {message && <p style={{ color: 'green', textAlign: 'center' }}>{message}</p>}
-      {error && <p className={styles.errorMessage}>{error}</p>}
-    </form>
+        {message && <p className={styles.successMessage}>{message}</p>}
+        {error && <p className={styles.errorMessage}>{error}</p>}
+
+        <button type="submit" className={styles.button}>
+          Şifreyi Güncelle
+        </button>
+      </form>
+    </div>
   );
 }
 
-// useSearchParams kullandığımız için ana sayfayı Suspense ile sarmalıyız.
+// useSearchParams kullandığımız için Suspense sarmalayıcısı şarttır.
 export default function ResetPasswordPage() {
   return (
     <Suspense fallback={<div>Yükleniyor...</div>}>

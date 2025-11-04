@@ -1,21 +1,22 @@
+import React from 'react';
 import Image from 'next/image';
-import Logo from '../login/logo'; // Mevcut login logonuzu kullanıyoruz
-import '../auth-layout.css'; // Mevcut auth stillerinizi kullanıyoruz
-import loginImage from '../../../public/Login.png'; // Mevcut görseli kullanıyoruz
-import logoYesil from '../../../public/logoYesil.png';
+import logoImage from '../../../public/logoYesil.png';
+// Mevcut login/register layout stilinizi kullanıyoruz
+import '../register/auth-layout.css'; 
 
-export default function ForgotPasswordLayout({ children }: { children: React.ReactNode }) {
+export default function ForgotPasswordLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <div className="authContainer">
-      <div className="logoSection">
-        <Logo src={logoYesil} />
-        <div className="imageContainer">
-          <Image src={loginImage} alt="Şifremi Unuttum" fill style={{ objectFit: 'contain' }} />
-        </div>
+    <div className="auth-container">
+      <div className="auth-logo-container">
+        <a href="/anasayfa">
+          <Image src={logoImage} alt="PharmaDesk Logo" width={343} height={134} priority />
+        </a>
       </div>
-      <div className="formSection">
-        {children}
-      </div>
+      <main className="auth-main-content">{children}</main>
     </div>
   );
 }
