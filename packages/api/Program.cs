@@ -86,6 +86,7 @@ using (var scope = app.Services.CreateScope())
     pharmacyDb.Database.Migrate();
     identityDb.Database.Migrate();
 
+    /* admin bitince acicam!
     if (!identityDb.IdentityUsers.Any(u => u.Role == "Admin"))
     {
         identityDb.IdentityUsers.Add(new IdentityUser {
@@ -97,6 +98,7 @@ using (var scope = app.Services.CreateScope())
         });
         identityDb.SaveChanges();
     }
+    */
 }
 
 if (app.Environment.IsDevelopment())
