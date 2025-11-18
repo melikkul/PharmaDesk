@@ -1,19 +1,18 @@
-# vars
 @baseUrl = http://localhost:8081
-@email = duygua963@gmail.com
-@password = P@ssw0rd!
-@newPassword = N3wP@ss!
-@gln = 1234567890123
-@pharmacyName = Duygu Eczanesi
-@phoneNumber = +90 532 000 00 00
-@city = Ankara
-@avatarPath = ./assets/avatar.jpg
 
-# health check
+@email = test@pharma.com
+@password = zort
+@newPassword = yenizort
+@gln = 1234567890123
+@pharmacyName = Test Eczanesi
+
+### 1. health
 GET {{baseUrl}}/health
 Accept: application/json
 
-# auth register
+### 2. /auth/register
+# @name register_user
+
 POST {{baseUrl}}/api/auth/register
 Content-Type: application/json
 Accept: application/json
@@ -25,9 +24,17 @@ Accept: application/json
   "pharmacyName": "{{pharmacyName}}"
 }
 
-@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1laWRlbnRpZmllciI6IjExIiwic3ViIjoiMTEiLCJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9lbWFpbGFkZHJlc3MiOiJkdXlndWE5NjNAZ21haWwuY29tIiwiaHR0cDovL3NjaGVtYXMueG1sc29hcC5vcmcvd3MvMjAwNS8wNS9pZGVudGl0eS9jbGFpbXMvbmFtZSI6IkR1eWd1IEVjemFuZXNpIiwiaHR0cDovL3NjaGVtYXMubWljcm9zb2Z0LmNvbS93cy8yMDA4LzA2L2lkZW50aXR5L2NsYWltcy9yb2xlIjoiVXNlciIsIm5iZiI6MTc2MjA2NzczNCwiZXhwIjoxNzYyNjcyNTM0fQ.CK6lWDDZydPM0N01ioduLvCNRigm3nOhdS1WQeoCtyw
+> {%
+  let b = {};
+  try { b = JSON.parse(response.body) } catch {}
+  const t = b.token ?? b.Token;
+  if (t) { client.global.set("user_token", t); client.log("user_token from register set"); }
+%}
 
-# auth login
+### 3. /auth/login
+#
+# @name login_user
+
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 Accept: application/json
@@ -38,39 +45,70 @@ Accept: application/json
 }
 
 > {%
-  const b = response.body || {};
-  const t = b.token || b.accessToken || b.jwt;
-  if (t) client.global.set("token", t);
+  let b = {};
+  try { b = JSON.parse(response.body) } catch {}
+  const t = b.token ?? b.Token;
+  if (t) { client.global.set("user_token", t); client.log("user_token from login set"); }
 %}
 
-# get profile
-GET {{baseUrl}}/api/users/me
-Accept: application/json
-Authorization: Bearer {{token}}
 
-# update profile
-PUT {{baseUrl}}/api/users/me
-Content-Type: application/json
+### 4. /api/users/me
+#
+
+GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{user_token}}
 Accept: application/json
-Authorization: Bearer {{token}}
+
+
+### 5. /api/users/me (Update Profile)
+# 
+
+PUT {{baseUrl}}/api/users/me
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
 
 {
-  "phoneNumber": "{{phoneNumber}}",
-  "city": "{{city}}"
+  "phoneNumber": "5551234567",
+  "city": "Ankara"
 }
 
-## change password
-POST {{baseUrl}}/api/users/change-password
+
+### 6. /auth/forgot
+#
+# @name forgot_req
+
+POST {{baseUrl}}/api/auth/forgot
 Content-Type: application/json
 Accept: application/json
-Authorization: Bearer {{token}}
 
 {
-  "oldPassword": "{{password}}",
+  "email": "{{email}}"
+}
+
+> {%
+  let b = {};
+  try { b = JSON.parse(response.body) } catch {}
+  const t = b.token ?? b.Token;
+  if (t) { client.global.set("reset_token", t); client.log("reset_token set"); }
+%}
+
+
+### 7. /auth/reset
+# 
+
+POST {{baseUrl}}/api/auth/reset
+Content-Type: application/json
+Accept: application/json
+
+{
+  "token": "{{reset_token}}",
   "newPassword": "{{newPassword}}"
 }
 
-# login with new password
+
+### 8. /auth/login (New Password)
+# 
+
 POST {{baseUrl}}/api/auth/login
 Content-Type: application/json
 Accept: application/json
@@ -80,56 +118,17 @@ Accept: application/json
   "password": "{{newPassword}}"
 }
 
-> {% 
-  const body = response.body || {};
-  if (body && (body.token || body.accessToken || body.jwt)) {
-    client.global.set("token", body.token || body.accessToken || body.jwt);
-  }
+> {%
+  let b = {};
+  try { b = JSON.parse(response.body) } catch {}
+  const t = b.token ?? b.Token;
+  if (t) { client.global.set("user_token", t); client.log("user_token (new) set"); }
 %}
 
-# verify profile after password change
+
+### 9. /api/users/me
+#
+
 GET {{baseUrl}}/api/users/me
+Authorization: Bearer {{user_token}}
 Accept: application/json
-Authorization: Bearer {{token}}
-
-# upload avatar
-POST {{baseUrl}}/api/users/me/avatar
-Accept: application/json
-Authorization: Bearer {{token}}
-Content-Type: multipart/form-data; boundary=BOUNDARY
-
---BOUNDARY
-Content-Disposition: form-data; name="file"; filename="avatar.jpg"
-Content-Type: image/jpeg
-
-< {{avatarPath}}
---BOUNDARY--
-
-# admin login
-POST {{baseUrl}}/api/admin/login
-Content-Type: application/json
-Accept: application/json
-
-{
-  "email": "admin@pharmadesk.com",
-  "password": "AdminP@ss!"
-}
-
-> {% 
-  const body = response.body || {};
-  if (body && (body.token || body.accessToken || body.jwt)) {
-    client.global.set("admin_token", body.token || body.accessToken || body.jwt);
-  }
-%}
-
-# duplicate register attempt (should fail)
-POST {{baseUrl}}/api/auth/register
-Content-Type: application/json
-Accept: application/json
-
-{
-  "email": "{{email}}",
-  "password": "{{password}}",
-  "gln": "{{gln}}",
-  "pharmacyName": "{{pharmacyName}}"
-}

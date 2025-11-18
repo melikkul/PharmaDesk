@@ -13,18 +13,15 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls(builder.Configuration["ASPNETCORE_URLS"] ?? "http://0.0.0.0:8081");
 
-// services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// db
 string? databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string connString;
 
 if (!string.IsNullOrWhiteSpace(databaseUrl))
 {
-    // format: postgresql://user:pass@host:port/dbname[?params]
     var uri = new Uri(databaseUrl);
     var userInfo = (uri.UserInfo ?? "").Split(':');
     var host = uri.Host;
@@ -41,12 +38,11 @@ else
                  ?? throw new InvalidOperationException("Connection string not found and DATABASE_URL is not set.");
 }
 
-builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connString));
+builder.Services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connString)); 
+builder.Services.AddDbContext<IdentityDbContext>(opt => opt.UseNpgsql(connString));
 
-// services
 builder.Services.AddScoped<AuthService>();
 
-// auth
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey))
     throw new InvalidOperationException("Jwt:Key missing. Provide via appsettings or environment (Jwt__Key).");
@@ -66,7 +62,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 
-// cors
 builder.Services.AddCors(opt =>
 {
     opt.AddPolicy("frontend",
@@ -83,27 +78,27 @@ builder.Services.Configure<FormOptions>(o =>
 
 var app = builder.Build();
 
-// auto migrate
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    var pharmacyDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+    
+    pharmacyDb.Database.Migrate();
+    identityDb.Database.Migrate();
 
-    if (!db.Users.Any(u => u.Role == "Admin"))
+    if (!identityDb.IdentityUsers.Any(u => u.Role == "Admin"))
     {
-        db.Users.Add(new User {
+        identityDb.IdentityUsers.Add(new IdentityUser {
             GLN = "9999999999999",
             Email = "admin@pharma.com",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
             PharmacyName = "PharmaDesk HQ",
             Role = "Admin"
         });
-        db.SaveChanges();
+        identityDb.SaveChanges();
     }
 }
 
-
-// middleware
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

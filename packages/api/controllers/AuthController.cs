@@ -43,14 +43,25 @@ namespace Backend.Controllers
             }
         }
 
-        [HttpPost("admin/login")]
-        public async Task<IActionResult> AdminLogin([FromBody] LoginRequest req)
+        [HttpPost("forgot")]
+        public async Task<IActionResult> Forgot([FromBody] ForgotRequest req)
         {
-            var token = await _authService.LoginAsync(req, requiredRole: "Admin");
-            if (token == null)
-                return Unauthorized(new { error = "Admin yetkisi gerekli veya bilgiler hatalı." });
+            var token = await _authService.GeneratePasswordResetTokenAsync(req.Email);
+            if (token == null) return NotFound(new { error = "Kullanıcı bulunamadı." });
 
-            return Ok(new { token });
+            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
+            if (env.Equals("Development", StringComparison.OrdinalIgnoreCase))
+                return Ok(new { token });
+
+            return NoContent();
+        }
+
+        [HttpPost("reset")]
+        public async Task<IActionResult> Reset([FromBody] ResetRequest req)
+        {
+            var ok = await _authService.ResetPasswordWithTokenAsync(req.Token, req.NewPassword);
+            if (!ok) return BadRequest(new { error = "Token geçersiz veya süresi dolmuş." });
+            return NoContent();
         }
     }
 }

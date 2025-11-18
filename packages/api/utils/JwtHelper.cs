@@ -1,14 +1,14 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Backend.Models;
+using Backend.Models; 
 using Microsoft.IdentityModel.Tokens;
 
 namespace Backend.Utils
 {
     public static class JwtHelper
     {
-        public static string GenerateToken(User user, string jwtKey)
+        public static string GenerateToken(IdentityUser user, string jwtKey)
         {
             if (string.IsNullOrWhiteSpace(jwtKey) || jwtKey.Length < 32)
                 throw new InvalidOperationException("Jwt key too short.");

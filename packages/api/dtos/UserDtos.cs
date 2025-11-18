@@ -1,3 +1,4 @@
+using System;
 namespace Backend.Dtos
 {
     public class UserMeResponse
@@ -29,11 +30,5 @@ namespace Backend.Dtos
         public string? ServicePackage { get; set; }
         public string? PharmacyName { get; set; }
         public string? ProfileImagePath { get; set; }
-    }
-
-    public class ChangePasswordRequest
-    {
-        public string OldPassword { get; set; } = string.Empty;
-        public string NewPassword { get; set; } = string.Empty;
     }
 }
