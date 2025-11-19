@@ -1,7 +1,8 @@
 // src/app/(dashboard)/tekliflerim/OfferForm.tsx
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import IMask from 'imask'; // YENİ: IMask objesini import et
 import { useIMask } from 'react-imask';
 import { useSearchParams } from 'next/navigation';
 import { 
@@ -109,11 +110,13 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const [basePrice, setBasePrice] = useState<number>(0);
 
   const { ref: sktRef, setValue: setMaskedSktValue } = useIMask<HTMLInputElement>({
-    mask: 'MM / YYYY', blocks: {
+    mask: 'MM / YYYY',
+    blocks: {
       MM: { mask: IMask.MaskedRange, from: 1, to: 12, maxLength: 2, autofix: true, placeholderChar: '_' },
       YYYY: { mask: IMask.MaskedRange, from: new Date().getFullYear(), to: new Date().getFullYear() + 20, maxLength: 4, placeholderChar: '_' },
-    }, lazy: true, overwrite: true,
-    onAccept: (value) => handleInputChange('skt', value as string),
+    },
+    lazy: true,
+    overwrite: true,
   });
 
   // === 2. EFFECT'LER ===
@@ -198,7 +201,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   // === 4. EVENT HANDLER'LAR (useCallback) ===
 
   // Genel form input değişikliği
-  const handleInputChange = useCallback((field: keyof FormData, value: string | number | boolean) => {
+  const handleInputChange = useCallback((field: keyof FormData, value: string | number | boolean | null) => {
     setFormData(prev => {
       const newState = { ...prev, [field]: value };
       if (field === 'stockPrice' || field === 'customBaremNetPrice') {

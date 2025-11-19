@@ -31,6 +31,10 @@ const OfferIcon = () => (
   </svg>
 );
 
+interface FullInventoryTableProps {
+  data: MedicationItem[];
+}
+
 const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredData }) => {
   
   // Hangi ilacın alarmı ayarlanıyorsa onu state'de tut

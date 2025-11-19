@@ -80,25 +80,37 @@ var app = builder.Build();
 
 using (var scope = app.Services.CreateScope())
 {
-    var pharmacyDb = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var identityDb = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
-    
-    pharmacyDb.Database.Migrate();
-    identityDb.Database.Migrate();
-
-    /* admin bitince acicam!
-    if (!identityDb.IdentityUsers.Any(u => u.Role == "Admin"))
+    var services = scope.ServiceProvider;
+    try
     {
-        identityDb.IdentityUsers.Add(new IdentityUser {
-            GLN = "9999999999999",
-            Email = "admin@pharma.com",
-            PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-            PharmacyName = "PharmaDesk HQ",
-            Role = "Admin"
-        });
-        identityDb.SaveChanges();
+        var pharmacyDb = services.GetRequiredService<Backend.Data.AppDbContext>();
+        pharmacyDb.Database.Migrate();
+
+        var identityDb = services.GetRequiredService<Backend.Data.IdentityDbContext>();
+        identityDb.Database.Migrate();
+
+        // --- Admin Kullanıcısı Oluşturma (Seed) ---
+        // İleride bu yorum satırlarını açtığınızda çalışacak kod:
+        /*
+        if (!identityDb.IdentityUsers.Any(u => u.Role == "Admin"))
+        {
+            identityDb.IdentityUsers.Add(new Backend.Models.IdentityUser {
+                GLN = "9999999999999",
+                Email = "admin@pharma.com",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
+                PharmacyName = "PharmaDesk HQ",
+                Role = "Admin",
+                CreatedAt = DateTime.UtcNow
+            });
+            identityDb.SaveChanges();
+        }
+        */
     }
-    */
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Veritabanı migration işlemi sırasında bir hata oluştu.");
+    }
 }
 
 if (app.Environment.IsDevelopment())
