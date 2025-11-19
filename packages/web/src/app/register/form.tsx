@@ -1,110 +1,135 @@
 "use client";
 
 import "./form.css";
-import Register from "../../../public/Login.png";
 import { useIMask } from "react-imask";
-// ### OPTİMİZASYON: 'useCallback' ve 'useEffect' import edildi ###
-import { useState, useCallback, FormEvent, useEffect } from "react";
+import { useState, useCallback, FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { text } from "stream/consumers";
 
 export default function Form() {
   const [formData, setFormData] = useState({
     isim: "",
     soyisim: "",
     email: "",
-    gln: "", // GLU yerine GLN
     sifre: "",
     tekrarSifre: "",
   });
+  
+  // Hatalı inputları takip eden state
+  const [errors, setErrors] = useState<{[key: string]: boolean}>({});
+  // Formun genel hata mesajı
+  const [generalError, setGeneralError] = useState("");
+
   const router = useRouter();
 
-  // // Sayfa yüklendiğinde doğrudan /anasayfa'ya yönlendir
-  // useEffect(() => {
-  //   // Bu sayfa doğrudan açıldığında /anasayfa'ya yönlendirir.
-  //   // Eğer kayıt formunun gösterilmesi gerekiyorsa bu satırı kaldırın.
-  //   router.replace('/anasayfa');
-  // }, [router]);
-
-  // ### OPTİMİZASYON: useCallback ###
-  // Form input fonksiyonu memoize edildi.
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
     
-    // 'setFormData'nın callback formunu kullanarak 'formData' bağımlılığından kurtulduk.
     if (id === 'isim' || id === 'soyisim') {
-      const filteredValue = value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, ''); // Sadece harf ve boşluk
+      const filteredValue = value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
       setFormData(prev => ({ ...prev, [id]: filteredValue }));
     } else {
       setFormData(prev => ({ ...prev, [id]: value }));
     }
-  }, []); // Bağımlılığı yok
+
+    // Kullanıcı yazarken hatayı temizle
+    if (errors[id]) {
+      setErrors(prev => ({ ...prev, [id]: false }));
+    }
+    if (generalError) setGeneralError("");
+  }, [errors, generalError]);
 
   const { ref: phoneRef, value: phoneValue } = useIMask<HTMLInputElement>({
     mask: '(\\0\\500) 000 00 00',
     lazy: false,
   });
 
-  // YENİ: GLN Numarası için IMask
   const { ref: glnRef, value: glnValue } = useIMask<HTMLInputElement>({
-    mask: '0000000000000', // 13 haneli GLN formatı
-    lazy: true, // DEĞİŞİKLİK: Placeholder'ları gizlemek için lazy: true yapıldı
+    mask: '0000000000000',
+    lazy: true,
     overwrite: true,
   });
+  
+  // GLN değişimini takip edip hatayı silmek için
+  const handleGlnChange = () => {
+      if(errors.gln) setErrors(prev => ({...prev, gln: false}));
+      if(generalError) setGeneralError("");
+  };
 
   const handleSubmit = useCallback(async (e: FormEvent) => {
-    e.preventDefault(); // Sayfanın yeniden yüklenmesini engelle
+    e.preventDefault();
+    
+    const newErrors: {[key: string]: boolean} = {};
+    let hasError = false;
 
-    // Basit validasyon
-    if (!formData.isim || !formData.soyisim || !formData.email || !glnValue || !formData.sifre || !formData.tekrarSifre) {
-      alert("Lütfen tüm alanları doldurunuz.");
-      return;
-    }
-    // YENİ: GLN formatı kontrolü
-    if (glnValue.replace(/[^0-9]/g, '').length !== 13) {
-      alert("Lütfen tüm alanları doldurunuz.");
-      return;
+    // Boş alan kontrolü
+    if (!formData.isim) newErrors.isim = true;
+    if (!formData.soyisim) newErrors.soyisim = true;
+    if (!formData.email) newErrors.email = true;
+    if (!formData.sifre) newErrors.sifre = true;
+    if (!formData.tekrarSifre) newErrors.tekrarSifre = true;
+    
+    // GLN Kontrolü (13 hane olmalı)
+    const cleanGln = glnValue.replace(/[^0-9]/g, '');
+    if (cleanGln.length !== 13) {
+        newErrors.gln = true;
     }
 
+    if (Object.keys(newErrors).length > 0) {
+        setErrors(newErrors);
+        setGeneralError("Lütfen tüm alanları eksiksiz doldurunuz.");
+        return;
+    }
+
+    // Şifre Eşleşme Kontrolü
     if (formData.sifre !== formData.tekrarSifre) {
-      alert("Şifreler uyuşmuyor.");
+      setErrors({ sifre: true, tekrarSifre: true });
+      setGeneralError("Şifreler uyuşmuyor.");
       return;
     }
 
-    // Burada form verilerini bir API'ye gönderme veya başka bir işlem yapabilirsiniz.
-    console.log("Form Verileri:", {
+    // Başarılı Validasyon
+    console.log("Kayıt Verileri:", {
       ...formData,
-      telefon: phoneValue, // Maskelenmiş telefon numarasını ekle
-      gln: glnValue, // Maskelenmiş GLN numarasını ekle
+      telefon: phoneValue,
+      gln: glnValue,
     });
 
-    // TODO: API çağrısı burada yapılmalı
-    // Başarılı olursa ikinci adıma yönlendir
     router.push('/register/step2');
-  }, [formData, router, phoneValue, glnValue]); // formData, router, phoneValue ve glnValue bağımlılıklarını ekledik
+  }, [formData, glnValue, phoneValue, router]);
 
   return (
     <div className="container">
-      {/* --- DEĞİŞTİRİLEN SATIR --- */}
       <div className="form-panel" onDrop={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
         <h1>Kayıt Ekranı</h1>
         <form onSubmit={handleSubmit}>
           <div className="input-group-row">
             <div className="input-wrapper">
               <i className="fa-regular fa-user"></i>
-              <input type="text" id="isim" placeholder=" " value={formData.isim} onChange={handleInputChange} />
+              <input 
+                type="text" id="isim" 
+                className={errors.isim ? "error" : ""}
+                placeholder=" " value={formData.isim} onChange={handleInputChange} 
+              />
               <label htmlFor="isim">İsim</label>
             </div>
             <div className="input-wrapper">
               <i className="fa-regular fa-user"></i>
-              <input type="text" id="soyisim" placeholder=" " value={formData.soyisim} onChange={handleInputChange} />
+              <input 
+                type="text" id="soyisim" 
+                className={errors.soyisim ? "error" : ""}
+                placeholder=" " value={formData.soyisim} onChange={handleInputChange} 
+              />
               <label htmlFor="soyisim">Soyisim</label>
             </div>
           </div>
 
           <div className="input-wrapper">
             <i className="fa-regular fa-envelope"></i>
-            <input type="email" id="email" placeholder=" " value={formData.email} onChange={handleInputChange} />
+            <input 
+              type="email" id="email" 
+              className={errors.email ? "error" : ""}
+              placeholder=" " value={formData.email} onChange={handleInputChange} 
+            />
             <label htmlFor="email">Email</label>
           </div>
 
@@ -115,23 +140,39 @@ export default function Form() {
           </div>
 
           <div className="input-wrapper">
-            <input ref={glnRef} type="text" id="gln" placeholder=" " className="no-icon" onChange={handleInputChange} />
+            <input 
+              ref={glnRef} type="text" id="gln" 
+              className={`no-icon ${errors.gln ? "error" : ""}`}
+              placeholder=" " 
+              onChange={handleGlnChange} 
+            />
             <label htmlFor="gln" className="no-icon-label">GLN Numarası</label>
           </div>
 
           <div className="input-group-row">
             <div className="input-wrapper">
               <i className="fa-solid fa-lock"></i>
-              <input type="password" id="sifre" placeholder=" " value={formData.sifre} onChange={handleInputChange} />
+              <input 
+                type="password" id="sifre" 
+                className={errors.sifre ? "error" : ""}
+                placeholder=" " value={formData.sifre} onChange={handleInputChange} 
+              />
               <label htmlFor="sifre">Şifre</label>
               <i className="fa-regular fa-eye-slash password-toggle"></i>
             </div>
             <div className="input-wrapper">
               <i className="fa-solid fa-lock"></i>
-              <input type="password" id="tekrarSifre" placeholder=" " value={formData.tekrarSifre} onChange={handleInputChange} />
+              <input 
+                type="password" id="tekrarSifre" 
+                className={errors.tekrarSifre ? "error" : ""}
+                placeholder=" " value={formData.tekrarSifre} onChange={handleInputChange} 
+              />
               <label htmlFor="tekrar-sifre">Tekrar Şifre</label>
             </div>
           </div>
+
+          {/* Hata Mesajı */}
+          {generalError && <div className="error-message">{generalError}</div>}
 
           <button type="submit" className="btn btn-primary">
             Kayıt
@@ -149,7 +190,6 @@ export default function Form() {
         <img src="/Register.png" alt="Eczane İllüstrasyonu" />
       </div>
 
-      {/* SVG kısmı aynı kalıyor */}
       <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style={{ display: 'none' }}>
         <defs>
           <filter id="goo">

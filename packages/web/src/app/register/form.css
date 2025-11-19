@@ -9,7 +9,6 @@
 }
 
 body {
-    /* İçe aktarılan Montserrat fontu burada kullanılıyor */
     font-family: 'Montserrat', sans-serif;
     background-color: #f8f9fa;
     display: flex;
@@ -68,6 +67,7 @@ form {
     transform: translateY(-50%);
     font-size: 16px;
     color: #adb5bd;
+    z-index: 10;
 }
 
 .input-wrapper i:first-of-type {
@@ -94,17 +94,17 @@ form {
 }
 
 .input-wrapper label.no-icon-label {
-    left: 50px; /* İkon olmayan inputlar için etiketi sola yasla */
+    left: 50px;
 }
 
 /* YENİ KURAL 1: Butonları içeren taşıyıcı */
 .bottom-buttons-container {
     display: flex;
-    justify-content: space-between; /* Butonları iki uca yaslar */
+    justify-content: space-between;
     align-items: center;
     width: 100%;
-    margin-top: auto; /* Taşıyıcıyı en alta iter */
-    padding-top: 20px; /* Üstündeki elemanlarla boşluk */
+    margin-top: auto;
+    padding-top: 20px;
 }
 
 /* Yüzen etiket animasyonunu tetikleyen seçiciler */
@@ -120,17 +120,16 @@ input[type="email"],
 input[type="tel"],
 input[type="password"] {
     width: 100%;
-    padding: 15px 20px 15px 50px; /* İkon için solda boşluk */
+    padding: 15px 20px 15px 50px;
     border: 2px solid #CBD5E0;
     border-radius: 30px;
     font-family: 'Montserrat', sans-serif;
     font-size: 15px;
     outline: none;
     transition: border-color 0.3s, box-shadow 0.3s;
-    background-color: transparent; /* Placeholder'ın görünmesi için */
+    background-color: transparent;
 }
 
-/* Placeholder'ı gizlemek için kullanılır, böylece :not(:placeholder-shown) çalışır */
 input::placeholder {
     color: transparent;
 }
@@ -158,7 +157,7 @@ input:focus {
 }
 
 .btn-primary {
-    background-color: #1f9a8b; /* Görseldeki yeşil tonu */
+    background-color: #1f9a8b;
     color: white;
 }
 
@@ -201,7 +200,7 @@ input:focus {
         max-width: 500px;
     }
     .image-panel {
-        display: none; /* Küçük ekranlarda görseli gizle */
+        display: none;
     }
     .form-panel {
         padding: 40px;
@@ -220,4 +219,23 @@ input:focus {
         text-align: center;
         margin-bottom: 30px;
     }
+}
+
+/* --- HATA STİLLERİ (YENİ EKLENDİ) --- */
+input.error {
+    border-color: #e74c3c !important;
+    box-shadow: 0 0 0 3px rgba(231, 76, 60, 0.1) !important;
+}
+
+.error-message {
+    width: 100%;
+    color: #e74c3c;
+    background-color: rgba(231, 76, 60, 0.1);
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    font-weight: 600;
 }
