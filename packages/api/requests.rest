@@ -132,3 +132,66 @@ Accept: application/json
 GET {{baseUrl}}/api/users/me
 Authorization: Bearer {{user_token}}
 Accept: application/json
+
+
+### 10. /api/medications/
+# 
+GET {{baseUrl}}/api/medications
+Accept: application/json
+
+> {%
+  let b = {};
+  try { b = JSON.parse(response.body) } catch {}
+  if (Array.isArray(b) && b.length > 0) {
+    client.global.set("medicationId", b[0].id);
+    client.log("medicationId set: " + b[0].id);
+  }
+%}
+
+### 11. /api/inventory/
+#
+# @name add_inventory
+POST {{baseUrl}}/api/inventory
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "medicationId": {{medicationId}},
+  "quantity": 100,
+  "batchNumber": "TESTBATCH001",
+  "expiryDate": "2026-12-31T00:00:00Z"
+}
+
+
+### 12. /api/inventory/me
+# 
+GET {{baseUrl}}/api/inventory/me
+Authorization: Bearer {{user_token}}
+Accept: application/json
+
+> {%
+  let b = {};
+  try { b = JSON.parse(response.body) } catch {}
+  if (b.length > 0) {
+    client.global.set("inventory_id", b[0].id);
+    client.log("inventory_id set: " + b[0].id);
+  }
+%}
+
+### 13. /api/inventory/{id} (Update)
+#
+PUT {{baseUrl}}/api/inventory/{{inventory_id}}
+Authorization: Bearer {{user_token}}
+Content-Type: application/json
+
+{
+  "quantity": 90,
+  "batchNumber": "TESTBATCH001_UPDATED"
+}
+
+
+### 14. /api/inventory/{id}  (Delete)
+#
+DELETE {{baseUrl}}/api/inventory/{{inventory_id}}
+Authorization: Bearer {{user_token}}
+Accept: application/json
