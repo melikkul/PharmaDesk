@@ -12,24 +12,30 @@ services:
       POSTGRES_PASSWORD: melik123
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # --- EKLENEN KISIM: Backend'in çökmemesi için veritabanı kontrolü ---
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pharmadesk_user -d pharmadesk_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
-    build: ./packages/api  # <-- YOL GÜNCELLENDİ
+    build: ./packages/api
     container_name: pharma_desk_backend
     env_file:
-      - ./packages/api/.env  # <-- YOL GÜNCELLENDİ
+      - ./packages/api/.env
     ports:
       - "8081:8081"
     networks:
       - pharmanet
     environment:
-      # Docker ağı içindeki 'db' servisine bağlan
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
     depends_on:
-      - db
+      db:
+        condition: service_healthy # DB tam hazır olana kadar bekle
 
-  frontend-web:  # <-- İSİM GÜNCELLENDİ (eski frontend)
-    build: ./packages/web  # <-- YOL GÜNCELLENDİ (eski pharma-desk)
+  frontend-web:
+    build: ./packages/web
     container_name: pharma_desk_frontend_web
     ports:
       - "3000:3000"
@@ -37,22 +43,22 @@ services:
       - backend
     networks:
       - pharmanet
-    # --- YENİ EKLENEN BÖLÜM ---
-    # Bu değişken, Next.js'e Docker içindeyken
-    # 'backend' servisine bağlanmasını söyler.
     environment:
+      # Backend servis ismini kullanıyoruz
       - API_BASE_URL=http://backend:8081
-    # --- YENİ BÖLÜM SONU ---
 
-  frontend-admin:  # <-- YENİ SERVİS EKLENDİ
-    build: ./packages/admin # <-- YOL GÜNCELLENDİ
+  frontend-admin:
+    build: ./packages/admin
     container_name: pharma_desk_frontend_admin
     ports:
-      - "3001:3000" # Dışarıda 3001, içeride 3000
+      - "3001:3000"
     depends_on:
       - backend
     networks:
       - pharmanet
+    environment:
+      # Admin paneli için de aynı ayarı yapıyoruz
+      - API_BASE_URL=http://backend:8081
 
 networks:
   pharmanet:

@@ -51,7 +51,7 @@ export default function Form() {
     // Validasyon başarılı ise API isteği at
     try {
       // DÜZELTME: Port numarası 5001 yerine 8081 yapıldı
-      const res = await fetch("http://localhost:8081/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -72,7 +72,7 @@ export default function Form() {
 
       if (!res.ok) {
         // Backend'den gelen özel hata mesajını göster
-        setErrorMessage(data.message || "Giriş yapılamadı.");
+        setErrorMessage(data.error || data.message || "Giriş yapılamadı.");
       } else {
         // Başarılı giriş
         console.log("Giriş Başarılı. Token:", data.token);

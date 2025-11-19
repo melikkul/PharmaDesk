@@ -21,6 +21,11 @@ namespace Backend.Controllers
             try
             {
                 var token = await _authService.RegisterAsync(req);
+                // DÜZELTME: Eğer token null ise kullanıcı zaten vardır
+                if (token == null)
+                {
+                    return BadRequest(new { error = "Bu e-posta adresi zaten kayıtlı." });
+                }
                 return Ok(new { Token = token });
             }
             catch (Exception ex)
@@ -35,6 +40,13 @@ namespace Backend.Controllers
             try
             {
                 var token = await _authService.LoginAsync(req);
+                
+                // DÜZELTME: Token null ise giriş başarısız demektir (401 Unauthorized dön)
+                if (token == null)
+                {
+                    return Unauthorized(new { error = "E-posta adresi veya şifre hatalı." });
+                }
+
                 return Ok(new { Token = token });
             }
             catch (Exception ex)
