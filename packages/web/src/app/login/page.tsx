@@ -1,9 +1,11 @@
+import { Suspense } from "react";
 import Form from "./form";
 
 export default function Login() {
   return (
-    // Form componentini AuthLayout içinde sarmalamak için doğrudan render ediyoruz.
-    // Logo, AuthLayout tarafından sağlanacaktır.
-    <Form />
+    // useSearchParams kullanan bileşenler Suspense içinde olmalıdır.
+    <Suspense fallback={<div>Yükleniyor...</div>}>
+      <Form />
+    </Suspense>
   );
 }

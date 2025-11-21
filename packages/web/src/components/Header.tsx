@@ -16,6 +16,7 @@ interface HeaderPharmacyData {
   logoUrl: string | null;
   pharmacistInCharge: string;
   username: string;
+  publicId?: string; // YENİ
 }
 
 interface HeaderProps {

@@ -2,6 +2,7 @@
 
 import React from 'react';
 import styles from './DashboardCard.module.css';
+import Link from 'next/link';
 
 interface DashboardCardProps {
   title: string;
@@ -13,7 +14,7 @@ const DashboardCard: React.FC<DashboardCardProps> = ({ title, children, viewAllL
     <div className={styles.card}>
         <div className={styles.cardHeader}>
             <h2 className={styles.cardTitle}>{title}</h2>
-            {viewAllLink && <a href={viewAllLink} className={styles.viewAllLink}>Tümünü Gör</a>}
+            {viewAllLink && <Link href={viewAllLink} className={styles.viewAllLink}>Tümünü Gör</Link>}
         </div>
         <div className={styles.tableContainer}>
             {children}

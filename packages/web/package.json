@@ -13,6 +13,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-imask": "^7.6.1",
+    "react-joyride": "^2.9.3",
     "typescript": "^5"
   },
   "devDependencies": {
@@ -20,6 +21,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/react-joyride": "^2.0.2",
     "tailwindcss": "^4"
   }
 }

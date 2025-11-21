@@ -1,111 +1,104 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import axios from 'axios';
+import { createContext, useContext, useState, ReactNode, useCallback, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import axios, { AxiosInstance } from 'axios';
 
-// API helper
-const api = axios.create({
-  baseURL: '/api', // Next.js proxy'sini kullan
-});
-
-interface User {
-  id: number;
+// Kullanıcı (User) veri tipini merkezi olarak tanımlar.
+export interface User {
+  name: string;
   email: string;
-  role: string;
 }
 
+// Context'in taşıyacağı değerlerin tipini tanımlar.
 interface AuthContextType {
   user: User | null;
-  token: string | null;
+  api: AxiosInstance;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  isAuthenticated: boolean;
   logout: () => void;
-  api: typeof api; // API instance'ını context'e ekle
+  login: (email: string, password: string) => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// API istekleri için merkezi bir Axios instance'ı oluşturuyoruz.
+// Docker ortamında backend servisine erişmek için servis adını kullanabiliriz.
+const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081',
+});
 
+// AuthContext'i oluşturuyoruz. Başlangıç değeri undefined olacak.
+const AuthContext = createContext<AuthContextType | undefined>(undefined); 
+
+// Uygulamayı sarmalayacak olan Provider bileşenini oluşturuyoruz.
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    // --- DEĞİŞİKLİK BAŞLANGICI: Backend bağlantısını kesmek ve direkt giriş için mock admin kullan ---
-    // Sayfa yüklendiğinde token'ı localStorage'dan kontrol etmek yerine
-    // doğrudan sahte bir admin kullanıcısı ve token atıyoruz.
     try {
-      const mockUser = { id: 1, email: 'admin@pharmadesk.local', role: 'Admin' };
-      const mockToken = 'mock-admin-token-bypassed-login';
-      
-      setUser(mockUser);
-      setToken(mockToken);
-      api.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-    } catch (e) {
-      console.error("Mock admin oluşturulurken hata", e);
+      const storedToken = localStorage.getItem('admin_token');
+      const storedUser = localStorage.getItem('admin_user');
+
+      if (storedToken && storedUser) {
+        const userData: User = JSON.parse(storedUser);
+        setToken(storedToken);
+        setUser(userData);
+        api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+      }
+    } catch (error) {
+      console.error('Failed to initialize auth state from storage', error);
+      // Hata durumunda depolamayı temizle
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-    // --- DEĞİŞİKLİK SONU ---
   }, []);
 
-  const login = async (email: string, password: string) => {
-    // --- DEĞİŞİKLİK BAŞLANGICI: Backend API çağrısı kaldırıldı ---
-    console.log(`Login denemesi (backend bağlantısı kapalı): ${email}`);
-    
-    // Sadece göstermelik bir kontrol
-    if (!email.includes('admin')) {
-      throw new Error('Mock Login: Geçersiz e-posta.');
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const response = await api.post('/api/auth/login', { email, password });
+      const { token, user } = response.data;
+
+      if (token && user) {
+        localStorage.setItem('admin_token', token);
+        localStorage.setItem('admin_user', JSON.stringify(user));
+        setToken(token);
+        setUser(user);
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        router.push('/dashboard');
+      } else {
+        throw new Error('Login failed: No token or user data received.');
+      }
+    } catch (error) {
+      console.error('Login failed', error);
+      throw error; // Re-throw the error to be caught by the calling component
     }
+  }, [router]);
 
-    // Zaten useEffect'te giriş yapıldı, bu fonksiyonu göstermelik bırak.
-    // İstenirse burada da state'i set edebilirdik.
-    const mockUser = { id: 1, email: email, role: 'Admin' };
-    const mockToken = 'mock-admin-token-bypassed-login';
-    
-    setUser(mockUser);
-    setToken(mockToken);
-    api.defaults.headers.common['Authorization'] = `Bearer ${mockToken}`;
-    
-    return Promise.resolve();
-    // --- DEĞİŞİKLİK SONU ---
-
-    /* Orijinal kod:
-    const { data } = await api.post('/auth/login', { email, password });
-    
-    // SADECE admin rolü olanlar giriş yapabilir
-    if (data.user && data.user.role === 'admin') {
-      setToken(data.token);
-      setUser(data.user);
-      api.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
-      localStorage.setItem('admin_token', data.token);
-      localStorage.setItem('admin_user', JSON.stringify(data.user));
-    } else {
-      throw new Error('Erişim reddedildi: Admin yetkisi gerekli.');
-    }
-    */
-  };
-
-  const logout = () => {
-    // --- DEĞİŞİKLİK: Oturumun kapanmaması için bu kısmı da kapatabiliriz,
-    // ancak şimdilik orijinal haliyle bırakıyorum.
-    setToken(null);
+  const logout = useCallback(() => {
+    // Kullanıcı state'ini temizle
     setUser(null);
-    delete api.defaults.headers.common['Authorization'];
+    setToken(null);
+    // Token'ı local storage'dan kaldır (eğer kullanılıyorsa)
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
-  };
+    delete api.defaults.headers.common['Authorization'];
+    // Kullanıcıyı login sayfasına yönlendir
+    router.push('/login');
+  }, [router]);
 
-  return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, api }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = { user, api, isLoading, logout, login, isAuthenticated: !!token };
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth, AuthProvider içinde kullanılmalıdır');
+    // Bu hata, useAuth'un AuthProvider dışında kullanılmasını engeller.
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

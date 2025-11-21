@@ -9,6 +9,7 @@ namespace Backend.Data
 
         public DbSet<IdentityUser> IdentityUsers { get; set; } 
 
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

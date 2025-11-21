@@ -1,10 +1,15 @@
 /* --- SIDEBAR (SOL NAVİGASYON) --- */
 .sidebar {
-    grid-area: sidebar;
+    position: fixed; /* Sayfa scroll olsa bile sabit kalır */
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 250px; /* Sabit genişlik */
     background-color: #34495E;
     padding: 20px;
     display: flex;
     flex-direction: column;
+    z-index: 1000; /* Diğer içeriklerin üzerinde kalması için */
 }
 
 .sidebarLogo {
@@ -24,32 +29,22 @@
 }
 
 .sidebarNav a {
-    /* display: block; YORUM SATIRINA ALINDI */
     color: white;
     text-decoration: none;
     padding: 15px 20px;
     border-radius: 8px;
     font-weight: 500;
     transition: background-color 0.2s ease;
-
-    /* --- YENİ EKLENEN STİLLER --- */
     display: flex;
     align-items: center;
     gap: 15px; /* İkon ile yazı arası boşluk */
 }
 
-/* --- YENİ EKLENEN STİLLER --- */
 .sidebarNav a svg {
     width: 20px;
     height: 20px;
     flex-shrink: 0; /* İkonların küçülmesini engelle */
 }
-
-/* --- YENİ EKLENEN STİLLER --- */
-.sidebarNav a span {
-    flex-grow: 1; /* Yazının kalan alanı kaplamasını sağla */
-}
-/* --- YENİ STİLLER SONU --- */
 
 .sidebarNav a:hover {
     background-color: rgba(255, 255, 255, 0.1);

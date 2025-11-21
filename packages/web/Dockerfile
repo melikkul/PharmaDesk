@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Önce bağımlılıkları kopyala ve kur (Docker katman önbelleklemesi için)
 COPY package*.json ./
-RUN npm ci
+RUN npm install --legacy-peer-deps
 
 # Tüm kaynak kodunu kopyala
 # DİKKAT: Orijinal dosyanızda burada "COPY ." ve altında tek başına "." vardı.
@@ -28,7 +28,7 @@ COPY package*.json ./
 # 'npm ci --omit=dev' komutu yerine, 'builder' aşamasından
 # node_modules'ü kopyalayıp sadece üretim paketlerini bırakıyoruz.
 COPY --from=builder /app/node_modules ./node_modules
-RUN npm prune --production
+RUN npm prune --production --legacy-peer-deps
 
 # Builder aşamasından build edilmiş dosyaları kopyala
 COPY --from=builder /app/.next ./.next

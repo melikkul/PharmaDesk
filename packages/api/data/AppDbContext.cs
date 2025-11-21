@@ -11,6 +11,8 @@ namespace Backend.Data
         public DbSet<Medication> Medications { get; set; }
         public DbSet<InventoryItem> InventoryItems { get; set; }
 
+        public DbSet<Admin> Admins { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -24,6 +26,17 @@ namespace Backend.Data
             modelBuilder.Entity<InventoryItem>()
                 .HasIndex(i => new { i.PharmacyProfileId, i.MedicationId, i.BatchNumber })
                 .IsUnique();
+
+            // Seed Admin
+            modelBuilder.Entity<Admin>().HasData(new Admin
+            {
+                Id = 1,
+                Email = "melik_kul@outlook.com",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("melik123"),
+                FirstName = "Melik",
+                LastName = "Kul",
+                CreatedAt = DateTime.UtcNow
+            });
         }
     }
 }

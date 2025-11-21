@@ -19,6 +19,7 @@ export interface ShowroomMedication {
 
 
 export interface PharmacyProfileData {
+  id?: number; // YENİ: Backend entegrasyonu için eklendi
   pharmacyName: string;
   pharmacistInCharge: string;
   balance: number;

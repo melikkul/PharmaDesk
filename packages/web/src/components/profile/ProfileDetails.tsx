@@ -6,7 +6,14 @@ import styles from './ProfileDetails.module.css';
 import { PharmacyProfileData } from '../../data/dashboardData';
 
 interface ProfileDetailsProps {
-  pharmacy: PharmacyProfileData;
+  pharmacy: {
+    pharmacyName: string;
+    gln: string;
+    location: string;
+    registrationDate: string;
+    about?: string;
+    [key: string]: any;
+  };
   isOwnProfile: boolean;
 }
 

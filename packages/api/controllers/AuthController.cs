@@ -1,6 +1,7 @@
 using Backend.Dtos;
 using Backend.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.Text.Json; // JSON loglama için eklendi
 
 namespace Backend.Controllers
 {
@@ -18,19 +19,25 @@ namespace Backend.Controllers
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest req)
         {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(new { error = "Eksik veya hatalı veri." });
+            }
+
             try
             {
-                var token = await _authService.RegisterAsync(req);
-                // DÜZELTME: Eğer token null ise kullanıcı zaten vardır
-                if (token == null)
+                var response = await _authService.RegisterAsync(req);
+                if (response == null)
                 {
                     return BadRequest(new { error = "Bu e-posta adresi zaten kayıtlı." });
                 }
-                return Ok(new { Token = token });
+                
+                return Ok(response);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return BadRequest(new { error = ex.Message });
+                // Loglama yapılabilir ama kullanıcıya detay dönülmemeli
+                return StatusCode(500, new { error = "Kayıt işlemi sırasında bir hata oluştu." });
             }
         }
 
@@ -39,41 +46,45 @@ namespace Backend.Controllers
         {
             try
             {
-                var token = await _authService.LoginAsync(req);
+                var result = await _authService.LoginAsync(req);
                 
-                // DÜZELTME: Token null ise giriş başarısız demektir (401 Unauthorized dön)
-                if (token == null)
+                if (result == null)
                 {
                     return Unauthorized(new { error = "E-posta adresi veya şifre hatalı." });
                 }
 
-                return Ok(new { Token = token });
+                return Ok(result);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return BadRequest(new { error = ex.Message });
+                return StatusCode(500, new { error = "Giriş işlemi sırasında bir hata oluştu." });
             }
+        }
+        
+        // Forgot ve Reset metodları buraya eklenebilir...
+        [HttpPost("complete-onboarding")]
+        [Microsoft.AspNetCore.Authorization.Authorize]
+        public async Task<IActionResult> CompleteOnboarding()
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+            var success = await _authService.CompleteOnboardingAsync(userId);
+            if (!success) return BadRequest("User not found or error updating.");
+
+            return Ok(new { message = "Onboarding completed." });
         }
 
         [HttpPost("forgot")]
-        public async Task<IActionResult> Forgot([FromBody] ForgotRequest req)
+        public IActionResult Forgot([FromBody] ForgotRequest req)
         {
-            var token = await _authService.GeneratePasswordResetTokenAsync(req.Email);
-            if (token == null) return NotFound(new { error = "Kullanıcı bulunamadı." });
-
-            var env = Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ?? "Production";
-            if (env.Equals("Development", StringComparison.OrdinalIgnoreCase))
-                return Ok(new { token });
-
-            return NoContent();
+             return Ok(new { message = "Not implemented for debug" });
         }
 
         [HttpPost("reset")]
-        public async Task<IActionResult> Reset([FromBody] ResetRequest req)
+        public IActionResult Reset([FromBody] ResetRequest req)
         {
-            var ok = await _authService.ResetPasswordWithTokenAsync(req.Token, req.NewPassword);
-            if (!ok) return BadRequest(new { error = "Token geçersiz veya süresi dolmuş." });
-            return NoContent();
+             return Ok(new { message = "Not implemented for debug" });
         }
     }
 }

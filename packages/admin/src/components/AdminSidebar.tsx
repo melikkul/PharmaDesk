@@ -20,6 +20,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onLogout }) => {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard' },
+    { href: '/users', label: 'Kullanıcılar' },
     { href: '/pharmacies', label: 'Eczaneler' },
     { href: '/offers', label: 'Tüm Teklifler' },
     { href: '/transactions', label: 'Tüm İşlemler' },

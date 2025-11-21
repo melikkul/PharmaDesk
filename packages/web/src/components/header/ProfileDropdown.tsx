@@ -15,6 +15,7 @@ interface ProfileDropdownProps {
     pharmacyName: string;
     pharmacistInCharge: string;
     username: string;
+    publicId?: string; // YENİ
   };
   onClose: () => void;
   onLogout: () => void;
@@ -45,7 +46,7 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onClose, onLogo
 
   return (
     <div className={styles.profileDropdown} ref={dropdownRef}>
-      <Link href={`/profil/${user.username}`} className={styles.dropdownHeaderLink} onClick={onClose}>
+      <Link href={`/profil/${user.publicId || user.username}`} className={styles.dropdownHeaderLink} onClick={onClose}>
         <div className={styles.dropdownHeader}>
           <strong>{user.pharmacyName}</strong>
           <span>Sorumlu: {user.pharmacistInCharge}</span>

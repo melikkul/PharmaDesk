@@ -7,6 +7,7 @@ namespace Backend.Dtos
         public string GLN { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PharmacyName { get; set; } = string.Empty;
+        public string PublicId { get; set; } = string.Empty; // YENİ
         public string? PhoneNumber { get; set; }
         public string? City { get; set; }
         public string? District { get; set; }
@@ -30,5 +31,6 @@ namespace Backend.Dtos
         public string? ServicePackage { get; set; }
         public string? PharmacyName { get; set; }
         public string? ProfileImagePath { get; set; }
+        public string? About { get; set; } // YENİ
     }
 }

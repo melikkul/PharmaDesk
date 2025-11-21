@@ -1,0 +1,17 @@
+.adminContainer {
+  display: flex;
+  min-height: 100vh;
+}
+
+.mainContent {
+  flex-grow: 1;
+  margin-left: 250px; /* Sidebar width */
+  display: flex;
+  flex-direction: column;
+}
+
+.pageContent {
+  padding: 2rem;
+  background-color: #f4f7fa;
+  min-height: calc(100vh - 64px); /* Header height */
+}

@@ -22,6 +22,49 @@ namespace api.Migrations.App
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Backend.Models.Admin", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Admins");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 11, 21, 22, 9, 23, 549, DateTimeKind.Utc).AddTicks(1721),
+                            Email = "melik_kul@outlook.com",
+                            FirstName = "Melik",
+                            LastName = "Kul",
+                            PasswordHash = "$2a$11$3lc9ytM6Kx/HbAM0vKx0Y.qylKSzaN50YXnY9cUKQf45rjjozc7Dm"
+                        });
+                });
+
             modelBuilder.Entity("Backend.Models.InventoryItem", b =>
                 {
                     b.Property<int>("Id")
@@ -98,6 +141,9 @@ namespace api.Migrations.App
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("About")
+                        .HasColumnType("text");
+
                     b.Property<string>("Address1")
                         .HasColumnType("text");
 
@@ -130,6 +176,10 @@ namespace api.Migrations.App
                         .HasColumnType("text");
 
                     b.Property<string>("ProfileImagePath")
+                        .HasColumnType("text");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<string>("ServicePackage")

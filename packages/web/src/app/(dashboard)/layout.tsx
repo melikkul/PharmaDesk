@@ -21,6 +21,7 @@ import { pharmacyData } from '@/data/dashboardData';
 
 // GÜNCELLEME: Hook'u ve Context'i import et
 import { useDashboardPanels, DashboardContext, Notification, Message } from '@/hooks/useDashboardPanels';
+import { useAuth } from '@/context/AuthContext';
 // HATA DÜZELTME: CartProvider'ı import et
 import { CartProvider } from '@/context/CartContext';
 
@@ -75,6 +76,16 @@ export default function DashboardLayout({
 }) {
   // 1. ADIM: Tüm state ve fonksiyonları hook'tan al
   const panelValues = useDashboardPanels();
+  const { user, logout } = useAuth();
+
+  // Merge real user data with dummy data for missing fields (like balance)
+  const headerUserData = {
+    ...pharmacyData,
+    pharmacyName: user?.pharmacyName || pharmacyData.pharmacyName,
+    pharmacistInCharge: user?.fullName || pharmacyData.pharmacistInCharge,
+    username: user?.fullName || pharmacyData.username,
+    publicId: user?.publicId, // YENİ: PublicId'yi geçir
+  };
 
   // 2. ADIM: Değerleri (panelValues) Context Provider ile sarmala
   return (
@@ -84,13 +95,13 @@ export default function DashboardLayout({
           <Sidebar />
           
           <Header
-            userData={pharmacyData}
+            userData={headerUserData}
             onMessageClick={panelValues.toggleMessagesPanel}
             onNotificationClick={panelValues.toggleNotificationsPanel}
             onCartClick={panelValues.toggleCartPanel}
             unreadNotificationCount={panelValues.unreadNotificationCount}
             unreadMessageCount={panelValues.unreadMessageCount}
-            onLogout={panelValues.handleLogout}
+            onLogout={logout}
           />
 
           <main className="main-content">

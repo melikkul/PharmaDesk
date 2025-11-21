@@ -1,147 +1,124 @@
 "use client";
 
 import "./form.css";
-import { useState, useCallback, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useState, FormEvent, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { useAuth } from "../../context/AuthContext";
 
 export default function Form() {
-  const [formData, setFormData] = useState({
-    email: "",
-    sifre: "",
-  });
-
-  // Hataları tutan state
-  const [errors, setErrors] = useState({
-    email: false,
-    sifre: false,
-  });
-
-  // Sunucudan gelen mesajı tutan state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
   
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { login } = useAuth();
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData(prev => ({ ...prev, [id]: value }));
-    
-    // Yazmaya başladığında kırmızılığı kaldır
-    if (errors[id as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [id]: false }));
+  useEffect(() => {
+    // URL'de ?success=true varsa mesaj göster
+    if (searchParams.get("success") === "true") {
+        setSuccessMessage("Kayıt işleminiz başarıyla tamamlandı. Lütfen giriş yapınız.");
+        // 3 saniye sonra mesajı kaldır
+        const timer = setTimeout(() => {
+            setSuccessMessage("");
+            // URL'den query param'ı temizlemek istersek router.replace kullanabiliriz ama şimdilik kalsın
+        }, 3000);
+        return () => clearTimeout(timer);
     }
-    if (errorMessage) setErrorMessage("");
-  }, [errors, errorMessage]);
+  }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
 
-    // 1. İstemci Tarafı Validasyonu (Boş kontrolü)
-    const newErrors = {
-      email: formData.email.trim() === "",
-      sifre: formData.sifre.trim() === "",
-    };
-
-    setErrors(newErrors);
-
-    if (newErrors.email || newErrors.sifre) {
+    if (!email.trim() || !password.trim()) {
       setErrorMessage("Lütfen tüm alanları doldurunuz.");
       return;
     }
 
-    // Validasyon başarılı ise API isteği at
     try {
-      // DÜZELTME: Port numarası 5001 yerine 8081 yapıldı
-      const res = await fetch("/api/auth/login", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      const res = await fetch(`${apiUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.sifre, // Backend DTO'suna uygun olarak 'password'
-        }),
+        body: JSON.stringify({ email, password }),
       });
 
-      // Eğer backend'den JSON dönmezse (örn: 500 hatası) patlamaması için kontrol
-      let data;
-      try {
-          data = await res.json();
-      } catch (err) {
-          console.error("JSON parse hatası:", err);
-          setErrorMessage("Sunucudan geçersiz yanıt alındı.");
-          return;
-      }
+      const data = await res.json();
 
       if (!res.ok) {
-        // Backend'den gelen özel hata mesajını göster
-        setErrorMessage(data.error || data.message || "Giriş yapılamadı.");
+        setErrorMessage(data.error || "Giriş yapılamadı.");
       } else {
-        // Başarılı giriş
-        console.log("Giriş Başarılı. Token:", data.token);
-        
-        // Token'ı kaydet (Localstorage veya Cookie)
-        localStorage.setItem("token", data.token);
-        
-        // Yönlendir
+        // Construct user object from response
+        const userData = {
+            ...data.user,
+            isFirstLogin: data.isFirstLogin
+        };
+        login(data.token, userData);
         router.push("/dashboard");
       }
     } catch (error) {
-      console.error("Bağlantı hatası:", error);
-      setErrorMessage("Sunucuya bağlanılamadı. Backend'in çalıştığından emin olun (Port 8081).");
+      console.error("Login error:", error);
+      setErrorMessage("Sunucuya bağlanılamadı.");
     }
   };
 
   return (
     <div className="container">
+      {/* TOAST NOTIFICATION */}
+      {successMessage && (
+        <div style={{
+            position: 'fixed',
+            top: '20px',
+            right: '20px',
+            backgroundColor: '#28a745',
+            color: 'white',
+            padding: '15px 25px',
+            borderRadius: '8px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+            zIndex: 1000,
+            animation: 'slideIn 0.5s ease-out',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            fontSize: '14px',
+            fontWeight: '500'
+        }}>
+            <i className="fa-solid fa-check-circle"></i>
+            {successMessage}
+        </div>
+      )}
+
       <div className="form-panel">
         <h1>Giriş Ekranı</h1>
         <form onSubmit={handleSubmit}>
+
           <div className="input-wrapper">
             <i className="fa-regular fa-envelope"></i>
-            <input
-              type="email"
-              id="email"
-              className={errors.email ? "error" : ""}
-              placeholder=" "
-              value={formData.email}
-              onChange={handleInputChange}
-            />
+            <input type="email" id="email" placeholder=" " value={email} onChange={(e) => setEmail(e.target.value)} />
             <label htmlFor="email">Email</label>
           </div>
 
           <div className="input-wrapper">
             <i className="fa-solid fa-lock"></i>
-            <input
-              type="password"
-              id="sifre"
-              className={errors.sifre ? "error" : ""}
-              placeholder=" "
-              value={formData.sifre}
-              onChange={handleInputChange}
-            />
+            <input type="password" id="sifre" placeholder=" " value={password} onChange={(e) => setPassword(e.target.value)} />
             <label htmlFor="sifre">Şifre</label>
-            <i className="fa-regular fa-eye-slash password-toggle"></i>
           </div>
 
-          <a href="./sifremi-unuttum" className="forgot-password">
-            Şifremi Unuttum
-          </a>
+          <Link href="/sifremi-unuttum" className="forgot-password">Şifremi Unuttum</Link>
 
-          {/* Hata Mesajı Alanı */}
           {errorMessage && <div className="error-message">{errorMessage}</div>}
 
           <div className="action-buttons-container">
-            <button type="submit" className="btn btn-primary">
-            Giriş
-            </button>
-            <a href="./register" type="button" className="btn btn-primary">
-            Kayıt
-            </a>
+            <button type="submit" className="btn btn-primary">Giriş</button>
+            <Link href="/register" className="btn btn-primary">Kayıt</Link>
           </div>
         </form>
       </div>
-
-      <div className="image-panel">
-        <img src="/Login.png" alt="Eczane İllüstrasyonu" />
-      </div>
+      <div className="image-panel"><img src="/Login.png" alt="Giriş" /></div>
     </div>
   );
 }

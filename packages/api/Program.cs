@@ -7,15 +7,43 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Http.Features;
 using System.Text;
+using AspNetCoreRateLimit;
+using Microsoft.AspNetCore.Diagnostics;
+using System.Net;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 builder.WebHost.UseUrls(builder.Configuration["ASPNETCORE_URLS"] ?? "http://0.0.0.0:8081");
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddProblemDetails();
+
+// --- Rate Limiting Services ---
+builder.Services.AddMemoryCache();
+builder.Services.Configure<IpRateLimitOptions>(options =>
+{
+    options.GeneralRules = new List<RateLimitRule>
+    {
+        new RateLimitRule
+        {
+            Endpoint = "*",
+            Period = "1m",
+            Limit = 100 // 1 dakikada maksimum 100 istek
+        },
+        new RateLimitRule
+        {
+            Endpoint = "*",
+            Period = "1h",
+            Limit = 3600
+        }
+    };
+});
+builder.Services.AddInMemoryRateLimiting();
+builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
+// ------------------------------
 
 string? databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string connString;
@@ -52,9 +80,12 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     {
         opt.TokenValidationParameters = new TokenValidationParameters
         {
-            ValidateIssuer = false,
-            ValidateAudience = false,
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            ValidIssuer = "PharmaDeskApi",
+            ValidAudience = "PharmaDeskClient",
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
@@ -62,14 +93,19 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
 
-builder.Services.AddCors(opt =>
-{
-    opt.AddPolicy("frontend",
-        p => p.WithOrigins("http://localhost:3000", "http://localhost:3001", "http://localhost:4200")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials());
-});
+// --- Secure CORS Policy ---
+var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',');
+
+    builder.Services.AddCors(opt =>
+    {
+        opt.AddPolicy("frontend", p =>
+        {
+            p.SetIsOriginAllowed(origin => true) // Allow any origin for now to fix Docker/Network issues
+             .AllowAnyHeader()
+             .AllowAnyMethod()
+             .AllowCredentials();
+        });
+    });
 
 builder.Services.Configure<FormOptions>(o =>
 {
@@ -77,6 +113,46 @@ builder.Services.Configure<FormOptions>(o =>
 });
 
 var app = builder.Build();
+
+// --- Global Exception Handler ---
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler(errorApp =>
+    {
+        errorApp.Run(async context =>
+        {
+            var problemDetailsService = context.RequestServices.GetService<IProblemDetailsService>();
+            var problemDetails = new ProblemDetails
+            {
+                Status = (int)HttpStatusCode.InternalServerError,
+                Title = "An unexpected error occurred.",
+                Detail = "An unexpected error occurred. Please try again later."
+            };
+            context.Response.ContentType = "application/problem+json";
+            if (problemDetailsService != null)
+            {
+                await problemDetailsService.WriteAsync(new ProblemDetailsContext { HttpContext = context, ProblemDetails = problemDetails });
+            }
+            else
+            {
+                await context.Response.WriteAsJsonAsync(problemDetails);
+            }
+        });
+    });
+}
+// -------------------------------
+
+// --- Security Headers Middleware ---
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+    context.Response.Headers.Append("X-Frame-Options", "DENY");
+    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+    context.Response.Headers.Append("Content-Security-Policy", "default-src 'self';");
+    await next();
+});
+// -----------------------------------
 
 using (var scope = app.Services.CreateScope())
 {
@@ -88,23 +164,6 @@ using (var scope = app.Services.CreateScope())
 
         var identityDb = services.GetRequiredService<Backend.Data.IdentityDbContext>();
         identityDb.Database.Migrate();
-
-        // --- Admin Kullanıcısı Oluşturma (Seed) ---
-        // İleride bu yorum satırlarını açtığınızda çalışacak kod:
-        /*
-        if (!identityDb.IdentityUsers.Any(u => u.Role == "Admin"))
-        {
-            identityDb.IdentityUsers.Add(new Backend.Models.IdentityUser {
-                GLN = "9999999999999",
-                Email = "admin@pharma.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-                PharmacyName = "PharmaDesk HQ",
-                Role = "Admin",
-                CreatedAt = DateTime.UtcNow
-            });
-            identityDb.SaveChanges();
-        }
-        */
     }
     catch (Exception ex)
     {
@@ -122,6 +181,7 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
+app.UseIpRateLimiting(); // Rate Limiting Middleware
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();

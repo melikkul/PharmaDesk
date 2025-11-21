@@ -29,13 +29,17 @@ services:
     networks:
       - pharmanet
     environment:
+      ASPNETCORE_ENVIRONMENT: Development
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001"
     depends_on:
       db:
         condition: service_healthy # DB tam hazır olana kadar bekle
 
   frontend-web:
-    build: ./packages/web
+    build:
+      context: ./packages/web
+      network: host
     container_name: pharma_desk_frontend_web
     ports:
       - "3000:3000"
@@ -44,8 +48,10 @@ services:
     networks:
       - pharmanet
     environment:
-      # Backend servis ismini kullanıyoruz
+      # Backend servis ismini kullanıyoruz (server-side Next.js için)
       - API_BASE_URL=http://backend:8081
+      # Browser-side requests için (client tarafından erişilebilir olmalı)
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
 
   frontend-admin:
     build: ./packages/admin

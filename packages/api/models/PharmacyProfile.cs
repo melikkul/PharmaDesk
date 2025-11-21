@@ -8,6 +8,8 @@ namespace Backend.Models
         [Key]
         public int Id { get; set; }
 
+        public string PublicId { get; set; } = string.Empty;
+
         [Required, StringLength(50)]
         public string GLN { get; set; } = string.Empty;
 
@@ -22,6 +24,7 @@ namespace Backend.Models
         public string? PostalCode { get; set; }
         public string? ServicePackage { get; set; }
         public string? ProfileImagePath { get; set; }
+        public string? About { get; set; } // YENİ
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

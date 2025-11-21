@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import styles from './layout.module.css'; // CSS modülünü import et
 import { useAuth } from '@/context/AuthContext';
 import { useRouter, usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
-import styles from './adminLayout.module.css';
+import Header from '@/components/Header';
 
 export default function AdminLayout({
   children,
@@ -29,17 +30,13 @@ export default function AdminLayout({
     );
   }
   
-  // Login sayfasındaysa layout'u gösterme (her ihtimale karşı)
-  if (pathname === '/login') {
-    return children;
-  }
-
   return (
     <div className={styles.adminContainer}>
-      <AdminSidebar onLogout={logout} />
-      <main className={styles.mainContent}>
-        {children}
-      </main>
+      <AdminSidebar onLogout={logout} /> 
+      <div className={styles.mainContent}>
+        <Header userName={user?.name || 'Admin'} onLogout={logout} />
+        <main className={styles.pageContent}>{children}</main>
+      </div>
     </div>
   );
 }

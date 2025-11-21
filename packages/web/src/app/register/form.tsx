@@ -4,6 +4,7 @@ import "./form.css";
 import { useIMask } from "react-imask";
 import { useState, useCallback, FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function Form() {
   const [formData, setFormData] = useState({
@@ -12,125 +13,112 @@ export default function Form() {
     email: "",
     sifre: "",
     tekrarSifre: "",
+    eczaneAdi: "",
   });
   
-  // Hatalı inputları takip eden state
   const [errors, setErrors] = useState<{[key: string]: boolean}>({});
-  // Formun genel hata mesajı
-  const [generalError, setGeneralError] = useState("");
-
+  const [errorMessage, setErrorMessage] = useState("");
   const router = useRouter();
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    
     if (id === 'isim' || id === 'soyisim') {
-      const filteredValue = value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '');
-      setFormData(prev => ({ ...prev, [id]: filteredValue }));
+      setFormData(prev => ({ ...prev, [id]: value.replace(/[^a-zA-ZçÇğĞıİöÖşŞüÜ\s]/g, '') }));
     } else {
       setFormData(prev => ({ ...prev, [id]: value }));
     }
-
-    // Kullanıcı yazarken hatayı temizle
-    if (errors[id]) {
-      setErrors(prev => ({ ...prev, [id]: false }));
-    }
-    if (generalError) setGeneralError("");
-  }, [errors, generalError]);
+    if (errors[id]) setErrors(prev => ({ ...prev, [id]: false }));
+    setErrorMessage("");
+  }, [errors]);
 
   const { ref: phoneRef, value: phoneValue } = useIMask<HTMLInputElement>({
-    mask: '(\\0\\500) 000 00 00',
-    lazy: false,
+    mask: '(\\0\\500) 000 00 00', lazy: false
   });
 
   const { ref: glnRef, value: glnValue } = useIMask<HTMLInputElement>({
-    mask: '0000000000000',
-    lazy: true,
-    overwrite: true,
+    mask: '0000000000000', lazy: true, overwrite: true
   });
   
-  // GLN değişimini takip edip hatayı silmek için
   const handleGlnChange = () => {
       if(errors.gln) setErrors(prev => ({...prev, gln: false}));
-      if(generalError) setGeneralError("");
   };
 
   const handleSubmit = useCallback(async (e: FormEvent) => {
     e.preventDefault();
     
+    // Validasyonlar
     const newErrors: {[key: string]: boolean} = {};
-    let hasError = false;
-
-    // Boş alan kontrolü
-    if (!formData.isim) newErrors.isim = true;
-    if (!formData.soyisim) newErrors.soyisim = true;
-    if (!formData.email) newErrors.email = true;
-    if (!formData.sifre) newErrors.sifre = true;
-    if (!formData.tekrarSifre) newErrors.tekrarSifre = true;
+    if (!formData.isim.trim()) newErrors.isim = true;
+    if (!formData.soyisim.trim()) newErrors.soyisim = true;
+    if (!formData.eczaneAdi.trim()) newErrors.eczaneAdi = true;
     
-    // GLN Kontrolü (13 hane olmalı)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!formData.email.trim() || !emailRegex.test(formData.email)) newErrors.email = true;
+    
+    if (!formData.sifre.trim() || formData.sifre.length < 6) newErrors.sifre = true; // Min 6 chars
+    if (!formData.tekrarSifre.trim()) newErrors.tekrarSifre = true;
+    
     const cleanGln = glnValue.replace(/[^0-9]/g, '');
-    if (cleanGln.length !== 13) {
-        newErrors.gln = true;
-    }
+    if (cleanGln.length !== 13) newErrors.gln = true;
 
     if (Object.keys(newErrors).length > 0) {
         setErrors(newErrors);
-        setGeneralError("Lütfen tüm alanları eksiksiz doldurunuz.");
+        setErrorMessage("Lütfen tüm alanları eksiksiz ve doğru doldurunuz.");
         return;
     }
 
-    // Şifre Eşleşme Kontrolü
     if (formData.sifre !== formData.tekrarSifre) {
       setErrors({ sifre: true, tekrarSifre: true });
-      setGeneralError("Şifreler uyuşmuyor.");
+      setErrorMessage("Şifreler uyuşmuyor.");
       return;
     }
 
-    // Başarılı Validasyon
-    console.log("Kayıt Verileri:", {
-      ...formData,
-      telefon: phoneValue,
-      gln: glnValue,
-    });
+    // VERİ PAKETLEME (Backend DTO ile eşleşmeli)
+    const step1Data = {
+      FirstName: formData.isim,
+      LastName: formData.soyisim,
+      Email: formData.email,
+      Password: formData.sifre,
+      PhoneNumber: phoneValue,
+      GLN: cleanGln,
+      PharmacyName: formData.eczaneAdi
+    };
 
+    // Konsola yazdıralım (F12 ile görünür)
+    console.log("Step 1 Verileri Kaydediliyor:", step1Data);
+
+    sessionStorage.setItem('registerStep1', JSON.stringify(step1Data));
     router.push('/register/step2');
   }, [formData, glnValue, phoneValue, router]);
 
   return (
     <div className="container">
-      <div className="form-panel" onDrop={(e) => e.preventDefault()} onDragOver={(e) => e.preventDefault()}>
+      <div className="form-panel">
         <h1>Kayıt Ekranı</h1>
         <form onSubmit={handleSubmit}>
           <div className="input-group-row">
             <div className="input-wrapper">
               <i className="fa-regular fa-user"></i>
-              <input 
-                type="text" id="isim" 
-                className={errors.isim ? "error" : ""}
-                placeholder=" " value={formData.isim} onChange={handleInputChange} 
-              />
+              <input type="text" id="isim" className={errors.isim ? "error" : ""} placeholder=" " value={formData.isim} onChange={handleInputChange} />
               <label htmlFor="isim">İsim</label>
             </div>
             <div className="input-wrapper">
               <i className="fa-regular fa-user"></i>
-              <input 
-                type="text" id="soyisim" 
-                className={errors.soyisim ? "error" : ""}
-                placeholder=" " value={formData.soyisim} onChange={handleInputChange} 
-              />
+              <input type="text" id="soyisim" className={errors.soyisim ? "error" : ""} placeholder=" " value={formData.soyisim} onChange={handleInputChange} />
               <label htmlFor="soyisim">Soyisim</label>
             </div>
           </div>
 
           <div className="input-wrapper">
             <i className="fa-regular fa-envelope"></i>
-            <input 
-              type="email" id="email" 
-              className={errors.email ? "error" : ""}
-              placeholder=" " value={formData.email} onChange={handleInputChange} 
-            />
+            <input type="email" id="email" className={errors.email ? "error" : ""} placeholder=" " value={formData.email} onChange={handleInputChange} />
             <label htmlFor="email">Email</label>
+          </div>
+
+          <div className="input-wrapper">
+            <i className="fa-solid fa-clinic-medical"></i>
+            <input type="text" id="eczaneAdi" className={errors.eczaneAdi ? "error" : ""} placeholder=" " value={formData.eczaneAdi} onChange={handleInputChange} />
+            <label htmlFor="eczaneAdi">Eczane Adı</label>
           </div>
 
           <div className="input-wrapper">
@@ -140,65 +128,31 @@ export default function Form() {
           </div>
 
           <div className="input-wrapper">
-            <input 
-              ref={glnRef} type="text" id="gln" 
-              className={`no-icon ${errors.gln ? "error" : ""}`}
-              placeholder=" " 
-              onChange={handleGlnChange} 
-            />
+            <input ref={glnRef} type="text" id="gln" className={`no-icon ${errors.gln ? "error" : ""}`} placeholder=" " onChange={handleGlnChange} />
             <label htmlFor="gln" className="no-icon-label">GLN Numarası</label>
           </div>
 
           <div className="input-group-row">
             <div className="input-wrapper">
               <i className="fa-solid fa-lock"></i>
-              <input 
-                type="password" id="sifre" 
-                className={errors.sifre ? "error" : ""}
-                placeholder=" " value={formData.sifre} onChange={handleInputChange} 
-              />
+              <input type="password" id="sifre" className={errors.sifre ? "error" : ""} placeholder=" " value={formData.sifre} onChange={handleInputChange} />
               <label htmlFor="sifre">Şifre</label>
-              <i className="fa-regular fa-eye-slash password-toggle"></i>
             </div>
             <div className="input-wrapper">
               <i className="fa-solid fa-lock"></i>
-              <input 
-                type="password" id="tekrarSifre" 
-                className={errors.tekrarSifre ? "error" : ""}
-                placeholder=" " value={formData.tekrarSifre} onChange={handleInputChange} 
-              />
+              <input type="password" id="tekrarSifre" className={errors.tekrarSifre ? "error" : ""} placeholder=" " value={formData.tekrarSifre} onChange={handleInputChange} />
               <label htmlFor="tekrar-sifre">Tekrar Şifre</label>
             </div>
           </div>
 
-          {/* Hata Mesajı */}
-          {generalError && <div className="error-message">{generalError}</div>}
-
-          <button type="submit" className="btn btn-primary">
-            Kayıt
-          </button>
+          {errorMessage && <div className="error-message">{errorMessage}</div>}
+          <button type="submit" className="btn btn-primary">Devam Et</button>
         </form>
-
         <div className="bottom-buttons-container">
-          <button type="button" className="btn btn-secondary" onClick={() => router.back()}>
-            Geri Dön
-          </button>
+          <Link href="/login" className="btn btn-secondary">Geri Dön</Link>
         </div>
       </div>
-
-      <div className="image-panel">
-        <img src="/Register.png" alt="Eczane İllüstrasyonu" />
-      </div>
-
-      <svg xmlns="http://www.w3.org/2000/svg" version="1.1" style={{ display: 'none' }}>
-        <defs>
-          <filter id="goo">
-            <feGaussianBlur in="SourceGraphic" result="blur" stdDeviation="10"></feGaussianBlur>
-            <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0 0 1 0 0 0 0 0 1 0 0 0 0 0 21 -7" result="goo"></feColorMatrix>
-            <feBlend in2="goo" in="SourceGraphic" result="mix"></feBlend>
-          </filter>
-        </defs>
-      </svg>
+      <div className="image-panel"><img src="/Register.png" alt="Kayıt" /></div>
     </div>
   );
 }
