@@ -1,0 +1,79 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: pharma_desk_db_prod
+    restart: always
+    ports:
+      - "5432:5432"
+    networks:
+      - pharmanet
+    environment:
+      POSTGRES_DB: pharmadesk_db
+      POSTGRES_USER: pharmadesk_user
+      POSTGRES_PASSWORD: melik123
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pharmadesk_user -d pharmadesk_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./packages/api
+    container_name: pharma_desk_backend_prod
+    restart: always
+    env_file:
+      - ./packages/api/.env
+    ports:
+      - "8081:8081"
+    networks:
+      - pharmanet
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
+      # Production domainlerini buraya ekliyoruz
+      ALLOWED_ORIGINS: "https://pharmadesk.com.tr,https://www.pharmadesk.com.tr,https://admin.pharmadesk.com.tr,http://localhost:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend-web:
+    build:
+      context: ./packages/web
+      # Build sırasında ortam değişkenini içeri aktarıyoruz
+      args:
+        NEXT_PUBLIC_API_URL: https://api.pharmadesk.com.tr
+    container_name: pharma_desk_frontend_web_prod
+    restart: always
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - pharmanet
+    environment:
+      # Server-side iletişim için (Docker ağı içinde)
+      - API_BASE_URL=http://backend:8081
+      # Client-side iletişim için (Tarayıcıdan)
+      - NEXT_PUBLIC_API_URL=https://api.pharmadesk.com.tr
+
+  frontend-admin:
+    build: ./packages/admin
+    container_name: pharma_desk_frontend_admin_prod
+    restart: always
+    ports:
+      - "3001:3000"
+    depends_on:
+      - backend
+    networks:
+      - pharmanet
+    environment:
+      - API_BASE_URL=http://backend:8081
+
+networks:
+  pharmanet:
+    driver: bridge
+
+volumes:
+  postgres_data_prod:

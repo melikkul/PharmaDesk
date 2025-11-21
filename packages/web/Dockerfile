@@ -13,6 +13,8 @@ RUN npm install --legacy-peer-deps
 COPY . .
 
 # .dockerignore dosyasının node_modules ve .next klasörlerini içerdiğinden emin olun
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 RUN npm run build
 
 # --- Stage 2: Production Runner ---

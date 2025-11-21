@@ -91,6 +91,7 @@ export default function FormStep2() {
         };
 
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+        console.log("ENV NEXT_PUBLIC_API_URL:", process.env.NEXT_PUBLIC_API_URL); // DEBUG LOG
         console.log(`Fetching to: ${apiUrl}/api/auth/register`); // DEBUG LOG
         
         const res = await fetch(`${apiUrl}/api/auth/register`, {
