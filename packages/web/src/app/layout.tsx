@@ -6,6 +6,13 @@ import './globals.css'; // Assuming there might be a global css, if not I will r
 // The user provided file list showed: form.css, etc.
 // I will just add AuthProvider for now.
 
+export const metadata = {
+  title: 'PharmaDesk',
+  icons: {
+    icon: '/logoBeyaz.png',
+  },
+};
+
 export default function RootLayout({
   children,
 }: {

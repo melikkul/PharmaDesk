@@ -22,7 +22,7 @@ const Sidebar = () => {
       <Link href="/dashboard">
         <img
           src="/logoBeyaz.png" // Logonuzun public klasöründe olduğundan emin olun
-          alt="PharmaDesk Admin"
+          alt="PharmaDesk"
           className={styles.sidebarLogo}
         />
       </Link>
@@ -34,14 +34,6 @@ const Sidebar = () => {
               className={isActive('/dashboard') ? styles.active : ''}
             >
               <DashboardIcon /> <span>Dashboard</span>
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/users"
-              className={isActive('/users') ? styles.active : ''}
-            >
-              <UsersIcon /> <span>Kullanıcılar</span>
             </Link>
           </li>
         </ul>
