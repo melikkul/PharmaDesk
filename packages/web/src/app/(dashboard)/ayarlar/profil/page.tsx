@@ -22,8 +22,8 @@ const ProfilimPage = () => {
     if (!token) return;
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-      const response = await fetch(`${apiUrl}/api/users/me`, {
+      // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+      const response = await fetch(`/api/users/me`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

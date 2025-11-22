@@ -17,14 +17,14 @@ export const useProfile = (username: string) => {
       // The API endpoint we added is /api/users/{username}.
       
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+        // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
         // If username is 'me', use /api/users/me, otherwise /api/users/{username}
         // Actually, our UsersController has Me() at /api/users/me and GetProfile(username) at /api/users/{username}.
         // If username is 'me', it will hit GetProfile('me') unless we handle it. 
         // UsersController route order matters. "me" is a specific literal, "{username}" is a parameter.
         // Usually specific routes take precedence. Let's assume "me" hits Me().
         
-        const endpoint = username === 'me' ? `${apiUrl}/api/users/me` : `${apiUrl}/api/users/${username}`;
+        const endpoint = username === 'me' ? `/api/users/me` : `/api/users/${username}`;
 
         const response = await fetch(endpoint, {
           headers: {
