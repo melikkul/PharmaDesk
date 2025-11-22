@@ -20,6 +20,8 @@ export interface DashboardData {
   shipments: any[];
 }
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+
 export const useDashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -29,7 +31,7 @@ export const useDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch(`/api/dashboard/stats`, {
+        const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -43,8 +45,7 @@ export const useDashboard = () => {
         const result = await response.json();
         // Ensure keys match what frontend expects (camelCase vs PascalCase from API)
         // If API returns PascalCase (default .NET), we might need to map it or configure API to return camelCase.
-        // Assuming default .NET behavior might be PascalCase, but let's check.
-        // Usually .NET Core defaults to camelCase JSON unless configured otherwise.
+        // Assuming default .NET Core defaults to camelCase JSON unless configured otherwise.
         setData(result);
       } catch (err) {
         console.error(err);
@@ -56,6 +57,8 @@ export const useDashboard = () => {
 
     if (token) {
       fetchStats();
+    } else {
+      setLoading(false);
     }
   }, [token]);
 

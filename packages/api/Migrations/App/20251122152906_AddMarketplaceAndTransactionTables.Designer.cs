@@ -3,6 +3,7 @@ using System;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace api.Migrations.App
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251122152906_AddMarketplaceAndTransactionTables")]
+    partial class AddMarketplaceAndTransactionTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -52,6 +55,17 @@ namespace api.Migrations.App
                     b.HasKey("Id");
 
                     b.ToTable("Admins");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            CreatedAt = new DateTime(2025, 11, 22, 15, 29, 6, 340, DateTimeKind.Utc).AddTicks(8344),
+                            Email = "melik_kul@outlook.com",
+                            FirstName = "Melik",
+                            LastName = "Kul",
+                            PasswordHash = "$2a$11$CFXREGvgZdRmPyBWbQQPCe31AX/EGYaHvJ9eAz.X7LpLmNfsokQdy"
+                        });
                 });
 
             modelBuilder.Entity("Backend.Models.Group", b =>

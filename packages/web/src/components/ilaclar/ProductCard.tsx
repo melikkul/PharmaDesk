@@ -14,8 +14,8 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
   const barWidth = medication.initialStock > 0 ? (medication.currentStock / medication.initialStock) * 100 : 0;
 
   // Create a URL-friendly slug from the medication name
-  // Bu hesaplama basit olduğu için useMemo'ya gerek duyulmamıştır.
-  const medicationSlug = medication.name.toLowerCase().replace(/\s+/g, '-');
+  // Replace spaces and slashes with dashes, and handle Turkish characters if needed
+  const medicationSlug = medication.name.toLowerCase().replace(/[\s\/]+/g, '-');
 
   return (
     <div className={`${styles.cardWrapper} ${isOutOfStock ? styles.outOfStock : ''}`}>

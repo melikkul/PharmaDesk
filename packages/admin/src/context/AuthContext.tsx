@@ -17,7 +17,7 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthenticated: boolean;
   logout: () => void;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
 }
 
 // API istekleri için merkezi bir Axios instance'ı oluşturuyoruz.
@@ -38,8 +38,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     try {
-      const storedToken = localStorage.getItem('admin_token');
-      const storedUser = localStorage.getItem('admin_user');
+      const storedToken = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+      const storedUser = localStorage.getItem('admin_user') || sessionStorage.getItem('admin_user');
 
       if (storedToken && storedUser) {
         const userData: User = JSON.parse(storedUser);
@@ -52,19 +52,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Hata durumunda depolamayı temizle
       localStorage.removeItem('admin_token');
       localStorage.removeItem('admin_user');
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('admin_user');
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string, rememberMe: boolean = true) => {
     try {
-      const response = await api.post('/api/auth/login', { email, password });
+      const response = await api.post('/api/admin/login', { email, password });
       const { token, user } = response.data;
 
       if (token && user) {
-        localStorage.setItem('admin_token', token);
-        localStorage.setItem('admin_user', JSON.stringify(user));
+        if (rememberMe) {
+          localStorage.setItem('admin_token', token);
+          localStorage.setItem('admin_user', JSON.stringify(user));
+          sessionStorage.removeItem('admin_token');
+          sessionStorage.removeItem('admin_user');
+        } else {
+          sessionStorage.setItem('admin_token', token);
+          sessionStorage.setItem('admin_user', JSON.stringify(user));
+          localStorage.removeItem('admin_token');
+          localStorage.removeItem('admin_user');
+        }
+        
         setToken(token);
         setUser(user);
         api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -85,6 +97,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Token'ı local storage'dan kaldır (eğer kullanılıyorsa)
     localStorage.removeItem('admin_token');
     localStorage.removeItem('admin_user');
+    sessionStorage.removeItem('admin_token');
+    sessionStorage.removeItem('admin_user');
     delete api.defaults.headers.common['Authorization'];
     // Kullanıcıyı login sayfasına yönlendir
     router.push('/login');

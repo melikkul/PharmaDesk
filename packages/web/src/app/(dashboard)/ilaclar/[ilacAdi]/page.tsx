@@ -168,7 +168,8 @@ export default function IlacDetayPage() {
     // ### OPTİMİZASYON: useMemo ###
     // 'medication' verisi, 'ilacAdi' değişmediği sürece yeniden aranmaz.
     const medication = useMemo(() => {
-        return ilaclarShowroomData.find(m => m.name.toLowerCase().replace(/\s+/g, '-') === ilacAdi) || null;
+        // URL'den gelen ilacAdi ile eşleşen ilacı bul (slug oluşturma mantığı ProductCard ile aynı olmalı)
+        return ilaclarShowroomData.find(m => m.name.toLowerCase().replace(/[\s\/]+/g, '-') === ilacAdi) || null;
     }, [ilacAdi]);
 
     const [mainQuantity, setMainQuantity] = useState<number | string>(1);

@@ -11,8 +11,14 @@ namespace Backend.Data
         public DbSet<Group> Groups { get; set; }
         public DbSet<Medication> Medications { get; set; }
         public DbSet<InventoryItem> InventoryItems { get; set; }
-
         public DbSet<Admin> Admins { get; set; }
+        
+        // --- YENİ TABLOLAR: Frontend Entegrasyonu için ---
+        public DbSet<Offer> Offers { get; set; }
+        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Shipment> Shipments { get; set; }
+        public DbSet<Notification> Notifications { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -27,17 +33,27 @@ namespace Backend.Data
             modelBuilder.Entity<InventoryItem>()
                 .HasIndex(i => new { i.PharmacyProfileId, i.MedicationId, i.BatchNumber })
                 .IsUnique();
+            
+            // --- YENİ İNDEXLER ---
+            // PharmacyProfile Username unique constraint
+            modelBuilder.Entity<PharmacyProfile>()
+                .HasIndex(p => p.Username)
+                .IsUnique();
+            
+            // Shipment OrderNumber unique constraint
+            modelBuilder.Entity<Shipment>()
+                .HasIndex(s => s.OrderNumber)
+                .IsUnique();
+            
+            // Transaction indexing for performance
+            modelBuilder.Entity<Transaction>()
+                .HasIndex(t => new { t.PharmacyProfileId, t.Date });
+            
+            // Offer indexing for marketplace queries
+            modelBuilder.Entity<Offer>()
+                .HasIndex(o => new { o.Status, o.MedicationId });
 
-            // Seed Admin
-            modelBuilder.Entity<Admin>().HasData(new Admin
-            {
-                Id = 1,
-                Email = "melik_kul@outlook.com",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("melik123"),
-                FirstName = "Melik",
-                LastName = "Kul",
-                CreatedAt = DateTime.UtcNow
-            });
+            // Admin seed data removed - no automatic admin accounts
         }
     }
 }

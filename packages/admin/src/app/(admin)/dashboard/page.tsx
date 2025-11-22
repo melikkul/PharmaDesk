@@ -19,7 +19,7 @@ export default function AdminDashboardPage() {
   const [stats, setStats] = React.useState<any>(null);
 
   React.useEffect(() => {
-    api.get('/admin/stats')
+    api.get('/api/admin/stats')
        .then(res => setStats(res.data))
        .catch(err => console.error("Stats fetch error:", err));
   }, [api]);

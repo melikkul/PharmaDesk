@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 export default function Form() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
   
@@ -55,9 +56,10 @@ export default function Form() {
         // Construct user object from response
         const userData = {
             ...data.user,
+            username: data.user.email, // Use email as username for routing
             isFirstLogin: data.isFirstLogin
         };
-        login(data.token, userData);
+        login(data.token, userData, rememberMe);
         router.push("/dashboard");
       }
     } catch (error) {
@@ -106,6 +108,17 @@ export default function Form() {
             <i className="fa-solid fa-lock"></i>
             <input type="password" id="sifre" placeholder=" " value={password} onChange={(e) => setPassword(e.target.value)} />
             <label htmlFor="sifre">Şifre</label>
+          </div>
+
+          <div className="remember-me-container" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+            <input 
+              type="checkbox" 
+              id="rememberMe" 
+              checked={rememberMe} 
+              onChange={(e) => setRememberMe(e.target.checked)} 
+              style={{ width: 'auto', margin: 0 }}
+            />
+            <label htmlFor="rememberMe" style={{ position: 'static', transform: 'none', color: '#666', fontSize: '14px', pointerEvents: 'auto' }}>Beni Hatırla</label>
           </div>
 
           <Link href="/sifremi-unuttum" className="forgot-password">Şifremi Unuttum</Link>

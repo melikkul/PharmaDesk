@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
 namespace Backend.Models
@@ -30,6 +31,18 @@ namespace Backend.Models
         public string? ServicePackage { get; set; }
         public string? ProfileImagePath { get; set; }
         public string? About { get; set; }
+        
+        // --- YENİ ALANLAR: Frontend Entegrasyonu için ---
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Balance { get; set; } = 0; // Cüzdan bakiyesi
+        
+        public string? CoverImageUrl { get; set; } // Kapak fotoğrafı
+        
+        [StringLength(100)]
+        public string? Username { get; set; } // URL-friendly benzersiz kimlik (örn: yildiz-eczanesi)
+        
+        public DateTime RegistrationDate { get; set; } = DateTime.UtcNow; // Kayıt tarihi
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

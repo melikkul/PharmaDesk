@@ -1,12 +1,17 @@
+'use client';
+
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useAuth } from '@/context/AuthContext';
 import styles from './anasayfa.module.css';
 
 // İkonlar için react-icons kütüphanesini kullanabilirsiniz (npm install react-icons)
 // import { FaBoxes, FaSyncAlt, FaChartBar } from 'react-icons/fa';
 
 export default function Anasayfa() {
+    const { isAuthenticated } = useAuth();
+
     return (
         <div className={styles.pageContainer}>
             {/* 1. Navigasyon Çubuğu */}
@@ -23,8 +28,14 @@ export default function Anasayfa() {
                         />
                     </Link>
                     <div className={styles.navLinks}>
-                        <Link href="/login" className={styles.btnOutline}>Giriş Yap</Link>
-                        <Link href="/register" className={styles.btnPrimary}>Kayıt Ol</Link>
+                        {isAuthenticated ? (
+                            <Link href="/dashboard" className={styles.btnPrimary}>Dashboard'a Git</Link>
+                        ) : (
+                            <>
+                                <Link href="/login" className={styles.btnOutline}>Giriş Yap</Link>
+                                <Link href="/register" className={styles.btnPrimary}>Kayıt Ol</Link>
+                            </>
+                        )}
                     </div>
                 </div>
             </nav>

@@ -27,7 +27,7 @@ export default function PharmaciesPage() {
       setIsLoading(true);
       setError('');
       try {
-        const { data } = await api.get('/admin/pharmacies');
+        const { data } = await api.get('/api/admin/pharmacies');
         setPharmacies(data);
       } catch (err: any) {
         console.error(err);

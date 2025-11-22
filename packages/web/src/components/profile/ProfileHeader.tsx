@@ -17,32 +17,9 @@ const MessageIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="
 
 const ProfileHeader: React.FC<ProfileHeaderProps> = ({ pharmacy, isOwnProfile, onStartChat }) => {
   return (
-    <div className={styles.profileHeader}>
-      <div className={styles.coverPhoto} style={{ backgroundImage: `url(${pharmacy.coverImageUrl || '/default-cover.jpg'})` }}></div>
-      <div className={styles.headerContent}>
-        <div className={styles.avatarContainer}>
-          <div className={styles.avatar} style={{ backgroundImage: `url(${pharmacy.logoUrl || ''})` }}>
-            {!pharmacy.logoUrl && <span>{pharmacy.pharmacyName.charAt(0)}</span>}
-          </div>
-        </div>
-        <div className={styles.userInfo}>
-          <h1>{pharmacy.pharmacyName}</h1>
-          <p>Sorumlu Eczacı: {pharmacy.pharmacistInCharge}</p>
-        </div>
-        
-        {/* GÜNCELLENDİ: Kendi profili ise "Düzenle", değilse "Mesaj Gönder" butonu */}
-        {isOwnProfile ? (
-          <Link href="/ayarlar/eczane" className={styles.editProfileButton}>
-            <EditIcon />
-            <span>Eczane Profilini Düzenle</span>
-          </Link>
-        ) : (
-          <button className={styles.editProfileButton} onClick={onStartChat}>
-            <MessageIcon />
-            <span>Mesaj Gönder</span>
-          </button>
-        )}
-      </div>
+    <div>
+      <p>Profile Header Minimal</p>
+      <p>Name: {pharmacy.pharmacyName}</p>
     </div>
   );
 };

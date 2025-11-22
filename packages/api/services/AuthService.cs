@@ -34,11 +34,25 @@ namespace Backend.Services
                  throw new Exception("Email adresi boş olamaz.");
             }
 
-            // Veritabanı kontrolü
-            var exists = await _db.IdentityUsers.AnyAsync(x => x.Email == emailLower);
-            Console.WriteLine($"[SERVICE] Veritabanında var mı? : {exists}");
+            // E-posta kontrolü - IdentityUsers tablosunda
+            var emailExists = await _db.IdentityUsers.AnyAsync(x => x.Email == emailLower);
+            Console.WriteLine($"[SERVICE] Email veritabanında var mı? : {emailExists}");
             
-            if (exists) return null;
+            if (emailExists)
+            {
+                Console.WriteLine($"[SERVICE] Bu e-posta zaten kayıtlı: {emailLower}");
+                return null; // E-posta zaten kayıtlı
+            }
+
+            // GLN kontrolü - PharmacyProfiles tablosunda
+            var glnExists = await _appDb.PharmacyProfiles.AnyAsync(p => p.GLN == req.GLN);
+            Console.WriteLine($"[SERVICE] GLN veritabanında var mı? : {glnExists}");
+            
+            if (glnExists)
+            {
+                Console.WriteLine($"[SERVICE] Bu GLN numarası zaten kayıtlı: {req.GLN}");
+                return null; // GLN zaten kayıtlı
+            }
 
             // Generate PublicId (Timestamp based)
             var publicId = DateTime.Now.ToString("yyyyMMddHHmmssfff");
@@ -66,6 +80,7 @@ namespace Backend.Services
                 LastName = req.LastName,
                 Email = emailLower,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
+                GLN = req.GLN, // GLN'i IdentityUser'a da ekle
                 PharmacyId = profile.Id, // Link here
                 Role = "User",
                 IsFirstLogin = true,
@@ -101,48 +116,53 @@ namespace Backend.Services
         {
             var emailLower = req.Email?.Trim().ToLowerInvariant();
             
-            // 1. Check Admin Table first
-            var admin = await _appDb.Admins.SingleOrDefaultAsync(a => a.Email == emailLower);
-            if (admin != null)
+            // 1. Check Admin Table ONLY if requiredRole is "Admin"
+            if (requiredRole == "Admin")
             {
-                if (BCrypt.Net.BCrypt.Verify(req.Password, admin.PasswordHash))
+                var admin = await _appDb.Admins.SingleOrDefaultAsync(a => a.Email == emailLower);
+                if (admin != null)
                 {
-                     // Create token for admin
-                     var adminUser = new IdentityUser
-                     {
-                         Id = admin.Id,
-                         Email = admin.Email,
-                         FirstName = admin.FirstName,
-                         LastName = admin.LastName,
-                         Role = "Admin",
-                         PharmacyId = 0 // No pharmacy for admin
-                     };
-                     
-                     var adminToken = JwtHelper.GenerateToken(adminUser, _jwtKey);
-                     
-                     var adminAuthUser = new AuthUserDto
-                     {
-                         FullName = $"{admin.FirstName} {admin.LastName}",
-                         Email = admin.Email,
-                         PharmacyName = "System Admin",
-                         GLN = "0000000000000",
-                         PublicId = "ADMIN",
-                         City = "System",
-                         District = "System"
-                     };
+                    if (BCrypt.Net.BCrypt.Verify(req.Password, admin.PasswordHash))
+                    {
+                         // Create token for admin
+                         var adminUser = new IdentityUser
+                         {
+                             Id = admin.Id,
+                             Email = admin.Email,
+                             FirstName = admin.FirstName,
+                             LastName = admin.LastName,
+                             Role = "Admin",
+                             PharmacyId = 0 // No pharmacy for admin
+                         };
+                         
+                         var adminToken = JwtHelper.GenerateToken(adminUser, _jwtKey);
+                         
+                         var adminAuthUser = new AuthUserDto
+                         {
+                             FullName = $"{admin.FirstName} {admin.LastName}",
+                             Email = admin.Email,
+                             PharmacyName = "System Admin",
+                             GLN = "0000000000000",
+                             PublicId = "ADMIN",
+                             City = "System",
+                             District = "System"
+                         };
 
-                     return new LoginResponse 
-                     { 
-                         Token = adminToken, 
-                         IsFirstLogin = false,
-                         FullName = adminAuthUser.FullName,
-                         PharmacyName = adminAuthUser.PharmacyName,
-                         User = adminAuthUser
-                     };
+                         return new LoginResponse 
+                         { 
+                             Token = adminToken, 
+                             IsFirstLogin = false,
+                             FullName = adminAuthUser.FullName,
+                             PharmacyName = adminAuthUser.PharmacyName,
+                             User = adminAuthUser
+                         };
+                    }
                 }
+                // If requiredRole is "Admin" but admin not found or wrong password, return null
+                return null;
             }
 
-            // 2. Check IdentityUsers (Regular Users)
+            // 2. Check IdentityUsers (Regular Users) - only when NOT requiring Admin role
             var user = await _db.IdentityUsers.SingleOrDefaultAsync(u => u.Email == emailLower);
 
             if (user == null)

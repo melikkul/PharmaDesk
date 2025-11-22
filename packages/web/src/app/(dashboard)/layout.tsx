@@ -1,8 +1,9 @@
 // src/app/(dashboard)/layout.tsx
 'use client';
 
-import React from 'react'; // React.memo için 'React' import edildi
+import React, { useEffect } from 'react'; // React.memo için 'React' import edildi
 import './dashboard/dashboard.css'; // Global dashboard stilleri
+import { useRouter } from 'next/navigation';
 
 // Ana Bileşenler
 import Sidebar from '@/components/Sidebar';
@@ -78,7 +79,26 @@ export default function DashboardLayout({
 }) {
   // 1. ADIM: Tüm state ve fonksiyonları hook'tan al
   const panelValues = useDashboardPanels();
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  const router = useRouter();
+
+  // Authentication check - redirect to homepage if not authenticated
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      console.log('[Dashboard Layout] User not authenticated, performing logout and redirecting');
+      logout(); // Clear cookies/storage to prevent middleware loop
+      // router.push('/anasayfa'); // logout() already redirects to '/'
+    }
+  }, [isAuthenticated, isLoading, logout, router]);
+
+  // Show loading or nothing while checking authentication
+  if (isLoading || !isAuthenticated) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+        <p>Yükleniyor...</p>
+      </div>
+    );
+  }
 
   // Merge real user data with dummy data for missing fields (like balance)
   const headerUserData = {

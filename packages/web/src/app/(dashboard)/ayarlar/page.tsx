@@ -3,6 +3,7 @@ import React from 'react';
 import GenelAyarlarPage from './GenelAyarlar';
 
 const AyarlarPage = () => {
+  console.log('AyarlarPage rendering');
   return <GenelAyarlarPage />;
 };
 

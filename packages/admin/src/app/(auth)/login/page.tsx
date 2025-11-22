@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 export default function AdminLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   
@@ -18,7 +19,7 @@ export default function AdminLoginPage() {
     setError('');
     setIsLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, rememberMe);
       router.replace('/dashboard');
     } catch (err: any) {
       console.error(err);
@@ -82,6 +83,19 @@ export default function AdminLoginPage() {
                 placeholder="••••••••"
                 required
               />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="rememberMe"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+              />
+              <label htmlFor="rememberMe" className="text-sm text-text-secondary cursor-pointer">
+                Beni Hatırla
+              </label>
             </div>
 
             <button

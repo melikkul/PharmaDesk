@@ -155,5 +155,44 @@ namespace Backend.Controllers
 
             return Ok(p);
         }
+
+        // GET /api/users - List all users (for admin panel)
+        [HttpGet]
+        public async Task<ActionResult> GetAllUsers()
+        {
+            var users = await _identityDb.IdentityUsers
+                .Select(u => new
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    GLN = u.GLN,
+                    CreatedAt = u.CreatedAt,
+                    PharmacyId = u.PharmacyId
+                })
+                .ToListAsync();
+
+            // Fetch pharmacy names for each user
+            var result = new List<object>();
+            foreach (var user in users)
+            {
+                var pharmacy = await _db.PharmacyProfiles.FindAsync(user.PharmacyId);
+                result.Add(new
+                {
+                    user.Id,
+                    user.Email,
+                    user.FirstName,
+                    user.LastName,
+                    user.GLN,
+                    PharmacyName = pharmacy?.PharmacyName ?? "N/A",
+                    City = pharmacy?.City ?? "N/A",
+                    District = pharmacy?.District ?? "N/A",
+                    user.CreatedAt
+                });
+            }
+
+            return Ok(result);
+        }
     }
 }

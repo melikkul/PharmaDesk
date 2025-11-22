@@ -20,6 +20,12 @@ namespace Backend.Dtos
         public int Quantity { get; set; }
         public string BatchNumber { get; set; } = string.Empty;
         public DateTime ExpiryDate { get; set; }
+        
+        // YENİ ALANLAR
+        public decimal CostPrice { get; set; }
+        public decimal? SalePrice { get; set; }
+        public int BonusQuantity { get; set; }
+        public string Stock { get; set; } = string.Empty; // "Quantity + BonusQuantity" formatı
     }
 
     public class AddInventoryRequest
@@ -32,6 +38,12 @@ namespace Backend.Dtos
         public string BatchNumber { get; set; } = string.Empty;
         [Required]
         public DateTime ExpiryDate { get; set; }
+        
+        // YENİ ALANLAR
+        [Required]
+        public decimal CostPrice { get; set; }
+        public decimal? SalePrice { get; set; }
+        public int BonusQuantity { get; set; } = 0;
     }
 
     public class UpdateInventoryRequest

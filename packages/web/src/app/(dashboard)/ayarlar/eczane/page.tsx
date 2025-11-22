@@ -101,7 +101,6 @@ const EczaneBilgileriPage = () => {
               id="gln" 
               value={formData.gln} 
               disabled // GLN genellikle değişmez
-              className="bg-gray-100 cursor-not-allowed"
             />
           </div>
            <div className={styles.formGroup}>

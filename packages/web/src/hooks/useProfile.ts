@@ -2,31 +2,24 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { PharmacyProfileData } from '../data/dashboardData';
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+
 export const useProfile = (username: string) => {
+  console.log('useProfile called with:', username);
   const [profile, setProfile] = useState<PharmacyProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
+  console.log('useProfile token:', token);
 
   useEffect(() => {
     const fetchProfile = async () => {
       if (!username) return;
       
-      // If username is 'me', we might want to use the 'me' endpoint or just rely on AuthContext.
-      // But for consistency, let's fetch from API if possible, or handle 'me' logic here.
-      // The API endpoint we added is /api/users/{username}.
-      
       try {
-        // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-        // If username is 'me', use /api/users/me, otherwise /api/users/{username}
-        // Actually, our UsersController has Me() at /api/users/me and GetProfile(username) at /api/users/{username}.
-        // If username is 'me', it will hit GetProfile('me') unless we handle it. 
-        // UsersController route order matters. "me" is a specific literal, "{username}" is a parameter.
-        // Usually specific routes take precedence. Let's assume "me" hits Me().
-        
         const endpoint = username === 'me' ? `/api/users/me` : `/api/users/${username}`;
 
-        const response = await fetch(endpoint, {
+        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -50,7 +43,7 @@ export const useProfile = (username: string) => {
                 pharmacyName: data.pharmacyName,
                 gln: data.gln,
                 location: `${data.city || ''} / ${data.district || ''}`,
-                registrationDate: new Date(data.createdAt).toLocaleDateString('tr-TR'),
+                registrationDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('tr-TR') : 'Tarih Yok',
                 about: "Eczane hakkında bilgi...", // API doesn't have 'about' yet
                 username: username === 'me' ? data.email : username, // Fallback
                 pharmacistInCharge: "Eczacı Adı", // Placeholder

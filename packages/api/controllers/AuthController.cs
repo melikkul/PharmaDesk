@@ -29,7 +29,7 @@ namespace Backend.Controllers
                 var response = await _authService.RegisterAsync(req);
                 if (response == null)
                 {
-                    return BadRequest(new { error = "Bu e-posta adresi zaten kayıtlı." });
+                    return BadRequest(new { error = "Bu e-posta adresi veya GLN numarası zaten kayıtlı." });
                 }
                 
                 return Ok(response);

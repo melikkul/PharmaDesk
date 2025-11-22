@@ -154,23 +154,66 @@ app.Use(async (context, next) =>
 });
 // -----------------------------------
 
+// --- Auto-apply migrations on startup (for Docker) ---
 using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
+    var logger = services.GetRequiredService<ILogger<Program>>();
+    
     try
     {
+        logger.LogInformation("Applying database migrations...");
+        
         var pharmacyDb = services.GetRequiredService<Backend.Data.AppDbContext>();
         pharmacyDb.Database.Migrate();
+        logger.LogInformation("AppDbContext migrations applied successfully.");
 
         var identityDb = services.GetRequiredService<Backend.Data.IdentityDbContext>();
         identityDb.Database.Migrate();
+        logger.LogInformation("IdentityDbContext migrations applied successfully.");
+        
+        // --- Seed hardcoded admin account ---
+        logger.LogInformation("Seeding admin account...");
+        var adminEmail = "melik_kul@outlook.com";
+        var adminPassword = "melik123";
+        
+        var existingAdmin = await pharmacyDb.Admins.FirstOrDefaultAsync(a => a.Email == adminEmail);
+        
+        if (existingAdmin == null)
+        {
+            // Create new admin
+            var newAdmin = new Admin
+            {
+                Email = adminEmail,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
+                FirstName = "Melik",
+                LastName = "Kul",
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            pharmacyDb.Admins.Add(newAdmin);
+            await pharmacyDb.SaveChangesAsync();
+            logger.LogInformation($"Admin account created: {adminEmail}");
+        }
+        else
+        {
+            // Update existing admin password (in case it was changed)
+            existingAdmin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
+            existingAdmin.FirstName = "Melik";
+            existingAdmin.LastName = "Kul";
+            await pharmacyDb.SaveChangesAsync();
+            logger.LogInformation($"Admin account updated: {adminEmail}");
+        }
+        // ------------------------------------
     }
     catch (Exception ex)
     {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "Veritabanı migration işlemi sırasında bir hata oluştu.");
+        logger.LogError(ex, "An error occurred while applying database migrations or seeding admin.");
+        // Don't throw - allow app to start even if migrations fail
+        // This prevents the container from crashing on startup
     }
 }
+// ------------------------------------------------------
 
 if (app.Environment.IsDevelopment())
 {

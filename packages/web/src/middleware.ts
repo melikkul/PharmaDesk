@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
   // Auth routes: User must NOT be logged in (redirect to dashboard if they are)
-  const authRoutes = ['/login', '/register'];
+  const authRoutes = ['/login', '/register', '/anasayfa'];
   const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
   // 1. If trying to access protected route without token -> Redirect to Login
