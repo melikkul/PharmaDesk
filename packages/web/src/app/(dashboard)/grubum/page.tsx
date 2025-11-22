@@ -9,7 +9,7 @@ import tableStyles from '@/components/dashboard/Table.module.css';
 import filterStyles from '@/app/(dashboard)/tekliflerim/InventoryFilter.module.css';
 
 // GÜNCELLEME: Layout'taki hook'u import et
-import { useDashboard } from '@/hooks/useDashboardPanels';
+import { useDashboardContext } from '@/context/DashboardContext';
 
 // VERİLER
 import {
@@ -32,7 +32,7 @@ interface GroupFilterState {
 export default function GrubumPage() {
   
   // 1. ADIM: Context'ten (layout'tan) gelen fonksiyonu al
-  const { handleStartChat } = useDashboard();
+  const { handleStartChat } = useDashboardContext();
   
   const [filters, setFilters] = useState<GroupFilterState>({
     searchTerm: '',

@@ -5,7 +5,16 @@ WORKDIR /app
 
 # Önce bağımlılıkları kopyala ve kur (Docker katman önbelleklemesi için)
 COPY package*.json ./
-RUN npm install --legacy-peer-deps
+
+# NPM yapılandırması - ağ zaman aşımı sorunlarını önlemek için
+RUN npm config set fetch-timeout 300000 && \
+    npm config set fetch-retries 3 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set registry https://registry.npmjs.org/
+
+# Bağımlılıkları kur
+RUN npm install --legacy-peer-deps --verbose
 
 # Tüm kaynak kodunu kopyala
 # DİKKAT: Orijinal dosyanızda burada "COPY ." ve altında tek başına "." vardı.

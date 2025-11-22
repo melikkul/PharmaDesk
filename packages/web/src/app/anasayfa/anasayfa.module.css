@@ -1,13 +1,5 @@
 /* EczaTrend'den ilham alan renk paleti - PharmaDesk Yeşil Teması */
-:root {
-    --primary-color: #2D8B57; /* Ana Yeşil */
-    --primary-dark: #1F603C;  /* Koyu Yeşil (Hover) */
-    --secondary-color: #F4F7F6; /* Açık Gri Arka Plan */
-    --dark-color: #333333;    /* Koyu Metin */
-    --light-color: #666666;   /* Açık Metin */
-    --white-color: #FFFFFF;
-    --border-color: #E0E0E0;
-}
+/* CSS değişkenleri globals.css dosyasında :root içinde tanımlanmıştır */
 
 .pageContainer {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;

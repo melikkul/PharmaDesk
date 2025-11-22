@@ -15,6 +15,14 @@
   --negative-color: #E74C3C;
   --unread-dot-color: #3498DB;
   --font-family: 'Poppins', sans-serif;
+  
+  /* PharmaDesk Yeşil Teması */
+  --primary-color: #2D8B57;
+  --primary-dark: #1F603C;
+  --secondary-color: #F4F7F6;
+  --dark-color: #333333;
+  --light-color: #666666;
+  --white-color: #FFFFFF;
 }
 
 @media (prefers-color-scheme: dark) {

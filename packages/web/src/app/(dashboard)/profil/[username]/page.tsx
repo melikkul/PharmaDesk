@@ -10,7 +10,7 @@ import ProfileDetails from '@/components/profile/ProfileDetails';
 import ProfileMedications from '@/components/profile/ProfileMedications';
 
 // Hook'lar
-import { useDashboard } from '@/hooks/useDashboardPanels';
+import { useDashboardContext } from '@/context/DashboardContext';
 import { useAuth } from '@/context/AuthContext';
 import { useProfile } from '@/hooks/useProfile'; // YENİ HOOK
 
@@ -28,7 +28,7 @@ export default function ProfilePage() {
   // YENİ: Hook ile veri çekme
   const { profile, loading, error } = useProfile(params.username);
 
-  const { handleStartChat } = useDashboard();
+  const { handleStartChat } = useDashboardContext();
 
   if (loading) {
     return <div className="p-10 text-center">Profil yükleniyor...</div>;

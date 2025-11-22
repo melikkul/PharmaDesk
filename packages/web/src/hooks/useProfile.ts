@@ -67,7 +67,7 @@ export const useProfile = (username: string) => {
                 gonderiAdet: 0,
                 gonderiTutari: 0,
                 grubaKazandirdigi: 0,
-                kayitTarihi: data.createdAt ? new Date(data.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+                kayitTarihi: data.createdAt ? new Date(data.createdAt).toISOString().split('T')[0] : '2024-01-01'
             };
             setProfile(mappedProfile);
         }

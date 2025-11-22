@@ -16,15 +16,20 @@ namespace Backend.Models
         [Required, StringLength(100)]
         public string PharmacyName { get; set; } = string.Empty;
 
+        [Phone]
         public string? PhoneNumber { get; set; }
+        
         public string? City { get; set; }
         public string? District { get; set; }
-        public string? Address1 { get; set; }
-        public string? Address2 { get; set; }
-        public string? PostalCode { get; set; }
+        public string? Address { get; set; } // Consolidated Address
+        
+        // Foreign Key for Group
+        public int? GroupId { get; set; }
+        public Group? Group { get; set; }
+
         public string? ServicePackage { get; set; }
         public string? ProfileImagePath { get; set; }
-        public string? About { get; set; } // YENİ
+        public string? About { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

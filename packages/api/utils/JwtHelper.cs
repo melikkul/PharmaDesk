@@ -23,11 +23,7 @@ namespace Backend.Utils
                 new Claim(ClaimTypes.Email, user.Email),
                 // DÜZELTME: PharmacyName yerine fullName kullanıldı
                 new Claim(ClaimTypes.Name, string.IsNullOrWhiteSpace(fullName) ? user.Email : fullName),
-                new Claim(ClaimTypes.Role, user.Role ?? "User"),
-                
-                // İsterseniz frontend'de kullanmak için ek alanlar da gönderebilirsiniz
-                new Claim("City", user.City ?? ""),
-                new Claim("Group", user.Group ?? "")
+                new Claim(ClaimTypes.Role, user.Role ?? "User")
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));

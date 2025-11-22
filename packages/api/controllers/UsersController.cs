@@ -14,10 +14,12 @@ namespace Backend.Controllers
     public class UsersController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly IdentityDbContext _identityDb; // Inject IdentityDbContext to find user by username (email) if needed, or just join.
 
-        public UsersController(AppDbContext db)
+        public UsersController(AppDbContext db, IdentityDbContext identityDb)
         {
             _db = db;
+            _identityDb = identityDb;
         }
 
         [HttpGet("me")]
@@ -30,31 +32,32 @@ namespace Backend.Controllers
             if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var uid)) 
                 return Unauthorized();
 
-            var p = await _db.PharmacyProfiles
-                .AsNoTracking()
-                .Where(x => x.Id == uid)
-                .Select(x => new UserMeResponse
-                {
-                    Id = x.Id,
-                    Email = emailClaim ?? string.Empty, 
-                    Role = roleClaim, 
-                    GLN = x.GLN,
-                    PharmacyName = x.PharmacyName,
-                    PhoneNumber = x.PhoneNumber,
-                    City = x.City,
-                    District = x.District,
-                    Address1 = x.Address1,
-                    Address2 = x.Address2,
-                    PostalCode = x.PostalCode,
-                    ServicePackage = x.ServicePackage,
-                    ProfileImagePath = x.ProfileImagePath,
-                    CreatedAt = x.CreatedAt
-                })
-                .SingleOrDefaultAsync();
+            // Fetch IdentityUser
+            var user = await _identityDb.IdentityUsers.FindAsync(uid);
+            if (user == null) return NotFound();
 
-            if (p is null) return NotFound();
+            // Fetch PharmacyProfile manually
+            var x = await _db.PharmacyProfiles.FindAsync(user.PharmacyId);
+            if (x == null) return NotFound();
 
-            return Ok(p);
+            return Ok(new UserMeResponse
+            {
+                Id = x.Id,
+                Email = emailClaim ?? string.Empty, 
+                Role = roleClaim, 
+                GLN = x.GLN,
+                PharmacyName = x.PharmacyName,
+                PublicId = x.PublicId,
+                PhoneNumber = x.PhoneNumber,
+                City = x.City,
+                District = x.District,
+                Address1 = x.Address, // Mapping Address to Address1 for DTO compatibility
+                Address2 = "",
+                PostalCode = "", // Removed from model
+                ServicePackage = x.ServicePackage,
+                ProfileImagePath = x.ProfileImagePath,
+                CreatedAt = x.CreatedAt
+            });
         }
 
         [HttpPut("me")]
@@ -64,18 +67,21 @@ namespace Backend.Controllers
             if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var uid))
                 return Unauthorized();
 
-            var profile = await _db.PharmacyProfiles.SingleOrDefaultAsync(x => x.Id == uid);
-            if (profile is null) return NotFound();
+            var user = await _identityDb.IdentityUsers.FindAsync(uid);
+            if (user == null) return NotFound();
+
+            var profile = await _db.PharmacyProfiles.FindAsync(user.PharmacyId);
+            if (profile == null) return NotFound();
 
             profile.PhoneNumber = req.PhoneNumber ?? profile.PhoneNumber;
             profile.City = req.City ?? profile.City;
             profile.District = req.District ?? profile.District;
-            profile.Address1 = req.Address1 ?? profile.Address1;
-            profile.Address2 = req.Address2 ?? profile.Address2;
-            profile.PostalCode = req.PostalCode ?? profile.PostalCode;
+            profile.Address = req.Address1 ?? profile.Address; // Mapping Address1 from request to Address
+            // profile.PostalCode = req.PostalCode ?? profile.PostalCode; // Removed
             profile.ServicePackage = req.ServicePackage ?? profile.ServicePackage;
             profile.PharmacyName = req.PharmacyName ?? profile.PharmacyName;
             profile.ProfileImagePath = req.ProfileImagePath ?? profile.ProfileImagePath;
+            profile.About = req.About ?? profile.About;
 
             await _db.SaveChangesAsync();
             return NoContent();
@@ -107,13 +113,47 @@ namespace Backend.Controllers
             if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var uid))
                 return Unauthorized();
 
-            var profile = await _db.PharmacyProfiles.FindAsync(uid);
+            var user = await _identityDb.IdentityUsers.FindAsync(uid);
+            if (user == null) return NotFound();
+
+            var profile = await _db.PharmacyProfiles.FindAsync(user.PharmacyId);
             if (profile == null) return NotFound();
 
             profile.ProfileImagePath = $"/uploads/{name}";
             await _db.SaveChangesAsync();
 
             return Ok(new { url = profile.ProfileImagePath });
+        }
+
+        [HttpGet("{username}")]
+        public async Task<ActionResult<UserMeResponse>> GetProfile(string username)
+        {
+            var p = await _db.PharmacyProfiles
+                .AsNoTracking()
+                .Where(x => x.PublicId == username || x.PharmacyName == username || x.PharmacyName.Replace(" ", "").ToLower() == username.ToLower()) 
+                .Select(x => new UserMeResponse
+                {
+                    Id = x.Id,
+                    Email = "", 
+                    Role = "User", 
+                    GLN = x.GLN,
+                    PharmacyName = x.PharmacyName,
+                    PublicId = x.PublicId,
+                    PhoneNumber = x.PhoneNumber,
+                    City = x.City,
+                    District = x.District,
+                    Address1 = x.Address,
+                    Address2 = "",
+                    PostalCode = "",
+                    ServicePackage = x.ServicePackage,
+                    ProfileImagePath = x.ProfileImagePath,
+                    CreatedAt = x.CreatedAt
+                })
+                .FirstOrDefaultAsync();
+
+            if (p is null) return NotFound();
+
+            return Ok(p);
         }
     }
 }

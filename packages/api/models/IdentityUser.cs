@@ -24,17 +24,11 @@ namespace Backend.Models
         [Required, StringLength(50)]
         public string LastName { get; set; } = string.Empty;  // Soyisim
 
-        [Phone]
-        public string PhoneNumber { get; set; } = string.Empty; // Telefon
-
-        public string City { get; set; } = string.Empty;      // Şehir
-        public string District { get; set; } = string.Empty;  // İlçe
-        public string Address { get; set; } = string.Empty;   // Açık Adres
-        public string Group { get; set; } = string.Empty;     // Grup
-        // ---------------------------
-
-        // New Fields
-        public string PharmacyName { get; set; } = string.Empty;
+        // Foreign Key for PharmacyProfile
+        public int PharmacyId { get; set; }
+        // Navigation property can be added if needed, but usually IdentityUser is kept lightweight or in a separate context.
+        // However, since we are linking them, it's good to have the ID.
+        
         public bool IsFirstLogin { get; set; } = true;
 
         public string? Role { get; set; } = "User";

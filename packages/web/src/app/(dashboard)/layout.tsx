@@ -20,7 +20,9 @@ import CartPanel from '@/components/cart/CartPanel';
 import { pharmacyData } from '@/data/dashboardData';
 
 // GÜNCELLEME: Hook'u ve Context'i import et
-import { useDashboardPanels, DashboardContext, Notification, Message } from '@/hooks/useDashboardPanels';
+// GÜNCELLEME: Hook'u ve Context'i import et
+import { useDashboardPanels } from '@/hooks/useDashboardPanels';
+import { DashboardContext, useDashboardContext, Notification, Message } from '@/context/DashboardContext';
 import { useAuth } from '@/context/AuthContext';
 // HATA DÜZELTME: CartProvider'ı import et
 import { CartProvider } from '@/context/CartContext';

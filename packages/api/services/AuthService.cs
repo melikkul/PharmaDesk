@@ -40,19 +40,33 @@ namespace Backend.Services
             
             if (exists) return null;
 
+            // Generate PublicId (Timestamp based)
+            var publicId = DateTime.Now.ToString("yyyyMMddHHmmssfff");
+
+            // 1. Create PharmacyProfile FIRST
+            var profile = new PharmacyProfile
+            {
+                GLN = req.GLN,
+                PharmacyName = req.PharmacyName,
+                PhoneNumber = req.PhoneNumber,
+                City = req.City,
+                District = req.District,
+                Address = req.Address,
+                PublicId = publicId,
+                CreatedAt = DateTime.UtcNow
+            };
+            
+            _appDb.PharmacyProfiles.Add(profile);
+            await _appDb.SaveChangesAsync(); // Save to get Id
+
+            // 2. Create IdentityUser linked to PharmacyProfile
             var user = new IdentityUser
             {
                 FirstName = req.FirstName,
                 LastName = req.LastName,
                 Email = emailLower,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.Password),
-                PhoneNumber = req.PhoneNumber,
-                GLN = req.GLN,
-                City = req.City,
-                District = req.District,
-                Address = req.Address,
-                Group = req.Group,
-                PharmacyName = req.PharmacyName,
+                PharmacyId = profile.Id, // Link here
                 Role = "User",
                 IsFirstLogin = true,
                 CreatedAt = DateTime.UtcNow
@@ -61,48 +75,16 @@ namespace Backend.Services
             _db.IdentityUsers.Add(user);
             await _db.SaveChangesAsync();
 
-            // Generate PublicId (Timestamp based)
-            var publicId = DateTime.Now.ToString("yyyyMMddHHmmssfff");
-
-            // Create PharmacyProfile
-            // Note: We are assuming Id sync or we need to handle it. 
-            // Since we just saved 'user', it has an Id.
-            // If PharmacyProfile.Id is Identity, we can't force it easily without SET IDENTITY_INSERT.
-            // BUT, if we want to support the existing UsersController logic which queries by Id,
-            // we should try to match them. 
-            // However, for now, let's just create the profile. 
-            // If they get out of sync, we might need to update UsersController to use a common field (like Email or GLN) or add a FK.
-            // Given the constraints, let's try to add it.
-            
-            var profile = new PharmacyProfile
-            {
-                // If we can't set Id explicitly, we rely on auto-inc. 
-                // If this is the first user, it will be 1.
-                // If IdentityUser is 1, they match.
-                // This is brittle but let's proceed with creating the record first.
-                GLN = user.GLN,
-                PharmacyName = user.PharmacyName,
-                PhoneNumber = user.PhoneNumber,
-                City = user.City,
-                District = user.District,
-                Address1 = user.Address,
-                PublicId = publicId,
-                CreatedAt = DateTime.UtcNow
-            };
-            
-            _appDb.PharmacyProfiles.Add(profile);
-            await _appDb.SaveChangesAsync();
-
             var token = JwtHelper.GenerateToken(user, _jwtKey);
             var authUser = new AuthUserDto
             {
                 FullName = $"{user.FirstName} {user.LastName}",
                 Email = user.Email ?? "",
-                PharmacyName = user.PharmacyName,
-                GLN = user.GLN,
-                PublicId = publicId,
-                City = user.City,
-                District = user.District
+                PharmacyName = profile.PharmacyName,
+                GLN = profile.GLN,
+                PublicId = profile.PublicId,
+                City = profile.City,
+                District = profile.District
             };
 
             return new LoginResponse 
@@ -126,8 +108,6 @@ namespace Backend.Services
                 if (BCrypt.Net.BCrypt.Verify(req.Password, admin.PasswordHash))
                 {
                      // Create token for admin
-                     // We need to map Admin to IdentityUser-like structure for token generation or update GenerateToken to accept Admin
-                     // For simplicity, let's create a dummy IdentityUser for token generation
                      var adminUser = new IdentityUser
                      {
                          Id = admin.Id,
@@ -135,8 +115,7 @@ namespace Backend.Services
                          FirstName = admin.FirstName,
                          LastName = admin.LastName,
                          Role = "Admin",
-                         PharmacyName = "System Admin",
-                         GLN = "0000000000000"
+                         PharmacyId = 0 // No pharmacy for admin
                      };
                      
                      var adminToken = JwtHelper.GenerateToken(adminUser, _jwtKey);
@@ -178,19 +157,26 @@ namespace Backend.Services
 
             var token = JwtHelper.GenerateToken(user, _jwtKey);
             
-            // Fetch PublicId from PharmacyProfile
-            var profile = await _appDb.PharmacyProfiles.FirstOrDefaultAsync(p => p.GLN == user.GLN);
-            var publicId = profile?.PublicId ?? "";
+            // Fetch PharmacyProfile using PharmacyId
+            var profile = await _appDb.PharmacyProfiles.FindAsync(user.PharmacyId);
+            
+            // Fallback if profile not found (should not happen if DB is consistent)
+            if (profile == null) 
+            {
+                // Handle error or return basic info
+                // For now, let's return empty strings to avoid crash
+                profile = new PharmacyProfile(); 
+            }
 
             var authUser = new AuthUserDto
             {
                 FullName = $"{user.FirstName} {user.LastName}",
                 Email = user.Email ?? "",
-                PharmacyName = user.PharmacyName,
-                GLN = user.GLN,
-                PublicId = publicId,
-                City = user.City,
-                District = user.District
+                PharmacyName = profile.PharmacyName,
+                GLN = profile.GLN,
+                PublicId = profile.PublicId,
+                City = profile.City,
+                District = profile.District
             };
 
             return new LoginResponse 

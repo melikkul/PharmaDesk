@@ -8,6 +8,7 @@ namespace Backend.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<PharmacyProfile> PharmacyProfiles { get; set; }
+        public DbSet<Group> Groups { get; set; }
         public DbSet<Medication> Medications { get; set; }
         public DbSet<InventoryItem> InventoryItems { get; set; }
 

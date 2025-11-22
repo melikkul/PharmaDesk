@@ -14,36 +14,11 @@ import {
 } from '@/data/dashboardData';
 
 // Tipleri dışa aktar
-export type SelectedNotification = TNotification & { detail?: string };
+import { SelectedNotification } from '@/context/DashboardContext';
 export type Notification = TNotification;
 export type Message = TMessage;
 
-// 1. ADIM: Context için bir tip oluşturalım
-interface DashboardContextType {
-  notifications: TNotification[];
-  selectedNotification: SelectedNotification | null;
-  messages: TMessage[];
-  selectedChat: TMessage | null;
-  showNotificationsPanel: boolean;
-  showMessagesPanel: boolean;
-  showCartPanel: boolean;
-  handleLogout: () => void;
-  handleNotificationClick: (notification: TNotification) => void;
-  markAllNotificationsAsRead: (e: React.MouseEvent) => void;
-  handleMessageClick: (message: TMessage) => void;
-  markAllMessagesAsRead: (e: React.MouseEvent) => void;
-  toggleNotificationsPanel: () => void;
-  toggleMessagesPanel: () => void;
-  toggleCartPanel: () => void;
-  unreadNotificationCount: number;
-  unreadMessageCount: number;
-  closeNotificationModal: () => void;
-  closeChatWindow: () => void;
-  handleStartChat: (pharmacy: PharmacyProfileData) => void;
-}
-
-// 2. ADIM: Context'i oluşturalım
-const DashboardContext = createContext<DashboardContextType | null>(null);
+// 1. ADIM: Context ve Tipler artık context/DashboardContext.tsx dosyasında
 
 // 3. ADIM: Hook'umuzu güncelleyelim
 export const useDashboardPanels = () => {
@@ -180,15 +155,3 @@ export const useDashboardPanels = () => {
     unreadMessageCount, closeNotificationModal, closeChatWindow, handleStartChat
   ]);
 };
-
-// 6. ADIM: Context'i dışarı aktaran bir hook oluşturalım
-export const useDashboard = () => {
-  const context = useContext(DashboardContext);
-  if (!context) {
-    throw new Error('useDashboard, DashboardProvider içinde kullanılmalıdır');
-  }
-  return context;
-};
-
-// 7. ADIM: Context'i (Provider olarak) dışarı aktaralım
-export { DashboardContext };
