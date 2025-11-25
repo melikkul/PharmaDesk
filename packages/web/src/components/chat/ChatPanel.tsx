@@ -5,8 +5,8 @@ import { ChatList } from "./ChatList";
 import { ChatWindow } from "./ChatWindow";
 
 interface ChatPanelProps {
-  activeUserId: number | null;
-  onSelectUser: (userId: number | null) => void;
+  activeUserId: string | null;
+  onSelectUser: (userId: string | null) => void;
 }
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ activeUserId, onSelectUser }) => {

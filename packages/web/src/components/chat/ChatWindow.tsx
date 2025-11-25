@@ -13,7 +13,7 @@ interface Message {
 }
 
 interface ChatWindowProps {
-  otherUserId: number | null;
+  otherUserId: string | null;
   onBack?: () => void;
 }
 
@@ -64,10 +64,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onBack }) =
     connection.on("ReceiveMessage", (message: any) => {
       // Check if message belongs to current chat
       // message.senderId is number, otherUserId is number
-      // If I am the sender, I also receive it back
-      const currentUserId = Number(user?.pharmacyId);
-      
-      if (message.senderId === otherUserId || (message.senderId === currentUserId && otherUserId)) {
+      // Check if message belongs to current chat
+    const currentUserId = String(user?.pharmacyId);
+    
+    if (String(message.senderId) === otherUserId || (String(message.senderId) === currentUserId && otherUserId)) {
           // Verify if it belongs to this conversation
           // Ideally we check chatRoomId, but for now we check participants
           setMessages((prev) => {

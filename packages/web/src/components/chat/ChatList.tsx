@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { useSignalR } from "@/context/SignalRContext";
 
 interface Conversation {
   id: string;
   otherUser: {
-    id: number;
+    id: string; // Changed to string to handle large numbers
     pharmacyName: string;
     profileImagePath: string | null;
   };
@@ -16,12 +17,13 @@ interface Conversation {
 }
 
 interface ChatListProps {
-  onSelectChat: (userId: number) => void;
-  selectedUserId: number | null;
+  onSelectChat: (userId: string) => void;
+  selectedUserId: string | null;
 }
 
 export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId }) => {
   const { token } = useAuth();
+  const { connection } = useSignalR();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -50,6 +52,18 @@ export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId
     const interval = setInterval(fetchConversations, 10000);
     return () => clearInterval(interval);
   }, [token]);
+
+  useEffect(() => {
+    if (!connection) return;
+
+    connection.on("ReceiveMessage", () => {
+      fetchConversations();
+    });
+
+    return () => {
+      connection.off("ReceiveMessage");
+    };
+  }, [connection]);
 
   if (loading) return <div className="p-4">Yükleniyor...</div>;
 

@@ -75,8 +75,8 @@ namespace Backend.Controllers
                 .Where(c => c.User1Id == userId || c.User2Id == userId)
                 .Select(c => new
                 {
-                    c.Id,
-                    OtherUser = c.User1Id == userId ? new { c.User2.Id, c.User2.PharmacyName, c.User2.ProfileImagePath } : new { c.User1.Id, c.User1.PharmacyName, c.User1.ProfileImagePath },
+                    Id = c.Id.ToString(),
+                    OtherUser = c.User1Id == userId ? new { Id = c.User2.Id.ToString(), c.User2.PharmacyName, c.User2.ProfileImagePath } : new { Id = c.User1.Id.ToString(), c.User1.PharmacyName, c.User1.ProfileImagePath },
                     LastMessage = c.Messages.OrderByDescending(m => m.SentAt).FirstOrDefault().Content,
                     LastMessageDate = c.Messages.OrderByDescending(m => m.SentAt).FirstOrDefault().SentAt,
                     UnreadCount = c.Messages.Count(m => m.SenderId != userId && !m.IsRead)
@@ -109,7 +109,7 @@ namespace Backend.Controllers
                 {
                     m.Id,
                     m.Content,
-                    m.SenderId,
+                    SenderId = m.SenderId.ToString(),
                     m.SentAt,
                     m.IsRead
                 })

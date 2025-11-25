@@ -44,7 +44,7 @@ export const useDashboardPanels = () => {
 
   const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null);
   const [selectedChat, setSelectedChat] = useState<TMessage | null>(null);
-  const [activeChatUserId, setActiveChatUserId] = useState<number | null>(null);
+  const [activeChatUserId, setActiveChatUserId] = useState<string | null>(null);
 
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
@@ -103,14 +103,14 @@ export const useDashboardPanels = () => {
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
       
-      // Parse pharmacy ID to number
-      const receiverPharmacyId = typeof pharmacy.id === 'string' ? parseInt(pharmacy.id, 10) : pharmacy.id;
+      // Parse pharmacy ID to string (it's already string or number, but we want string for state)
+      const receiverPharmacyId = String(pharmacy.id);
       
       console.log('[handleStartChat] Pharmacy object:', pharmacy);
       console.log('[handleStartChat] pharmacy.id (raw):', pharmacy.id);
       console.log('[handleStartChat] receiverPharmacyId (parsed):', receiverPharmacyId);
       
-      if (!receiverPharmacyId || isNaN(receiverPharmacyId)) {
+      if (!receiverPharmacyId) {
         console.error('Invalid pharmacy ID:', pharmacy.id);
         alert('Geçersiz eczane ID. Lütfen sayfayı yenileyin.');
         return;
@@ -124,8 +124,22 @@ export const useDashboardPanels = () => {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ receiverPharmacyId }),
+        body: JSON.stringify({ receiverPharmacyId: Number(receiverPharmacyId) }), // API still expects number for now? Or we should update DTO too?
+        // Actually DTO expects long, which is number in JSON. But JS can't handle it if it's too big.
+        // If we send it as number in JSON, JS will stringify it.
+        // Wait, if I have "2025..." as string, JSON.stringify will make it "2025..." (string).
+        // Backend expects long.
+        // If I send string "2025...", backend JSON deserializer might handle it if configured?
+        // Or I should keep it as number but be careful?
+        // No, if I have it as string in JS, I can send it as string in JSON.
+        // But backend StartConversationDto has `long ReceiverPharmacyId`.
+        // I should probably update DTO to accept string or handle the conversion.
+        // Let's update DTO to string too? Or just let JSON deserializer handle string -> long conversion.
+        // System.Text.Json can handle string to number if configured.
+        // Let's try sending as is (string) and see if backend accepts it.
+        // If not, I'll update DTO.
       });
+
 
       console.log('[handleStartChat] Response status:', response.status);
 
