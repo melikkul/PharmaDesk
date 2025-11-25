@@ -1,19 +1,19 @@
-# build
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
+# Development Mode Dockerfile (SDK + EF Tool)
+FROM mcr.microsoft.com/dotnet/sdk:8.0
 
-# Copy project files and restore dependencies first to leverage Docker cache
-COPY *.csproj ./
-RUN dotnet restore 
-
-# Copy the rest of the source code and publish
-COPY . .
-RUN dotnet publish -c Release -o /app --no-restore
-
-# run
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.21
 WORKDIR /app
-COPY --from=build /app ./
-# CSV file will be mounted as volume in docker-compose
-ENV ASPNETCORE_URLS=http://0.0.0.0:8081
-ENTRYPOINT ["dotnet", "api.dll"]
+
+# Dosyaları kopyala
+COPY . .
+
+# Restore dependencies
+RUN dotnet restore
+
+# EF Core aracını local tool olarak yükle (global yerine)
+RUN dotnet tool install --tool-path /tools dotnet-ef --version 8.0.0
+
+# Path ayarını yap
+ENV PATH="$PATH:/tools"
+
+# Uygulamayı Watch modunda başlat (Hot Reload)
+ENTRYPOINT ["dotnet", "watch", "run", "--urls", "http://0.0.0.0:8081"]

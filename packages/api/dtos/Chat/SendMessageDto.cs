@@ -1,10 +1,9 @@
-using System;
-
 namespace Backend.Dtos.Chat
 {
     public class SendMessageDto
     {
-        public long ReceiverId { get; set; }
+        // CRITICAL: String to prevent JavaScript precision loss with large Long IDs
+        public string ReceiverId { get; set; }
         public string Content { get; set; }
     }
 }

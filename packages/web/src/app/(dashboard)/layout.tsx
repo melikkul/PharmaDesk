@@ -15,6 +15,7 @@ import NotificationItem from '@/components/notifications/NotificationItem';
 import MessageItem from '@/components/notifications/MessageItem';
 import NotificationModal from '@/components/notifications/NotificationModal';
 import { ChatPanel } from '@/components/chat/ChatPanel';
+import { FloatingChatWindow } from '@/components/chat/FloatingChatWindow';
 import CartPanel from '@/components/cart/CartPanel';
 
 // Veri
@@ -146,15 +147,9 @@ export default function DashboardLayout({
               title="Mesajlar"
               show={panelValues.showMessagesPanel}
               onClose={panelValues.toggleMessagesPanel}
-              onMarkAllRead={panelValues.markAllMessagesAsRead}
             >
-              {/* <MessageList 
-                items={panelValues.messages} 
-                onClick={panelValues.handleMessageClick} 
-              /> */}
               <ChatPanel 
-                activeUserId={panelValues.activeChatUserId}
-                onSelectUser={panelValues.setActiveChatUserId}
+                onSelectUser={panelValues.openFloatingChat}
               />
             </SlidePanel>
 
@@ -165,7 +160,17 @@ export default function DashboardLayout({
               onClose={panelValues.closeNotificationModal}
             />
 
-            {/* <ChatWindow chat={panelValues.selectedChat} onClose={panelValues.closeChatWindow} /> */}
+            {/* Floating Chat Windows */}
+            {panelValues.openChats.map((chatUserId, index) => (
+              <FloatingChatWindow
+                key={chatUserId}
+                otherUserId={chatUserId}
+                isMinimized={panelValues.minimizedChats.includes(chatUserId)}
+                onMinimize={() => panelValues.toggleMinimizeChat(chatUserId)}
+                onClose={() => panelValues.closeChat(chatUserId)}
+                position={{ bottom: 0, right: 20 + (index * 370) }}
+              />
+            ))}
           </div>
           </SignalRProvider>
         </DashboardContext.Provider>

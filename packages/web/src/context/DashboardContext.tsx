@@ -19,21 +19,26 @@ export interface DashboardContextType {
   showNotificationsPanel: boolean;
   showMessagesPanel: boolean;
   showCartPanel: boolean;
+  // Floating chat windows
+  openChats: string[];
+  minimizedChats: string[];
   handleLogout: () => void;
   handleNotificationClick: (notification: TNotification) => void;
   markAllNotificationsAsRead: (e: React.MouseEvent) => void;
   handleMessageClick: (message: TMessage) => void;
-  markAllMessagesAsRead: (e: React.MouseEvent) => void;
   toggleNotificationsPanel: () => void;
   toggleMessagesPanel: () => void;
   toggleCartPanel: () => void;
   unreadNotificationCount: number;
-  unreadMessageCount: number;
   closeNotificationModal: () => void;
   closeChatWindow: () => void;
   handleStartChat: (pharmacy: PharmacyProfileData) => void;
   activeChatUserId: string | null;
   setActiveChatUserId: (userId: string | null) => void;
+  // Floating window functions
+  openFloatingChat: (userId: string) => void;
+  closeChat: (userId: string) => void;
+  toggleMinimizeChat: (userId: string) => void;
 }
 
 // Context'i oluştur

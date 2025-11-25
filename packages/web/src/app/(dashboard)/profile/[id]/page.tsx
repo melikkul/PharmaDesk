@@ -13,6 +13,10 @@ import styles from './profile.module.css';
 export default function ProfilePage() {
   const params = useParams<{ id: string }>();
   const { user } = useAuth();
+  
+  // CRITICAL: All hooks must be called BEFORE any conditional returns
+  // This fixes "React has detected a change in the order of Hooks" error
+  const { handleStartChat } = useDashboardContext();
   const { profile, loading, error } = useProfile(params.id);
 
   if (loading) {
@@ -32,9 +36,10 @@ export default function ProfilePage() {
     profile.id === user.id?.toString()
   ) : false;
 
-  const { handleStartChat } = useDashboardContext();
-
   const onStartChat = () => {
+    console.log('[ProfilePage] onStartChat called!');
+    console.log('[ProfilePage] profile:', profile);
+    console.log('[ProfilePage] handleStartChat:', handleStartChat);
     if (profile) {
       handleStartChat(profile);
     }

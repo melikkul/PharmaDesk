@@ -53,11 +53,13 @@
     z-index: 998;
     opacity: 0;
     visibility: hidden;
+    pointer-events: none; /* CRITICAL FIX: Prevent blocking clicks when hidden */
     transition: opacity 0.3s ease, visibility 0s 0.3s;
 }
 .slide-panel-overlay.show {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto; /* Enable clicks when visible */
     transition: opacity 0.3s ease;
 }
 

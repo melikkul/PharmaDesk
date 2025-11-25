@@ -1,12 +1,7 @@
 import React from 'react';
 import { AuthProvider } from '../context/AuthContext';
-// import { ChatProvider } from '../context/ChatContext';
 import { CartProvider } from '../context/CartContext';
-import './globals.css'; // Assuming there might be a global css, if not I will remove it. But usually there is. 
-// Actually, looking at the file list, I didn't see globals.css in src/app. 
-// Let's check if there is one. 
-// The user provided file list showed: form.css, etc.
-// I will just add AuthProvider for now.
+import './globals.css';
 
 export const metadata = {
   title: 'PharmaDesk',
@@ -21,12 +16,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="tr">
-      <body>
+    <html lang="tr" suppressHydrationWarning={true}>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+      </head>
+      <body suppressHydrationWarning={true}>
         <AuthProvider>
-            <CartProvider>
-              {children}
-            </CartProvider>
+          <CartProvider>
+            {children}
+          </CartProvider>
         </AuthProvider>
       </body>
     </html>

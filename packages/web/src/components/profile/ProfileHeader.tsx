@@ -56,8 +56,17 @@ const ProfileHeader: React.FC<ProfileHeaderProps> = ({ pharmacy, isOwnProfile, o
           </Link>
         ) : (
           <button 
+            type="button"
             className={styles.editProfileButton}
-            onClick={onStartChat}
+            onClick={() => {
+              console.log('[ProfileHeader] Button clicked!');
+              console.log('[ProfileHeader] onStartChat prop:', onStartChat);
+              if (onStartChat) {
+                onStartChat();
+              } else {
+                console.error('[ProfileHeader] onStartChat is undefined!');
+              }
+            }}
             style={{
               backgroundColor: '#0d6efd',
               color: 'white',

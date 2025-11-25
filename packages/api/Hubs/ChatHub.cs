@@ -6,7 +6,6 @@ using Backend.Dtos.Chat;
 using Backend.Models;
 using System;
 using System.Threading.Tasks;
-using System.Linq;
 
 namespace Backend.Hubs
 {
@@ -22,29 +21,47 @@ namespace Backend.Hubs
 
         public async Task SendMessage(SendMessageDto messageDto)
         {
-            // Assuming the UserIdentifier is the PharmacyProfile Id (long)
-            if (!long.TryParse(Context.UserIdentifier, out long senderId))
+            // Try to get user ID from Context.UserIdentifier first, then fall back to PharmacyId claim
+            long senderId;
+            if (!string.IsNullOrEmpty(Context.UserIdentifier) && long.TryParse(Context.UserIdentifier, out senderId))
             {
-                // Handle invalid user ID (maybe log or return)
+                // Success - use Context.UserIdentifier
+            }
+            else
+            {
+                // Fallback: Try to get PharmacyId from claims
+                var pharmacyIdClaim = Context.User?.FindFirst("PharmacyId");
+                if (pharmacyIdClaim == null || !long.TryParse(pharmacyIdClaim.Value, out senderId))
+                {
+                    Console.WriteLine("[ChatHub.SendMessage] ERROR: Could not determine sender ID");
+                    return;
+                }
+            }
+
+            // CRITICAL: Parse string ReceiverId to long (prevents JavaScript precision loss)
+            if (!long.TryParse(messageDto.ReceiverId, out long receiverId))
+            {
+                Console.WriteLine($"[ChatHub.SendMessage] ERROR: Invalid ReceiverId format: '{messageDto.ReceiverId}'");
                 return;
             }
 
-            // Find or create chat room
+            Console.WriteLine($"[ChatHub.SendMessage] SenderId: {senderId}, ReceiverId (string): '{messageDto.ReceiverId}', ReceiverId (parsed): {receiverId}, Content: {messageDto.Content}");
+
+            // CRITICAL: ChatRoom MUST already exist (created by StartConversation API)
+            // Do NOT create ChatRoom here - it causes foreign key errors
             var room = await _context.ChatRooms
                 .FirstOrDefaultAsync(r => 
-                    (r.User1Id == senderId && r.User2Id == messageDto.ReceiverId) ||
-                    (r.User1Id == messageDto.ReceiverId && r.User2Id == senderId));
+                    (r.User1Id == senderId && r.User2Id == receiverId) ||
+                    (r.User1Id == receiverId && r.User2Id == senderId));
 
             if (room == null)
             {
-                room = new ChatRoom
-                {
-                    User1Id = senderId,
-                    User2Id = messageDto.ReceiverId
-                };
-                _context.ChatRooms.Add(room);
-                await _context.SaveChangesAsync();
+                Console.WriteLine($"[ChatHub.SendMessage] ERROR: ChatRoom not found! Use StartConversation API first.");
+                Console.WriteLine($"[ChatHub.SendMessage] SenderId: {senderId}, ReceiverId: {receiverId}");
+                throw new InvalidOperationException("Chat room does not exist. Please start a conversation first.");
             }
+
+            Console.WriteLine($"[ChatHub.SendMessage] Found ChatRoom ID: {room.Id}");
 
             var message = new ChatMessage
             {
@@ -57,26 +74,26 @@ namespace Backend.Hubs
             _context.ChatMessages.Add(message);
             await _context.SaveChangesAsync();
 
-            // Send to receiver
-            // Note: We need to map the long ID to string for SignalR Clients.User
-            await Clients.User(messageDto.ReceiverId.ToString()).SendAsync("ReceiveMessage", new 
-            {
-                Id = message.Id,
-                Content = message.Content,
-                SenderId = message.SenderId,
-                SentAt = message.SentAt,
-                ChatRoomId = room.Id
-            });
+            Console.WriteLine($"[ChatHub.SendMessage] Message saved with ID: {message.Id}");
 
-            // Send back to sender
-            await Clients.Caller.SendAsync("ReceiveMessage", new 
+            var messagePayload = new 
             {
                 Id = message.Id,
                 Content = message.Content,
                 SenderId = message.SenderId,
                 SentAt = message.SentAt,
                 ChatRoomId = room.Id
-            });
+            };
+
+            // Alıcıya gönder
+            Console.WriteLine($"[ChatHub.SendMessage] Broadcasting to receiver (User {receiverId})...");
+            await Clients.User(receiverId.ToString()).SendAsync("ReceiveMessage", messagePayload);
+            Console.WriteLine($"[ChatHub.SendMessage] Message sent to receiver");
+
+            // Gönderene geri gönder (UI güncellemesi için)
+            Console.WriteLine($"[ChatHub.SendMessage] Broadcasting to sender (Caller {senderId})...");
+            await Clients.Caller.SendAsync("ReceiveMessage", messagePayload);
+            Console.WriteLine($"[ChatHub.SendMessage] Message sent to sender");
         }
     }
 }

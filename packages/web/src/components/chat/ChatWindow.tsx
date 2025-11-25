@@ -24,13 +24,18 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onBack }) =
   const [newMessage, setNewMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
-    scrollToBottom();
+    console.log('[ChatWindow] Messages state updated, new length:', messages.length);
+    // Delay scroll to ensure DOM has updated
+    setTimeout(() => {
+      scrollToBottom();
+    }, 100);
   }, [messages]);
 
   useEffect(() => {
@@ -61,25 +66,62 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onBack }) =
   useEffect(() => {
     if (!connection) return;
 
-    connection.on("ReceiveMessage", (message: any) => {
-      // Check if message belongs to current chat
-      // message.senderId is number, otherUserId is number
-      // Check if message belongs to current chat
-    const currentUserId = String(user?.pharmacyId);
-    
-    if (String(message.senderId) === otherUserId || (String(message.senderId) === currentUserId && otherUserId)) {
-          // Verify if it belongs to this conversation
-          // Ideally we check chatRoomId, but for now we check participants
-          setMessages((prev) => {
-              // Avoid duplicates
-              if (prev.some(m => m.id === message.id)) return prev;
-              return [...prev, message];
-          });
+    const handleReceiveMessage = (message: any) => {
+      console.log('[ChatWindow] ReceiveMessage event:', JSON.stringify(message, null, 2));
+      
+      const currentUserId = String(user?.pharmacyId);
+      const messageSenderId = String(message.senderId || message.SenderId);
+      const otherUserIdStr = String(otherUserId);
+      
+      console.log(`[ChatWindow] ID Comparison:
+        currentUserId: "${currentUserId}" (type: ${typeof currentUserId})
+        messageSenderId: "${messageSenderId}" (type: ${typeof messageSenderId})
+        otherUserIdStr: "${otherUserIdStr}" (type: ${typeof otherUserIdStr})
+        rawUserPharmacyId: ${user?.pharmacyId}
+        rawMessageSenderId: ${message.senderId || message.SenderId}
+        rawOtherUserId: ${otherUserId}
+      `);
+      
+      // Map backend response (PascalCase) to frontend interface (camelCase)
+      const mappedMessage: Message = {
+        id: message.id || message.Id,
+        content: message.content || message.Content,
+        senderId: Number(message.senderId || message.SenderId),
+        sentAt: message.sentAt || message.SentAt,
+        isRead: message.isRead || false
+      };
+      
+      // Show message if:
+      // 1. I sent it (messageSenderId === currentUserId)
+      // 2. Other user sent it (messageSenderId === otherUserId)
+      const isMyMessage = messageSenderId === currentUserId;
+      const isOtherUserMessage = messageSenderId === otherUserIdStr;
+      
+      console.log(`[ChatWindow] Message check:
+        isMyMessage: ${isMyMessage} (${messageSenderId} === ${currentUserId})
+        isOtherUserMessage: ${isOtherUserMessage} (${messageSenderId} === ${otherUserIdStr})
+      `);
+      
+      if (isMyMessage || isOtherUserMessage) {
+        console.log('[ChatWindow] Adding message to UI:', { isMyMessage, isOtherUserMessage, mappedMessage });
+        setMessages((prev) => {
+          // Avoid duplicates
+          if (prev.some(m => m.id === mappedMessage.id)) {
+            console.log('[ChatWindow] Duplicate message, skipping');
+            return prev;
+          }
+          console.log('[ChatWindow] Adding new message. Previous count:', prev.length);
+          return [...prev, mappedMessage];
+        });
+      } else {
+        console.log('[ChatWindow] Message not for this conversation, ignoring');
       }
-    });
+    };
+
+    connection.on("ReceiveMessage", handleReceiveMessage);
 
     return () => {
-      connection.off("ReceiveMessage");
+      connection.off("ReceiveMessage", handleReceiveMessage);
     };
   }, [connection, otherUserId, user]);
 
@@ -87,14 +129,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onBack }) =
     e.preventDefault();
     if (!newMessage.trim() || !otherUserId || !connection) return;
 
+    console.log('[ChatWindow] Sending message:', { otherUserId, newMessage });
+
     try {
+      // CRITICAL: Backend expects ReceiverId as STRING and Content (capital letters)
+      // Do NOT convert to Number - causes precision loss!
       await connection.invoke("SendMessage", {
-        receiverId: otherUserId,
-        content: newMessage,
+        ReceiverId: otherUserId,  // Keep as string!
+        Content: newMessage,
       });
+      console.log('[ChatWindow] Message sent successfully');
       setNewMessage("");
+      // Restore focus to input field
+      setTimeout(() => inputRef.current?.focus(), 50);
     } catch (error) {
-      console.error("Failed to send message", error);
+      console.error("[ChatWindow] Failed to send message:", error);
+      alert('Mesaj gönderilemedi. Lütfen tekrar deneyin.');
     }
   };
 
@@ -107,26 +157,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onBack }) =
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-gray-50">
-      {/* Header */}
-      <div className="p-4 bg-white border-b border-gray-200 flex items-center shadow-sm gap-2">
-        {onBack && (
-          <button 
-            onClick={onBack}
-            className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-        )}
-        <div className="font-semibold text-gray-800">Sohbet</div>
-      </div>
-
+    <div className="flex-1 flex flex-col h-full bg-white">
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gray-50 hide-scrollbar">
         {loading ? (
-          <div className="text-center text-gray-500">Yükleniyor...</div>
+          <div className="text-center text-gray-500 py-8">Yükleniyor...</div>
+        ) : messages.length === 0 ? (
+          <div className="text-center text-gray-400 py-8">
+            Henüz mesaj yok. İlk mesajı gönderin!
+          </div>
         ) : (
           messages.map((msg) => {
             const isMyMessage = msg.senderId === Number(user?.pharmacyId);
@@ -136,19 +175,19 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onBack }) =
                 className={`flex ${isMyMessage ? "justify-end" : "justify-start"}`}
               >
                 <div
-                  className={`max-w-[70%] rounded-2xl px-4 py-2 shadow-sm ${
+                  className={`max-w-[75%] rounded-2xl px-4 py-2.5 shadow-sm ${
                     isMyMessage
-                      ? "bg-blue-600 text-white rounded-br-none"
-                      : "bg-white text-gray-800 border border-gray-200 rounded-bl-none"
+                      ? "bg-gradient-to-r from-[#2D8B57] to-[#1F603C] text-white rounded-br-sm"
+                      : "bg-white text-gray-800 border border-gray-200 rounded-bl-sm"
                   }`}
                 >
-                  <p className="text-sm">{msg.content}</p>
+                  <p className="text-sm leading-relaxed">{msg.content}</p>
                   <span
                     className={`text-[10px] block text-right mt-1 ${
-                      isMyMessage ? "text-blue-100" : "text-gray-400"
+                      isMyMessage ? "text-green-100" : "text-gray-400"
                     }`}
                   >
-                    {new Date(msg.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(msg.sentAt).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               </div>
@@ -160,20 +199,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onBack }) =
 
       {/* Input */}
       <div className="p-4 bg-white border-t border-gray-200">
-        <form onSubmit={handleSendMessage} className="flex gap-2">
+        <form onSubmit={handleSendMessage} className="flex gap-2 items-center">
           <input
+            ref={inputRef}
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Bir mesaj yazın..."
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            autoFocus
           />
           <button
             type="submit"
             disabled={!newMessage.trim() || !connection}
-            className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="bg-gradient-to-r from-[#2D8B57] to-[#1F603C] text-white px-4 py-3 rounded-lg hover:from-[#1F603C] hover:to-[#165028] transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm shadow-sm flex items-center justify-center shrink-0"
+            title="Gönder"
           >
-            Gönder
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+            </svg>
           </button>
         </form>
       </div>

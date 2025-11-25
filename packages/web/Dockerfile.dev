@@ -1,0 +1,27 @@
+# Development Dockerfile for frontend-web
+FROM node:20-alpine
+WORKDIR /app
+
+# Add libc6-compat for lightningcss/swc support
+RUN apk add --no-cache libc6-compat
+
+# Copy package files
+COPY package*.json ./
+
+# NPM configuration
+RUN npm config set fetch-timeout 300000 && \
+    npm config set fetch-retries 3 && \
+    npm config set fetch-retry-mintimeout 10000 && \
+    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set registry https://registry.npmjs.org/
+
+# Install ALL dependencies (including devDependencies) with legacy peer deps
+RUN npm install --legacy-peer-deps --verbose
+
+# Copy source code (will be overridden by volume mount in docker-compose)
+COPY . .
+
+EXPOSE 3000
+
+# Start dev server
+CMD ["npm", "run", "dev"]

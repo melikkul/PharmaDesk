@@ -30,6 +30,7 @@ services:
       - pharmanet
     volumes:
       - ./ilac_verileri.csv:/app/ilac_verileri.csv:ro
+      - ./packages/api:/app  # Development mode: sync code and migrations
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
@@ -41,6 +42,7 @@ services:
   frontend-web:
     build:
       context: ./packages/web
+      dockerfile: Dockerfile.dev  # Use development Dockerfile
       network: host
     container_name: pharma_desk_frontend_web
     ports:
@@ -49,6 +51,11 @@ services:
       - backend
     networks:
       - pharmanet
+    # DEVELOPMENT MODE: Volume mapping for hot reload
+    volumes:
+      - ./packages/web:/app
+      - /app/node_modules
+      - /app/.next
     environment:
       # Backend servis ismini kullanıyoruz (server-side Next.js için)
       - API_BASE_URL=http://backend:8081

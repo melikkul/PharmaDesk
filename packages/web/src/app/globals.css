@@ -51,3 +51,15 @@ body[style*="overflow: hidden"] {
   padding-right: 0 !important; /* Gereksiz boşluk eklemesini engelle */
 }
 
+/* Hide scrollbar utility - maintains scroll functionality */
+.hide-scrollbar {
+  /* Firefox */
+  scrollbar-width: none;
+  /* IE and Edge */
+  -ms-overflow-style: none;
+}
+
+/* Webkit browsers (Chrome, Safari, newer Edge) */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}

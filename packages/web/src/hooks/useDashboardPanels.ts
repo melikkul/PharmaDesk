@@ -1,7 +1,7 @@
 // src/hooks/useDashboardPanels.ts
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { useNotifications } from './useNotifications';
@@ -50,6 +50,20 @@ export const useDashboardPanels = () => {
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showCartPanel, setShowCartPanel] = useState(false);
 
+  // Floating chat windows state
+  const [openChats, setOpenChats] = useState<string[]>([]);
+  const [minimizedChats, setMinimizedChats] = useState<string[]>([]);
+
+  // DEBUG: Monitor showMessagesPanel state changes
+  useEffect(() => {
+    console.log('[useDashboardPanels] showMessagesPanel changed to:', showMessagesPanel);
+  }, [showMessagesPanel]);
+
+  // DEBUG: Monitor activeChatUserId state changes
+  useEffect(() => {
+    console.log('[useDashboardPanels] activeChatUserId changed to:', activeChatUserId);
+  }, [activeChatUserId]);
+
   const handleLogout = useCallback(() => {
     if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
       router.push('/anasayfa');
@@ -73,6 +87,31 @@ export const useDashboardPanels = () => {
       setShowNotificationsPanel(false);
       setShowMessagesPanel(false);
   }, []);
+
+  // Floating chat window functions
+  const openFloatingChat = useCallback((userId: string) => {
+    console.log('[useDashboardPanels] Opening floating chat for:', userId);
+    if (!openChats.includes(userId)) {
+      setOpenChats([...openChats, userId]);
+    }
+    // Close messages panel when opening floating window
+    setShowMessagesPanel(false);
+  }, [openChats]);
+
+  const closeChat = useCallback((userId: string) => {
+    console.log('[useDashboardPanels] Closing chat for:', userId);
+    setOpenChats(openChats.filter(id => id !== userId));
+    setMinimizedChats(minimizedChats.filter(id => id !== userId));
+  }, [openChats, minimizedChats]);
+
+  const toggleMinimizeChat = useCallback((userId: string) => {
+    console.log('[useDashboardPanels] Toggling minimize for:', userId);
+    if (minimizedChats.includes(userId)) {
+      setMinimizedChats(minimizedChats.filter(id => id !== userId));
+    } else {
+      setMinimizedChats([...minimizedChats, userId]);
+    }
+  }, [minimizedChats]);
 
   const handleNotificationClick = useCallback((notification: TNotification) => {
     setSelectedNotification(notification);
@@ -103,12 +142,12 @@ export const useDashboardPanels = () => {
     try {
       const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
       
-      // Parse pharmacy ID to string (it's already string or number, but we want string for state)
+      // Parse pharmacy ID to string (prevents JavaScript precision loss with large Long IDs)
       const receiverPharmacyId = String(pharmacy.id);
       
       console.log('[handleStartChat] Pharmacy object:', pharmacy);
       console.log('[handleStartChat] pharmacy.id (raw):', pharmacy.id);
-      console.log('[handleStartChat] receiverPharmacyId (parsed):', receiverPharmacyId);
+      console.log('[handleStartChat] receiverPharmacyId (string):', receiverPharmacyId);
       
       if (!receiverPharmacyId) {
         console.error('Invalid pharmacy ID:', pharmacy.id);
@@ -118,26 +157,14 @@ export const useDashboardPanels = () => {
 
       console.log('[handleStartChat] Making API call with receiverPharmacyId:', receiverPharmacyId);
 
-      const response = await fetch(`${API_BASE_URL}/api/conversations`, {
+      const response = await fetch(`${API_BASE_URL}/api/chat/conversations`, { 
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ receiverPharmacyId: Number(receiverPharmacyId) }), // API still expects number for now? Or we should update DTO too?
-        // Actually DTO expects long, which is number in JSON. But JS can't handle it if it's too big.
-        // If we send it as number in JSON, JS will stringify it.
-        // Wait, if I have "2025..." as string, JSON.stringify will make it "2025..." (string).
-        // Backend expects long.
-        // If I send string "2025...", backend JSON deserializer might handle it if configured?
-        // Or I should keep it as number but be careful?
-        // No, if I have it as string in JS, I can send it as string in JSON.
-        // But backend StartConversationDto has `long ReceiverPharmacyId`.
-        // I should probably update DTO to accept string or handle the conversion.
-        // Let's update DTO to string too? Or just let JSON deserializer handle string -> long conversion.
-        // System.Text.Json can handle string to number if configured.
-        // Let's try sending as is (string) and see if backend accepts it.
-        // If not, I'll update DTO.
+        // Send as STRING to prevent JavaScript precision loss
+        body: JSON.stringify({ receiverPharmacyId: receiverPharmacyId }),
       });
 
 
@@ -147,17 +174,8 @@ export const useDashboardPanels = () => {
         const conversation = await response.json();
         console.log('[handleStartChat] Conversation created:', conversation);
         
-        const chatData: TMessage = {
-          id: conversation.id,
-          idFromProfile: pharmacy.username,
-          sender: pharmacy.pharmacyName,
-          lastMessage: '', 
-          avatar: pharmacy.logoUrl,
-          read: true
-        };
-        
-        setActiveChatUserId(receiverPharmacyId);
-        setShowMessagesPanel(true); 
+        // Open floating chat window instead of inline panel
+        openFloatingChat(receiverPharmacyId);
         setShowNotificationsPanel(false);
         setShowCartPanel(false);
       } else {
@@ -186,27 +204,51 @@ export const useDashboardPanels = () => {
     showNotificationsPanel,
     showMessagesPanel,
     showCartPanel,
+    // Floating chat windows
+    openChats,
+    minimizedChats,
     handleLogout,
     handleNotificationClick,
     markAllNotificationsAsRead,
     handleMessageClick,
-    markAllMessagesAsRead,
     toggleNotificationsPanel,
     toggleMessagesPanel,
     toggleCartPanel,
-    unreadNotificationCount,
-    unreadMessageCount: 0, // Placeholder - actual value from ChatContext in Header
     closeNotificationModal,
     closeChatWindow,
-    handleStartChat,
+    unreadNotificationCount,
     activeChatUserId,
-    setActiveChatUserId 
+    setActiveChatUserId,
+    handleStartChat,
+    // Floating window functions
+    openFloatingChat,
+    closeChat,
+    toggleMinimizeChat,
   }), [
-    notifications, selectedNotification, messages, selectedChat,
-    showNotificationsPanel, showMessagesPanel, showCartPanel,
-    handleLogout, handleNotificationClick, markAllNotificationsAsRead,
-    handleMessageClick, markAllMessagesAsRead, toggleNotificationsPanel,
-    toggleMessagesPanel, toggleCartPanel, unreadNotificationCount,
-    closeNotificationModal, closeChatWindow, handleStartChat
+    notifications,
+    selectedNotification,
+    messages,
+    selectedChat,
+    showNotificationsPanel,
+    showMessagesPanel,
+    showCartPanel,
+    openChats,
+    minimizedChats,
+    handleLogout,
+    handleNotificationClick,
+    markAllNotificationsAsRead,
+    handleMessageClick,
+    toggleNotificationsPanel,
+    toggleMessagesPanel,
+    toggleCartPanel,
+    closeNotificationModal,
+    closeChatWindow,
+    unreadNotificationCount,
+    activeChatUserId,
+    setActiveChatUserId,
+    handleStartChat,
+    openFloatingChat,
+    closeChat,
+    toggleMinimizeChat,
   ]);
 };

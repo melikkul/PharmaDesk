@@ -10,9 +10,10 @@ namespace Backend.Models
         [Key]
         public Guid Id { get; set; } = Guid.NewGuid();
 
-        public string Name { get; set; } // Optional
+        // SORUN ÇÖZÜCÜ: Name alanını 'nullable' (soru işareti) yaptık.
+        // Veritabanı artık bu alan boş gelse bile hata vermeyecek.
+        public string? Name { get; set; }
 
-        // Participants
         public long User1Id { get; set; }
         [ForeignKey("User1Id")]
         public PharmacyProfile User1 { get; set; }

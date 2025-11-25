@@ -3,20 +3,17 @@ using System;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace api.Migrations.App
+namespace api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251125094602_RebuildChatSystemV2")]
-    partial class RebuildChatSystemV2
+    partial class AppDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -136,8 +133,6 @@ namespace api.Migrations.App
 
                     b.HasIndex("ChatRoomId");
 
-                    b.HasIndex("SenderId");
-
                     b.ToTable("ChatMessages");
                 });
 
@@ -151,7 +146,6 @@ namespace api.Migrations.App
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Name")
-                        .IsRequired()
                         .HasColumnType("text");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -891,15 +885,7 @@ namespace api.Migrations.App
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.HasOne("Backend.Models.PharmacyProfile", "Sender")
-                        .WithMany()
-                        .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.Navigation("ChatRoom");
-
-                    b.Navigation("Sender");
                 });
 
             modelBuilder.Entity("Backend.Models.ChatRoom", b =>

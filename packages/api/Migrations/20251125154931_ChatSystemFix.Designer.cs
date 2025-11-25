@@ -9,11 +9,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace api.Migrations.App
+namespace api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251122201119_AddComprehensiveSchema")]
-    partial class AddComprehensiveSchema
+    [Migration("20251125154931_ChatSystemFix")]
+    partial class ChatSystemFix
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -68,8 +68,8 @@ namespace api.Migrations.App
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("PharmacyProfileId")
-                        .HasColumnType("integer");
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -110,25 +110,55 @@ namespace api.Migrations.App
                     b.ToTable("CartItems");
                 });
 
-            modelBuilder.Entity("Backend.Models.Conversation", b =>
+            modelBuilder.Entity("Backend.Models.ChatMessage", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("uuid");
 
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<Guid>("ChatRoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("boolean");
+
+                    b.Property<long>("SenderId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChatRoomId");
+
+                    b.ToTable("ChatMessages");
+                });
+
+            modelBuilder.Entity("Backend.Models.ChatRoom", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTime>("LastMessageDate")
+                    b.Property<string>("Name")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("User1Id")
-                        .HasColumnType("integer");
+                    b.Property<long>("User1Id")
+                        .HasColumnType("bigint");
 
-                    b.Property<int>("User2Id")
-                        .HasColumnType("integer");
+                    b.Property<long>("User2Id")
+                        .HasColumnType("bigint");
 
                     b.HasKey("Id");
 
@@ -137,7 +167,7 @@ namespace api.Migrations.App
                     b.HasIndex("User1Id", "User2Id")
                         .IsUnique();
 
-                    b.ToTable("Conversations");
+                    b.ToTable("ChatRooms");
                 });
 
             modelBuilder.Entity("Backend.Models.Group", b =>
@@ -192,8 +222,8 @@ namespace api.Migrations.App
                     b.Property<int>("MinStockLevel")
                         .HasColumnType("integer");
 
-                    b.Property<int>("PharmacyProfileId")
-                        .HasColumnType("integer");
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
@@ -259,8 +289,8 @@ namespace api.Migrations.App
                         .HasColumnType("character varying(15)");
 
                     b.Property<string>("Barcode")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<decimal>("BasePrice")
                         .HasColumnType("decimal(18,2)");
@@ -270,8 +300,8 @@ namespace api.Migrations.App
                         .HasColumnType("character varying(1000)");
 
                     b.Property<string>("Manufacturer")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -279,8 +309,8 @@ namespace api.Migrations.App
                         .HasColumnType("character varying(255)");
 
                     b.Property<string>("PackageType")
-                        .HasMaxLength(50)
-                        .HasColumnType("character varying(50)");
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.HasKey("Id");
 
@@ -288,40 +318,6 @@ namespace api.Migrations.App
                         .IsUnique();
 
                     b.ToTable("Medications");
-                });
-
-            modelBuilder.Entity("Backend.Models.Message", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
-                    b.Property<int>("ConversationId")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<int>("SenderPharmacyId")
-                        .HasColumnType("integer");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ConversationId");
-
-                    b.HasIndex("SenderPharmacyId");
-
-                    b.ToTable("Messages");
                 });
 
             modelBuilder.Entity("Backend.Models.Notification", b =>
@@ -347,8 +343,8 @@ namespace api.Migrations.App
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
 
-                    b.Property<int>("PharmacyProfileId")
-                        .HasColumnType("integer");
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -373,13 +369,31 @@ namespace api.Migrations.App
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<bool>("AcceptingCounterOffers")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime?>("BiddingDeadline")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("BonusQuantity")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("CampaignBonusMultiplier")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateTime?>("CampaignEndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("CampaignStartDate")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpirationDate")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("InventoryItemId")
@@ -391,8 +405,11 @@ namespace api.Migrations.App
                     b.Property<int>("MinSaleQuantity")
                         .HasColumnType("integer");
 
-                    b.Property<int>("PharmacyProfileId")
+                    b.Property<int?>("MinimumOrderQuantity")
                         .HasColumnType("integer");
+
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("decimal(18,2)");
@@ -404,6 +421,9 @@ namespace api.Migrations.App
                         .HasColumnType("integer");
 
                     b.Property<int>("Stock")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
@@ -428,8 +448,8 @@ namespace api.Migrations.App
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<int>("BuyerPharmacyId")
-                        .HasColumnType("integer");
+                    b.Property<long>("BuyerPharmacyId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -445,8 +465,8 @@ namespace api.Migrations.App
                     b.Property<int>("PaymentStatus")
                         .HasColumnType("integer");
 
-                    b.Property<int>("SellerPharmacyId")
-                        .HasColumnType("integer");
+                    b.Property<long>("SellerPharmacyId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -503,11 +523,8 @@ namespace api.Migrations.App
 
             modelBuilder.Entity("Backend.Models.PharmacyProfile", b =>
                 {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                    b.Property<long>("Id")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("About")
                         .HasColumnType("text");
@@ -606,8 +623,8 @@ namespace api.Migrations.App
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
 
-                    b.Property<int>("PharmacyProfileId")
-                        .HasColumnType("integer");
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
 
                     b.Property<bool>("ShowStockToGroupOnly")
                         .HasColumnType("boolean");
@@ -640,8 +657,8 @@ namespace api.Migrations.App
                     b.Property<DateTime>("GeneratedDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("PharmacyProfileId")
-                        .HasColumnType("integer");
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
 
                     b.Property<int>("ReportType")
                         .HasColumnType("integer");
@@ -690,11 +707,11 @@ namespace api.Migrations.App
                     b.Property<int>("Quantity")
                         .HasColumnType("integer");
 
-                    b.Property<int>("ReceiverPharmacyId")
-                        .HasColumnType("integer");
+                    b.Property<long>("ReceiverPharmacyId")
+                        .HasColumnType("bigint");
 
-                    b.Property<int>("SenderPharmacyId")
-                        .HasColumnType("integer");
+                    b.Property<long>("SenderPharmacyId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime?>("ShippedDate")
                         .HasColumnType("timestamp with time zone");
@@ -765,8 +782,8 @@ namespace api.Migrations.App
                     b.Property<decimal>("Amount")
                         .HasColumnType("decimal(18,2)");
 
-                    b.Property<int?>("CounterpartyPharmacyId")
-                        .HasColumnType("integer");
+                    b.Property<long?>("CounterpartyPharmacyId")
+                        .HasColumnType("bigint");
 
                     b.Property<DateTime>("Date")
                         .HasColumnType("timestamp with time zone");
@@ -776,8 +793,8 @@ namespace api.Migrations.App
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
-                    b.Property<int>("PharmacyProfileId")
-                        .HasColumnType("integer");
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("RelatedReferenceId")
                         .HasMaxLength(100)
@@ -863,7 +880,18 @@ namespace api.Migrations.App
                     b.Navigation("Offer");
                 });
 
-            modelBuilder.Entity("Backend.Models.Conversation", b =>
+            modelBuilder.Entity("Backend.Models.ChatMessage", b =>
+                {
+                    b.HasOne("Backend.Models.ChatRoom", "ChatRoom")
+                        .WithMany("Messages")
+                        .HasForeignKey("ChatRoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ChatRoom");
+                });
+
+            modelBuilder.Entity("Backend.Models.ChatRoom", b =>
                 {
                     b.HasOne("Backend.Models.PharmacyProfile", "User1")
                         .WithMany()
@@ -910,25 +938,6 @@ namespace api.Migrations.App
                         .IsRequired();
 
                     b.Navigation("Medication");
-                });
-
-            modelBuilder.Entity("Backend.Models.Message", b =>
-                {
-                    b.HasOne("Backend.Models.Conversation", "Conversation")
-                        .WithMany("Messages")
-                        .HasForeignKey("ConversationId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.PharmacyProfile", "SenderPharmacy")
-                        .WithMany()
-                        .HasForeignKey("SenderPharmacyId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Conversation");
-
-                    b.Navigation("SenderPharmacy");
                 });
 
             modelBuilder.Entity("Backend.Models.Notification", b =>
@@ -1101,7 +1110,7 @@ namespace api.Migrations.App
                     b.Navigation("CartItems");
                 });
 
-            modelBuilder.Entity("Backend.Models.Conversation", b =>
+            modelBuilder.Entity("Backend.Models.ChatRoom", b =>
                 {
                     b.Navigation("Messages");
                 });
