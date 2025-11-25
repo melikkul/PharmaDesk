@@ -6,7 +6,7 @@ namespace Backend.Dtos
     
     public class PharmacyProfileDto
     {
-        public int Id { get; set; }
+        public long Id { get; set; }
         public string PharmacyName { get; set; } = string.Empty;
         public string PharmacistInCharge { get; set; } = string.Empty; // From IdentityUser
         public decimal Balance { get; set; }
@@ -39,18 +39,40 @@ namespace Backend.Dtos
     public class OfferDto
     {
         public int Id { get; set; }
+        public int MedicationId { get; set; } // Added for linking back to medication
         public string ProductName { get; set; } = string.Empty;
+        public string? Barcode { get; set; } // Medication barcode  
+        public string Type { get; set; } = string.Empty; // "standard", "campaign", "tender"
         public string Stock { get; set; } = string.Empty; // "quantity + bonus" format
         public decimal Price { get; set; }
         public string Status { get; set; } = string.Empty;
+        public string PharmacyId { get; set; } = string.Empty; // Pharmacy profile ID for linking
         public string PharmacyName { get; set; } = string.Empty; // Seller pharmacy
         public string? PharmacyUsername { get; set; }
+        
+        // New fields for Detail Page
+        public string? Description { get; set; }
+        public string? Manufacturer { get; set; }
+        public string? ImageUrl { get; set; }
+        
+        // Campaign-specific fields
+        public string? CampaignEndDate { get; set; }
+        public decimal? CampaignBonusMultiplier { get; set; }
+        
+        // Tender-specific fields
+        public int? MinimumOrderQuantity { get; set; }
+        public string? BiddingDeadline { get; set; }
+        public string? ExpirationDate { get; set; } // SKT
     }
 
     public class CreateOfferRequest
     {
+        public int? MedicationId { get; set; }
+        public string? Barcode { get; set; }
+        public string? ProductName { get; set; }
+        
         [Required]
-        public int MedicationId { get; set; }
+        public string Type { get; set; } = "standard"; // "standard", "campaign", "tender"
         
         [Required]
         [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
@@ -61,12 +83,48 @@ namespace Backend.Dtos
         public int Stock { get; set; }
         
         public int BonusQuantity { get; set; } = 0;
+        
+        public string? ExpirationDate { get; set; } // Format: "MM/YYYY" or "MM / YYYY"
+        
+        // Campaign-specific fields
+        public DateTime? CampaignStartDate { get; set; }
+        public DateTime? CampaignEndDate { get; set; }
+        public decimal CampaignBonusMultiplier { get; set; } = 1.0m;
+        
+        // Tender-specific fields
+        public int? MinimumOrderQuantity { get; set; }
+        public DateTime? BiddingDeadline { get; set; }
+        public bool AcceptingCounterOffers { get; set; } = false;
+    }
+
+    public class UpdateOfferRequest
+    {
+        [Required]
+        [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
+        public decimal Price { get; set; }
+        
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Stock must be at least 1")]
+        public int Stock { get; set; }
+        
+        public int BonusQuantity { get; set; } = 0;
+        public int MinSaleQuantity { get; set; } = 1;
+        
+        // Campaign-specific fields (optional updates)
+        public DateTime? CampaignStartDate { get; set; }
+        public DateTime? CampaignEndDate { get; set; }
+        public decimal? CampaignBonusMultiplier { get; set; }
+        
+        // Tender-specific fields (optional updates)
+        public int? MinimumOrderQuantity { get; set; }
+        public DateTime? BiddingDeadline { get; set; }
+        public bool? AcceptingCounterOffers { get; set; }
     }
 
     public class UpdateOfferStatusRequest
     {
         [Required]
-        public string Status { get; set; } = string.Empty; // "active", "paused", "expired", "out_of_stock"
+        public string Status { get; set; } = string.Empty; // "active", "paused", "expired", "out_of_stock", "stopped"
     }
 
     // ========== TRANSACTION DTOs ==========
@@ -159,20 +217,26 @@ namespace Backend.Dtos
     public class MessageDto
     {
         public int Id { get; set; }
-        public string Sender { get; set; } = string.Empty; // Pharmacy name
-        public string LastMessage { get; set; } = string.Empty;
-        public string? Avatar { get; set; }
-        public bool Read { get; set; }
-        public string? IdFromProfile { get; set; } // Pharmacy username
+        public int ConversationId { get; set; }
+        public string SenderPharmacyId { get; set; } = string.Empty;
+        public string Content { get; set; } = string.Empty;
+        public bool IsRead { get; set; }
+        public DateTime CreatedAt { get; set; }
     }
 
     public class SendMessageRequest
     {
         [Required]
-        public int ReceiverPharmacyId { get; set; }
+        public long ReceiverPharmacyId { get; set; }
         
         [Required]
         [StringLength(2000, MinimumLength = 1)]
         public string Content { get; set; } = string.Empty;
+    }
+
+    public class CreateConversationRequest
+    {
+        [Required]
+        public long ReceiverPharmacyId { get; set; }
     }
 }

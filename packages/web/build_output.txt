@@ -1,0 +1,164 @@
+
+> pharma-desk@0.1.0 build
+> next build
+
+API Hedef Adresi: http://backend:8081
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of /home/melik/package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * /home/melik/PharmaDesk-main/packages/web/package-lock.json
+   * /home/melik/PharmaDesk-main/pnpm-lock.yaml
+
+   ▲ Next.js 15.5.5
+
+   Creating an optimized production build ...
+API Hedef Adresi: http://backend:8081
+Failed to compile.
+
+./src/app/(dashboard)/ayarlar/eczane/eczane.module.css
+Error: Cannot find module '../lightningcss.linux-x64-gnu.node'
+Require stack:
+- /home/melik/PharmaDesk-main/node_modules/lightningcss/node/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/node/dist/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/postcss/dist/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-config.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-build/impl.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/compiled/jest-worker/processChild.js
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)
+    at /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:57:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Function._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1463:12)
+    at mod.require (/home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:68:28)
+    at require (node:internal/modules/helpers:147:16)
+
+Import trace for requested module:
+./src/app/(dashboard)/ayarlar/eczane/eczane.module.css
+./src/app/(dashboard)/ayarlar/eczane/page.tsx
+
+./src/app/(dashboard)/ayarlar/layout.module.css
+Error: Cannot find module '../lightningcss.linux-x64-gnu.node'
+Require stack:
+- /home/melik/PharmaDesk-main/node_modules/lightningcss/node/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/node/dist/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/postcss/dist/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-config.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-build/impl.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/compiled/jest-worker/processChild.js
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)
+    at /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:57:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Function._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1463:12)
+    at mod.require (/home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:68:28)
+    at require (node:internal/modules/helpers:147:16)
+
+Import trace for requested module:
+./src/app/(dashboard)/ayarlar/layout.module.css
+./src/app/(dashboard)/ayarlar/layout.tsx
+
+./src/app/(dashboard)/ayarlar/page.module.css
+Error: Cannot find module '../lightningcss.linux-x64-gnu.node'
+Require stack:
+- /home/melik/PharmaDesk-main/node_modules/lightningcss/node/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/node/dist/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/postcss/dist/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-config.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-build/impl.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/compiled/jest-worker/processChild.js
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)
+    at /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:57:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Function._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1463:12)
+    at mod.require (/home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:68:28)
+    at require (node:internal/modules/helpers:147:16)
+
+Import trace for requested module:
+./src/app/(dashboard)/ayarlar/page.module.css
+./src/app/(dashboard)/ayarlar/GenelAyarlar.tsx
+./src/app/(dashboard)/ayarlar/page.tsx
+
+./src/app/(dashboard)/ayarlar/page.module.css
+Error: Cannot find module '../lightningcss.linux-x64-gnu.node'
+Require stack:
+- /home/melik/PharmaDesk-main/node_modules/lightningcss/node/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/node/dist/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/postcss/dist/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-config.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-build/impl.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/compiled/jest-worker/processChild.js
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)
+    at /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:57:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Function._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1463:12)
+    at mod.require (/home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:68:28)
+    at require (node:internal/modules/helpers:147:16)
+
+Import trace for requested module:
+./src/app/(dashboard)/ayarlar/page.module.css
+./src/app/(dashboard)/sepet/page.tsx
+
+./src/app/(dashboard)/ayarlar/profil/profil.module.css
+Error: Cannot find module '../lightningcss.linux-x64-gnu.node'
+Require stack:
+- /home/melik/PharmaDesk-main/node_modules/lightningcss/node/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/node/dist/index.js
+- /home/melik/PharmaDesk-main/node_modules/@tailwindcss/postcss/dist/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/plugins.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/blocks/css/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack/config/index.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-config.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/build/webpack-build/impl.js
+- /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/compiled/jest-worker/processChild.js
+    at Function.<anonymous> (node:internal/modules/cjs/loader:1383:15)
+    at /home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:57:36
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Function._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Module.<anonymous> (node:internal/modules/cjs/loader:1463:12)
+    at mod.require (/home/melik/PharmaDesk-main/packages/web/node_modules/next/dist/server/require-hook.js:68:28)
+    at require (node:internal/modules/helpers:147:16)
+
+Import trace for requested module:
+./src/app/(dashboard)/ayarlar/profil/profil.module.css
+./src/app/(dashboard)/sepet/page.tsx
+
+
+> Build failed because of webpack errors
+npm error Lifecycle script `build` failed with error:
+npm error code 1
+npm error path /home/melik/PharmaDesk-main/packages/web
+npm error workspace pharma-desk@0.1.0
+npm error location /home/melik/PharmaDesk-main/packages/web
+npm error command failed
+npm error command sh -c next build

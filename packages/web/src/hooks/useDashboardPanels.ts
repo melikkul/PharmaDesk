@@ -1,13 +1,14 @@
 // src/hooks/useDashboardPanels.ts
 'use client';
 
-// ### OPTİMİZASYON: useMemo ve useCallback import edildi ###
-import { useState, createContext, useContext, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-// GÜNCELLEME: Tipleri data dosyasından import ediyoruz
+import { useAuth } from '@/context/AuthContext';
+import { useNotifications } from './useNotifications';
+// import { useMessages } from './useMessages';
+
+// Tipleri data dosyasından import ediyoruz
 import { 
-  initialNotifications, 
-  initialMessages,
   type Notification as TNotification, 
   type Message as TMessage,
   type PharmacyProfileData
@@ -15,116 +16,154 @@ import {
 
 // Tipleri dışa aktar
 import { SelectedNotification } from '@/context/DashboardContext';
+// YENİ: ChatContext import et
+// import { useChatContext } from '@/context/ChatContext';
 export type Notification = TNotification;
 export type Message = TMessage;
 
-// 1. ADIM: Context ve Tipler artık context/DashboardContext.tsx dosyasında
-
-// 3. ADIM: Hook'umuzu güncelleyelim
 export const useDashboardPanels = () => {
   const router = useRouter();
-
-  const [notifications, setNotifications] = useState<TNotification[]>(initialNotifications);
-  const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null);
+  const { token } = useAuth();
   
-  const [messages, setMessages] = useState<TMessage[]>(initialMessages);
+  // YENİ: Conversations ChatContext'ten geliyor
+  // During build time, context may be null - provide safe default
+  // const chatContext = useChatContext();
+  // const conversations = chatContext?.conversations ?? [];
+
+  // Real data hooks
+  const { 
+    notifications, 
+    markAsRead: markNotificationAsRead, 
+    markAllAsRead: markAllNotificationsAsReadApi 
+  } = useNotifications(token);
+
+  // Messages artık ChatContext'ten geliyor
+  // Messages artık ChatContext'ten geliyor
+  const messages: TMessage[] = []; // conversations;
+  
+
+  const [selectedNotification, setSelectedNotification] = useState<SelectedNotification | null>(null);
   const [selectedChat, setSelectedChat] = useState<TMessage | null>(null);
+  const [activeChatUserId, setActiveChatUserId] = useState<number | null>(null);
 
   const [showNotificationsPanel, setShowNotificationsPanel] = useState(false);
   const [showMessagesPanel, setShowMessagesPanel] = useState(false);
   const [showCartPanel, setShowCartPanel] = useState(false);
 
-  // ### OPTİMİZASYON: useCallback ###
-  // Fonksiyonun gereksiz yere yeniden oluşturulmasını engeller.
   const handleLogout = useCallback(() => {
     if (window.confirm("Çıkış yapmak istediğinizden emin misiniz?")) {
       router.push('/anasayfa');
     }
-  }, [router]); // router bağımlılığı eklendi
+  }, [router]);
 
-  // ### OPTİMİZASYON: useCallback ###
   const toggleNotificationsPanel = useCallback(() => {
       setShowNotificationsPanel(p => !p);
       setShowMessagesPanel(false);
       setShowCartPanel(false);
-  }, []); // Bağımlılığı yok
+  }, []);
 
-  // ### OPTİMİZASYON: useCallback ###
   const toggleMessagesPanel = useCallback(() => {
       setShowMessagesPanel(p => !p);
       setShowNotificationsPanel(false);
       setShowCartPanel(false);
-  }, []); // Bağımlılığı yok
+  }, []);
   
-  // ### OPTİMİZASYON: useCallback ###
   const toggleCartPanel = useCallback(() => {
       setShowCartPanel(p => !p);
       setShowNotificationsPanel(false);
       setShowMessagesPanel(false);
-  }, []); // Bağımlılığı yok
+  }, []);
 
-  // ### OPTİMİZASYON: useCallback ###
   const handleNotificationClick = useCallback((notification: TNotification) => {
     setSelectedNotification(notification);
-    setNotifications(prev => prev.map(n => n.id === notification.id ? { ...n, read: true } : n));
+    markNotificationAsRead(notification.id);
     setShowNotificationsPanel(false);
-  }, []); // Bağımlılığı yok
+  }, [markNotificationAsRead]);
 
-  // ### OPTİMİZASYON: useCallback ###
   const markAllNotificationsAsRead = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
-      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }, []); // Bağımlılığı yok
+      markAllNotificationsAsReadApi();
+  }, [markAllNotificationsAsReadApi]);
 
-  // ### OPTİMİZASYON: useCallback ###
   const handleMessageClick = useCallback((message: TMessage) => {
     setSelectedChat(message);
-    setMessages(prev => prev.map(m => m.id === message.id ? { ...m, read: true } : m));
+    // REMOVED: markMessageAsRead - ChatContext handles this automatically
     setShowMessagesPanel(false);
-  }, []); // Bağımlılığı yok
+  }, []);
 
-  // ### OPTİMİZASYON: useCallback ###
   const markAllMessagesAsRead = useCallback((e: React.MouseEvent) => {
       e.preventDefault();
-      setMessages(prev => prev.map(m => ({ ...m, read: true })));
-  }, []); // Bağımlılığı yok
+      // Implement mark all messages as read API call if available
+      // For now, we iterate or just rely on individual reads
+  }, []);
   
-  // 4. ADIM: YENİ SOHBET BAŞLATMA FONKSİYONU (GÜNCELLENDİ)
-  // ### OPTİMİZASYON: useCallback ###
-  const handleStartChat = useCallback((pharmacy: PharmacyProfileData) => {
-    // Eczane verisinden bir Mesaj objesi oluştur
-    const chatData: TMessage = {
-      id: 0, // Geçici ID
-      idFromProfile: pharmacy.username,
-      sender: pharmacy.pharmacyName,
-      lastMessage: `Sorumlu: ${pharmacy.pharmacistInCharge}`,
-      avatar: pharmacy.logoUrl,
-      read: true
-    };
-    
-    // State'leri güncelle
-    setSelectedChat(chatData); // Sadece bu state'i set ediyoruz
-    setShowMessagesPanel(false); 
-    setShowNotificationsPanel(false); // Diğerlerini kapat
-    setShowCartPanel(false);
-  }, []); // Bağımlılığı yok
+  const handleStartChat = useCallback(async (pharmacy: PharmacyProfileData) => {
+    if (!token) return;
 
-  // ### OPTİMİZASYON: useCallback ###
+    try {
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      
+      // Parse pharmacy ID to number
+      const receiverPharmacyId = typeof pharmacy.id === 'string' ? parseInt(pharmacy.id, 10) : pharmacy.id;
+      
+      console.log('[handleStartChat] Pharmacy object:', pharmacy);
+      console.log('[handleStartChat] pharmacy.id (raw):', pharmacy.id);
+      console.log('[handleStartChat] receiverPharmacyId (parsed):', receiverPharmacyId);
+      
+      if (!receiverPharmacyId || isNaN(receiverPharmacyId)) {
+        console.error('Invalid pharmacy ID:', pharmacy.id);
+        alert('Geçersiz eczane ID. Lütfen sayfayı yenileyin.');
+        return;
+      }
+
+      console.log('[handleStartChat] Making API call with receiverPharmacyId:', receiverPharmacyId);
+
+      const response = await fetch(`${API_BASE_URL}/api/conversations`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ receiverPharmacyId }),
+      });
+
+      console.log('[handleStartChat] Response status:', response.status);
+
+      if (response.ok) {
+        const conversation = await response.json();
+        console.log('[handleStartChat] Conversation created:', conversation);
+        
+        const chatData: TMessage = {
+          id: conversation.id,
+          idFromProfile: pharmacy.username,
+          sender: pharmacy.pharmacyName,
+          lastMessage: '', 
+          avatar: pharmacy.logoUrl,
+          read: true
+        };
+        
+        setActiveChatUserId(receiverPharmacyId);
+        setShowMessagesPanel(true); 
+        setShowNotificationsPanel(false);
+        setShowCartPanel(false);
+      } else {
+        const errorText = await response.text();
+        console.error('Failed to start chat:', response.status, errorText);
+        alert(`Sohbet başlatılamadı: ${response.status}\n${errorText.substring(0, 200)}`);
+      }
+    } catch (error) {
+      console.error('Error starting chat:', error);
+      alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+    }
+  }, [token]);
+
   const closeNotificationModal = useCallback(() => setSelectedNotification(null), []);
   
-  // ### OPTİMİZASYON: useCallback ###
   const closeChatWindow = useCallback(() => setSelectedChat(null), []);
 
-  // ### OPTİMİZASYON: useMemo ###
-  // Bu değerler 'notifications' ve 'messages' state'lerine bağlı.
   const unreadNotificationCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
-  const unreadMessageCount = useMemo(() => messages.filter(m => !m.read).length, [messages]);
+  // REMOVED: unreadMessageCount - now managed by ChatContext
 
-  // 5. ADIM: Tüm değerleri ve yeni fonksiyonu döndür
-  // ### OPTİMİZASYON: useMemo ###
-  // Hook'un döndürdüğü ana obje memoize edildi.
-  // Sadece içindeki bir değer (state veya memoize edilmiş fonksiyon) değişirse
-  // bu objenin referansı değişir. Bu, context tüketicilerinde gereksiz render'ları engeller.
   return useMemo(() => ({
     notifications,
     selectedNotification,
@@ -142,16 +181,18 @@ export const useDashboardPanels = () => {
     toggleMessagesPanel,
     toggleCartPanel,
     unreadNotificationCount,
-    unreadMessageCount,
+    unreadMessageCount: 0, // Placeholder - actual value from ChatContext in Header
     closeNotificationModal,
     closeChatWindow,
-    handleStartChat 
+    handleStartChat,
+    activeChatUserId,
+    setActiveChatUserId 
   }), [
     notifications, selectedNotification, messages, selectedChat,
     showNotificationsPanel, showMessagesPanel, showCartPanel,
     handleLogout, handleNotificationClick, markAllNotificationsAsRead,
     handleMessageClick, markAllMessagesAsRead, toggleNotificationsPanel,
     toggleMessagesPanel, toggleCartPanel, unreadNotificationCount,
-    unreadMessageCount, closeNotificationModal, closeChatWindow, handleStartChat
+    closeNotificationModal, closeChatWindow, handleStartChat
   ]);
 };

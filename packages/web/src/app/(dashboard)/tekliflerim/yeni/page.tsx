@@ -17,22 +17,70 @@ const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="non
 const NewOfferFormContent = () => {
   const router = useRouter();
 
-  // Kaydetme simülasyonu
+  // Real API integration
   const handleSave = async (data: any) => {
     console.log("KAYDEDİLEN VERİ:", data);
-    alert(`"${data.offerType}" türünde ilan oluşturuldu!`);
     
-    // Gerçekte burada data.offerType'a göre farklı API endpoint'lerine istek atılır
-    // Örn: /api/offers/stock, /api/offers/group-buy, /api/offers/request
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Başarı sonrası yönlendirme
-    if (data.offerType === 'stock') {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token) {
+        alert('Lütfen giriş yapın.');
+        router.push('/login');
+        return;
+      }
+
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      
+      // Map offerType to backend OfferType enum
+      const offerTypeMap: Record<string, string> = {
+        'standard': 'Standard',
+        'campaign': 'Campaign',
+        'tender': 'Tender'
+      };
+
+      const payload = {
+        offerType: offerTypeMap[data.offerType] || 'Standard',
+        productName: data.productName,
+        barcode: data.barcode,
+        price: data.price,
+        stock: data.stock,
+        bonusQuantity: data.bonus,
+        expirationDate: data.expirationDate, // MM/YYYY format
+        minOrderQuantity: data.minSaleQuantity,
+        // Campaign fields
+        campaignStartDate: data.campaignStartDate,
+        campaignEndDate: data.campaignEndDate,
+        // Tender fields  
+        minimumOrderQuantity: data.minimumOrderQuantity,
+        biddingDeadline: data.biddingDeadline,
+        acceptingCounterOffers: data.acceptingCounterOffers
+      };
+
+      console.log('Sending to backend:', payload);
+
+      const response = await fetch(`${API_BASE_URL}/api/offers`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Teklif oluşturulamadı');
+      }
+
+      const result = await response.json();
+      console.log('Offer created:', result);
+      
+      alert(`Teklif başarıyla oluşturuldu!`);
       router.push('/tekliflerim');
-    } else {
-      // Diğer türler için "Taleplerim" veya "Ortak Alımlarım" sayfası olabilir
-      router.push('/dashboard'); 
+      
+    } catch (error: any) {
+      console.error('Error creating offer:', error);
+      alert(`Hata: ${error.message || 'Teklif oluşturulamadı'}`);
     }
   };
 

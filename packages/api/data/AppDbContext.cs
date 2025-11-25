@@ -8,17 +8,35 @@ namespace Backend.Data
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
         public DbSet<PharmacyProfile> PharmacyProfiles { get; set; }
+        public DbSet<PharmacySettings> PharmacySettings { get; set; }
         public DbSet<Group> Groups { get; set; }
         public DbSet<Medication> Medications { get; set; }
         public DbSet<InventoryItem> InventoryItems { get; set; }
         public DbSet<Admin> Admins { get; set; }
         
-        // --- YENİ TABLOLAR: Frontend Entegrasyonu için ---
+        // --- MARKETPLACE & SALES ---
         public DbSet<Offer> Offers { get; set; }
-        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Cart> Carts { get; set; }
+        public DbSet<CartItem> CartItems { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<OrderItem> OrderItems { get; set; }
+        
+        // --- LOGISTICS ---
         public DbSet<Shipment> Shipments { get; set; }
+        public DbSet<ShipmentEvent> ShipmentEvents { get; set; }
+        
+        // --- FINANCE & ANALYTICS ---
+        public DbSet<Transaction> Transactions { get; set; }
+        public DbSet<Report> Reports { get; set; }
+        public DbSet<MarketDemand> MarketDemands { get; set; }
+        
+        // --- COMMUNICATION ---
         public DbSet<Notification> Notifications { get; set; }
-        public DbSet<Message> Messages { get; set; }
+        public DbSet<ChatRoom> ChatRooms { get; set; }
+        public DbSet<ChatMessage> ChatMessages { get; set; }
+        
+        // --- EXTERNAL RESOURCES ---
+        public DbSet<WarehouseBarem> WarehouseBarems { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -52,6 +70,46 @@ namespace Backend.Data
             // Offer indexing for marketplace queries
             modelBuilder.Entity<Offer>()
                 .HasIndex(o => new { o.Status, o.MedicationId });
+            
+            // --- NEW INDEXES ---
+            // Order OrderNumber unique constraint
+            modelBuilder.Entity<Order>()
+                .HasIndex(o => o.OrderNumber)
+                .IsUnique();
+            
+            // Cart indexing
+            modelBuilder.Entity<Cart>()
+                .HasIndex(c => c.PharmacyProfileId);
+            
+            // CartItem composite index
+            modelBuilder.Entity<CartItem>()
+                .HasIndex(ci => new { ci.CartId, ci.OfferId });
+            
+            // ShipmentEvent indexing for timeline queries
+            modelBuilder.Entity<ShipmentEvent>()
+                .HasIndex(se => new { se.ShipmentId, se.EventDate });
+            
+            // MarketDemand indexing for analytics
+            modelBuilder.Entity<MarketDemand>()
+                .HasIndex(md => new { md.City, md.LastSearchedDate });
+            
+            // ChatRoom unique constraint (prevent duplicate conversations)
+            modelBuilder.Entity<ChatRoom>()
+                .HasIndex(c => new { c.User1Id, c.User2Id })
+                .IsUnique();
+            
+            // Report indexing
+            modelBuilder.Entity<Report>()
+                .HasIndex(r => new { r.PharmacyProfileId, r.GeneratedDate });
+            
+            // WarehouseBarem indexing
+            modelBuilder.Entity<WarehouseBarem>()
+                .HasIndex(wb => new { wb.MedicationId, wb.WarehouseName });
+            
+            // PharmacySettings unique constraint (one setting per pharmacy)
+            modelBuilder.Entity<PharmacySettings>()
+                .HasIndex(ps => ps.PharmacyProfileId)
+                .IsUnique();
 
             // Admin seed data removed - no automatic admin accounts
         }

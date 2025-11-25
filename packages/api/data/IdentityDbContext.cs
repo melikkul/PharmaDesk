@@ -17,6 +17,10 @@ namespace Backend.Data
             modelBuilder.Entity<IdentityUser>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+            
+            // Index for filtering by status
+            modelBuilder.Entity<IdentityUser>()
+                .HasIndex(u => u.Status);
         }
     }
 }

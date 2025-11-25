@@ -29,7 +29,7 @@ namespace Backend.Controllers
         }
 
         [HttpGet("me")]
-        public async Task<ActionResult<IEnumerable<InventoryItemResponse>>> GetMyInventory()
+        public async Task<ActionResult<IEnumerable<object>>> GetMyInventory()
         {
             try
             {
@@ -39,15 +39,27 @@ namespace Backend.Controllers
                     .AsNoTracking()
                     .Where(i => i.PharmacyProfileId == userId)
                     .Include(i => i.Medication) 
-                    .Select(i => new InventoryItemResponse
+                    .Select(i => new
                     {
-                        Id = i.Id,
-                        MedicationId = i.MedicationId,
-                        MedicationName = i.Medication.Name,
-                        ATC = i.Medication.ATC,
-                        Quantity = i.Quantity,
-                        BatchNumber = i.BatchNumber,
-                        ExpiryDate = i.ExpiryDate
+                        id = i.Id,
+                        medicationId = i.MedicationId,
+                        quantity = i.Quantity,
+                        bonusQuantity = i.BonusQuantity,
+                        costPrice = i.CostPrice,
+                        salePrice = i.SalePrice,
+                        expiryDate = i.ExpiryDate.ToString("yyyy-MM-dd"),
+                        batchNumber = i.BatchNumber,
+                        shelfLocation = i.ShelfLocation,
+                        isAlarmSet = i.IsAlarmSet,
+                        minStockLevel = i.MinStockLevel,
+                        medication = new
+                        {
+                            id = i.Medication.Id,
+                            name = i.Medication.Name,
+                            barcode = i.Medication.Barcode,
+                            atcCode = i.Medication.ATC,
+                            basePrice = i.Medication.BasePrice
+                        }
                     })
                     .ToListAsync();
 

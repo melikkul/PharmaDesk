@@ -3,6 +3,9 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
+# Add libc6-compat for lightningcss/swc support
+RUN apk add --no-cache libc6-compat
+
 # Önce bağımlılıkları kopyala ve kur (Docker katman önbelleklemesi için)
 COPY package*.json ./
 

@@ -14,5 +14,6 @@ RUN dotnet publish -c Release -o /app --no-restore
 FROM mcr.microsoft.com/dotnet/aspnet:8.0.21
 WORKDIR /app
 COPY --from=build /app ./
+# CSV file will be mounted as volume in docker-compose
 ENV ASPNETCORE_URLS=http://0.0.0.0:8081
 ENTRYPOINT ["dotnet", "api.dll"]

@@ -72,7 +72,7 @@ namespace Backend.Controllers
                     : s.SenderPharmacy.PharmacyName,
                 ShippingProvider = s.Carrier,
                 Status = TranslateShipmentStatus(s.Status),
-                TrackingHistory = ParseTrackingHistory(s.TrackingHistory)
+                TrackingHistory = new List<TrackingEventDto>() // Will be loaded separately if needed
             });
 
             return Ok(response);
@@ -110,7 +110,7 @@ namespace Backend.Controllers
                     : shipment.SenderPharmacy.PharmacyName,
                 ShippingProvider = shipment.Carrier,
                 Status = TranslateShipmentStatus(shipment.Status),
-                TrackingHistory = ParseTrackingHistory(shipment.TrackingHistory)
+                TrackingHistory = await GetShipmentEvents(shipment.Id)
             };
 
             return Ok(response);
@@ -156,11 +156,21 @@ namespace Backend.Controllers
                 Status = ShipmentStatus.Pending,
                 Carrier = request.Carrier,
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow,
-                TrackingHistory = JsonSerializer.Serialize(trackingHistory)
+                UpdatedAt = DateTime.UtcNow
             };
 
             _context.Shipments.Add(shipment);
+            await _context.SaveChangesAsync();
+            
+            // Create initial tracking event
+            var initialEvent = new ShipmentEvent
+            {
+                ShipmentId = shipment.Id,
+                Status = "Sipariş Alındı",
+                Location = "Merkez Depo",
+                EventDate = DateTime.UtcNow
+            };
+            _context.ShipmentEvents.Add(initialEvent);
             await _context.SaveChangesAsync();
 
             // Load navigation properties
@@ -180,7 +190,15 @@ namespace Backend.Controllers
                 Counterparty = shipment.ReceiverPharmacy.PharmacyName,
                 ShippingProvider = shipment.Carrier,
                 Status = TranslateShipmentStatus(shipment.Status),
-                TrackingHistory = trackingHistory
+                TrackingHistory = new List<TrackingEventDto> 
+                {
+                    new TrackingEventDto
+                    {
+                        Date = initialEvent.EventDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                        Status = initialEvent.Status,
+                        Location = initialEvent.Location
+                    }
+                }
             };
 
             return CreatedAtAction(nameof(GetShipment), new { id = shipment.Id }, response);
@@ -215,10 +233,25 @@ namespace Backend.Controllers
             }
         }
 
-        private int? GetPharmacyIdFromToken()
+        private async Task<List<TrackingEventDto>> GetShipmentEvents(int shipmentId)
+        {
+            var events = await _context.ShipmentEvents
+                .Where(e => e.ShipmentId == shipmentId)
+                .OrderBy(e => e.EventDate)
+                .ToListAsync();
+
+            return events.Select(e => new TrackingEventDto
+            {
+                Date = e.EventDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                Status = e.Status,
+                Location = e.Location
+            }).ToList();
+        }
+
+        private long? GetPharmacyIdFromToken()
         {
             var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
-            if (int.TryParse(pharmacyIdClaim, out var pharmacyId))
+            if (long.TryParse(pharmacyIdClaim, out var pharmacyId))
                 return pharmacyId;
             return null;
         }

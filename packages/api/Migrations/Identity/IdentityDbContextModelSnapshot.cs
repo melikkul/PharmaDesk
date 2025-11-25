@@ -50,6 +50,9 @@ namespace api.Migrations.Identity
                     b.Property<bool>("IsFirstLogin")
                         .HasColumnType("boolean");
 
+                    b.Property<DateTime?>("LastLoginDate")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("LastName")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -59,8 +62,8 @@ namespace api.Migrations.Identity
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<int>("PharmacyId")
-                        .HasColumnType("integer");
+                    b.Property<long>("PharmacyId")
+                        .HasColumnType("bigint");
 
                     b.Property<string>("ResetToken")
                         .HasColumnType("text");
@@ -71,10 +74,15 @@ namespace api.Migrations.Identity
                     b.Property<string>("Role")
                         .HasColumnType("text");
 
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Email")
                         .IsUnique();
+
+                    b.HasIndex("Status");
 
                     b.ToTable("IdentityUsers");
                 });

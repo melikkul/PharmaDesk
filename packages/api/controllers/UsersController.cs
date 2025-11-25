@@ -42,7 +42,7 @@ namespace Backend.Controllers
 
             return Ok(new UserMeResponse
             {
-                Id = x.Id,
+                Id = x.Id.ToString(),
                 Email = emailClaim ?? string.Empty, 
                 Role = roleClaim, 
                 GLN = x.GLN,
@@ -56,6 +56,8 @@ namespace Backend.Controllers
                 PostalCode = "", // Removed from model
                 ServicePackage = x.ServicePackage,
                 ProfileImagePath = x.ProfileImagePath,
+                PharmacistFirstName = user.FirstName, // Eczacı adı
+                PharmacistLastName = user.LastName,   // Eczacı soyadı
                 CreatedAt = x.CreatedAt
             });
         }
@@ -125,35 +127,90 @@ namespace Backend.Controllers
             return Ok(new { url = profile.ProfileImagePath });
         }
 
-        [HttpGet("{username}")]
-        public async Task<ActionResult<UserMeResponse>> GetProfile(string username)
+        [HttpGet("{idOrUsername}")]
+        public async Task<ActionResult<UserMeResponse>> GetProfile(string idOrUsername)
         {
-            var p = await _db.PharmacyProfiles
+            Console.WriteLine($"GetProfile called with: {idOrUsername}");
+            
+            // Try to parse as integer ID first
+            if (int.TryParse(idOrUsername, out var pharmacyId))
+            {
+                // Search by ID - join with IdentityUser to get pharmacist name
+                var profileById = await (from p in _db.PharmacyProfiles
+                                         join u in _identityDb.IdentityUsers on p.Id equals u.PharmacyId into userGroup
+                                         from u in userGroup.DefaultIfEmpty()
+                                         where p.Id == pharmacyId
+                                         select new UserMeResponse
+                                         {
+                                             Id = p.Id.ToString(),
+                                             Email = "",
+                                             Role = "User",
+                                             GLN = p.GLN,
+                                             PharmacyName = p.PharmacyName,
+                                             PublicId = p.PublicId,
+                                             PhoneNumber = p.PhoneNumber,
+                                             City = p.City,
+                                             District = p.District,
+                                             Address1 = p.Address,
+                                             Address2 = "",
+                                             PostalCode = "",
+                                             ServicePackage = p.ServicePackage,
+                                             ProfileImagePath = p.ProfileImagePath,
+                                             PharmacistFirstName = u != null ? u.FirstName : "",
+                                             PharmacistLastName = u != null ? u.LastName : "",
+                                             CreatedAt = p.CreatedAt
+                                         })
+                                        .AsNoTracking()
+                                        .FirstOrDefaultAsync();
+
+                if (profileById != null) return Ok(profileById);
+            }
+            
+            // If not found by ID or not a valid ID, search by username/publicId
+            var profile = await _db.PharmacyProfiles
                 .AsNoTracking()
-                .Where(x => x.PublicId == username || x.PharmacyName == username || x.PharmacyName.Replace(" ", "").ToLower() == username.ToLower()) 
-                .Select(x => new UserMeResponse
-                {
-                    Id = x.Id,
-                    Email = "", 
-                    Role = "User", 
-                    GLN = x.GLN,
-                    PharmacyName = x.PharmacyName,
-                    PublicId = x.PublicId,
-                    PhoneNumber = x.PhoneNumber,
-                    City = x.City,
-                    District = x.District,
-                    Address1 = x.Address,
-                    Address2 = "",
-                    PostalCode = "",
-                    ServicePackage = x.ServicePackage,
-                    ProfileImagePath = x.ProfileImagePath,
-                    CreatedAt = x.CreatedAt
-                })
-                .FirstOrDefaultAsync();
+                .FirstOrDefaultAsync(p => p.PublicId == idOrUsername || 
+                                          p.Username == idOrUsername || 
+                                          p.PharmacyName == idOrUsername || 
+                                          p.PharmacyName.Replace(" ", "").ToLower() == idOrUsername.ToLower());
 
-            if (p is null) return NotFound();
+            // If looking up by numeric ID, try to parse it
+            if (profile == null && long.TryParse(idOrUsername, out var numericId))
+            {
+                profile = await _db.PharmacyProfiles
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == numericId);
+            }
 
-            return Ok(p);
+            if (profile == null) return NotFound();
+
+            // Fetch user info separately
+            var user = await _identityDb.IdentityUsers
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.PharmacyId == profile.Id);
+
+            var profileData = new UserMeResponse
+            {
+                Id = profile.Id.ToString(),
+                Email = user?.Email ?? "",
+                Role = "User",
+                GLN = profile.GLN,
+                PharmacyName = profile.PharmacyName,
+                PublicId = profile.PublicId,
+                PhoneNumber = profile.PhoneNumber,
+                City = profile.City,
+                District = profile.District,
+                Address1 = profile.Address,
+                Address2 = "",
+                PostalCode = "",
+                ServicePackage = profile.ServicePackage,
+                ProfileImagePath = profile.ProfileImagePath,
+                PharmacistFirstName = user?.FirstName ?? "",
+                PharmacistLastName = user?.LastName ?? "",
+                CreatedAt = profile.CreatedAt
+            };
+
+            return Ok(profileData);
         }
 
         // GET /api/users - List all users (for admin panel)

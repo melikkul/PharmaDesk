@@ -57,9 +57,10 @@ namespace Backend.Services
             // Generate PublicId (Timestamp based)
             var publicId = DateTime.Now.ToString("yyyyMMddHHmmssfff");
 
-            // 1. Create PharmacyProfile FIRST
+            // 1. Create PharmacyProfile FIRST with timestamp-based ID
             var profile = new PharmacyProfile
             {
+                Id = IdGenerator.GenerateTimestampId(), // Generate timestamp ID
                 GLN = req.GLN,
                 PharmacyName = req.PharmacyName,
                 PhoneNumber = req.PhoneNumber,
@@ -67,6 +68,7 @@ namespace Backend.Services
                 District = req.District,
                 Address = req.Address,
                 PublicId = publicId,
+                Username = GenerateSlug(req.PharmacyName) + "-" + publicId.Substring(8), // Ensure uniqueness
                 CreatedAt = DateTime.UtcNow
             };
             
@@ -99,7 +101,8 @@ namespace Backend.Services
                 GLN = profile.GLN,
                 PublicId = profile.PublicId,
                 City = profile.City,
-                District = profile.District
+                District = profile.District,
+                PharmacyId = user.PharmacyId.ToString() // Convert to string for JSON serialization
             };
 
             return new LoginResponse 
@@ -145,7 +148,8 @@ namespace Backend.Services
                              GLN = "0000000000000",
                              PublicId = "ADMIN",
                              City = "System",
-                             District = "System"
+                             District = "System",
+                             PharmacyId = "0" // String instead of long
                          };
 
                          return new LoginResponse 
@@ -196,8 +200,11 @@ namespace Backend.Services
                 GLN = profile.GLN,
                 PublicId = profile.PublicId,
                 City = profile.City,
-                District = profile.District
+                District = profile.District,
+                PharmacyId = user.PharmacyId.ToString() // Convert to string for JSON serialization
             };
+
+            Console.WriteLine($"[LoginAsync] user.PharmacyId: {user.PharmacyId}, profile.Id: {profile.Id}, authUser.PharmacyId: {authUser.PharmacyId}");
 
             return new LoginResponse 
             { 
@@ -222,5 +229,17 @@ namespace Backend.Services
         // Diğer metodlar (Placeholder)
         public Task<string?> GeneratePasswordResetTokenAsync(string email) => Task.FromResult<string?>(null);
         public Task<bool> ResetPasswordWithTokenAsync(string token, string newPassword) => Task.FromResult(false);
+        private string GenerateSlug(string phrase)
+        {
+            string str = phrase.ToLowerInvariant();
+            // Remove invalid chars
+            str = System.Text.RegularExpressions.Regex.Replace(str, @"[^a-z0-9\s-]", "");
+            // Convert multiple spaces into one space   
+            str = System.Text.RegularExpressions.Regex.Replace(str, @"\s+", " ").Trim();
+            // Cut and trim
+            str = str.Substring(0, str.Length <= 45 ? str.Length : 45).Trim();
+            str = System.Text.RegularExpressions.Regex.Replace(str, @"\s", "-");
+            return str;
+        }
     }
 }

@@ -32,7 +32,7 @@ namespace Backend.Controllers
                     ATC = m.ATC,
                     Name = m.Name,
                     Manufacturer = m.Manufacturer,
-                    Price = m.Price
+                    Price = m.BasePrice
                 })
                 .ToListAsync();
 
@@ -51,13 +51,48 @@ namespace Backend.Controllers
                     ATC = m.ATC,
                     Name = m.Name,
                     Manufacturer = m.Manufacturer,
-                    Price = m.Price
+                    Price = m.BasePrice
                 })
                 .SingleOrDefaultAsync();
 
             if (medication == null) return NotFound();
 
             return Ok(medication);
+        }
+
+        /// <summary>
+        /// Search medications by name or barcode (fuzzy search)
+        /// </summary>
+        [HttpGet("search")]
+        public async Task<ActionResult<IEnumerable<object>>> SearchMedications(
+            [FromQuery] string? q,
+            [FromQuery] int limit = 10)
+        {
+            if (string.IsNullOrWhiteSpace(q))
+            {
+                return Ok(new List<object>());
+            }
+
+            var searchTerm = q.ToLower().Trim();
+
+            var results = await _db.Medications
+                .AsNoTracking()
+                .Where(m => 
+                    m.Name.ToLower().Contains(searchTerm) || 
+                    (m.Barcode != null && m.Barcode.Contains(searchTerm)))
+                .OrderBy(m => m.Name)
+                .Take(limit)
+                .Select(m => new
+                {
+                    id = m.Id,
+                    name = m.Name,
+                    barcode = m.Barcode,
+                    manufacturer = m.Manufacturer,
+                    packageType = m.PackageType
+                })
+                .ToListAsync();
+
+            return Ok(results);
         }
     }
 }

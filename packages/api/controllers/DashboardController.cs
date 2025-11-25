@@ -46,6 +46,19 @@ namespace Backend.Controllers
                 .Where(o => o.PharmacyProfileId == pharmacyId && o.Status == Models.OfferStatus.Active)
                 .CountAsync();
 
+            // Offer counts by type
+            var standardOffers = await _context.Offers
+                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.Standard)
+                .CountAsync();
+            
+            var campaignOffers = await _context.Offers
+                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.Campaign)
+                .CountAsync();
+            
+            var tenderOffers = await _context.Offers
+                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.Tender)
+                .CountAsync();
+
             // Calculate total sales from completed transactions
             var totalSales = await _context.Transactions
                 .Where(t => t.PharmacyProfileId == pharmacyId && t.Type == Models.TransactionType.Sale)
@@ -60,6 +73,7 @@ namespace Backend.Controllers
                 {
                     o.Id,
                     o.MedicationId,
+                    ProductName = o.Medication.Name, // Added ProductName
                     Stock = o.Stock,
                     Price = o.Price,
                     Status = o.Status.ToString(),
@@ -104,7 +118,10 @@ namespace Backend.Controllers
                     TotalMedications = totalMedications,
                     ActiveOrders = activeOrders,
                     ActiveOffers = activeOffers,
-                    TotalSales = totalSales
+                    TotalSales = totalSales,
+                    StandardOffers = standardOffers,
+                    CampaignOffers = campaignOffers,
+                    TenderOffers = tenderOffers
                 },
                 RecentOffers = recentOffers,
                 BalanceHistory = balanceHistory,
@@ -113,7 +130,7 @@ namespace Backend.Controllers
             });
         }
         
-        private async Task<int?> GetPharmacyIdFromToken()
+        private async Task<long?> GetPharmacyIdFromToken()
         {
             // Get user ID from token
             var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;

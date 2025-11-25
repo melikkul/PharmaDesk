@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.AspNetCore.Http.Features;
 using System.Text;
-using AspNetCoreRateLimit;
+
 using Microsoft.AspNetCore.Diagnostics;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
@@ -16,34 +16,21 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.WebHost.UseUrls(builder.Configuration["ASPNETCORE_URLS"] ?? "http://0.0.0.0:8081");
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.ReferenceHandler = System.Text.Json.Serialization.ReferenceHandler.IgnoreCycles;
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
 
-// --- Rate Limiting Services ---
-builder.Services.AddMemoryCache();
-builder.Services.Configure<IpRateLimitOptions>(options =>
-{
-    options.GeneralRules = new List<RateLimitRule>
-    {
-        new RateLimitRule
-        {
-            Endpoint = "*",
-            Period = "1m",
-            Limit = 100 // 1 dakikada maksimum 100 istek
-        },
-        new RateLimitRule
-        {
-            Endpoint = "*",
-            Period = "1h",
-            Limit = 3600
-        }
-    };
-});
-builder.Services.AddInMemoryRateLimiting();
-builder.Services.AddSingleton<IRateLimitConfiguration, RateLimitConfiguration>();
-// ------------------------------
+// --- SignalR Service ---
+builder.Services.AddSignalR();
+builder.Services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
+// -----------------------
+
+
 
 string? databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 string connString;
@@ -87,6 +74,23 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = "PharmaDeskApi",
             ValidAudience = "PharmaDeskClient",
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+        
+        // Allow SignalR to pass token via query string
+        opt.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -204,6 +208,88 @@ using (var scope = app.Services.CreateScope())
             await pharmacyDb.SaveChangesAsync();
             logger.LogInformation($"Admin account updated: {adminEmail}");
         }
+        
+        // --- Seed medications from CSV ---
+        logger.LogInformation("Seeding medications from CSV...");
+        
+        var medicationCount = await pharmacyDb.Medications.CountAsync();
+        if (medicationCount == 0)
+        {
+            var csvPath = "/app/ilac_verileri.csv";
+            var seededCount = await MedicationSeederService.SeedFromCsvAsync(pharmacyDb, csvPath, logger);
+            logger.LogInformation($"Seeded {seededCount} medications from CSV");
+        }
+        else
+        {
+            logger.LogInformation($"Medications already seeded ({medicationCount} records), skipping CSV import");
+        }
+        
+        // --- Seed test inventory for PharmacyId=2 (melik_kul@outlook.com) ---
+        logger.LogInformation("Seeding inventory...");
+        
+        var testPharmacyId = 2; // melik_kul@outlook.com pharmacy
+        var existingInventory = await pharmacyDb.InventoryItems
+            .Where(i => i.PharmacyProfileId == testPharmacyId)
+            .AnyAsync();
+            
+        if (!existingInventory)
+        {
+            var dolorex = await pharmacyDb.Medications.FirstOrDefaultAsync(m => m.Barcode == "8699514010019");
+            var benical = await pharmacyDb.Medications.FirstOrDefaultAsync(m => m.Barcode == "8699546090011");
+            var aspirin = await pharmacyDb.Medications.FirstOrDefaultAsync(m => m.Barcode == "1234567890123");
+            
+            var inventoryItems = new List<InventoryItem>();
+            
+            if (dolorex != null)
+            {
+                inventoryItems.Add(new InventoryItem
+                {
+                    PharmacyProfileId = testPharmacyId,
+                    MedicationId = dolorex.Id,
+                    Quantity = 500,
+                    ExpiryDate = DateTime.SpecifyKind(new DateTime(2028, 1, 31), DateTimeKind.Utc),
+                    BatchNumber = "BATCH001",
+                    CostPrice = 28.0m
+                });
+            }
+            
+            if (benical != null)
+            {
+                inventoryItems.Add(new InventoryItem
+                {
+                    PharmacyProfileId = testPharmacyId,
+                    MedicationId = benical.Id,
+                    Quantity = 300,
+                    ExpiryDate = DateTime.SpecifyKind(new DateTime(2025, 10, 31), DateTimeKind.Utc),
+                    BatchNumber = "BATCH002",
+                    CostPrice = 40.0m
+                });
+            }
+            
+            if (aspirin != null)
+            {
+                inventoryItems.Add(new InventoryItem
+                {
+                    PharmacyProfileId = testPharmacyId,
+                    MedicationId = aspirin.Id,
+                    Quantity = 200,
+                    ExpiryDate = DateTime.SpecifyKind(new DateTime(2026, 6, 30), DateTimeKind.Utc),
+                    BatchNumber = "BATCH003",
+                    CostPrice = 20.0m
+                });
+            }
+            
+            if (inventoryItems.Any())
+            {
+                pharmacyDb.InventoryItems.AddRange(inventoryItems);
+                await pharmacyDb.SaveChangesAsync();
+                logger.LogInformation($"Seeded {inventoryItems.Count} inventory items for pharmacy {testPharmacyId}");
+            }
+        }
+        else
+        {
+            logger.LogInformation("Inventory already seeded, skipping");
+        }
         // ------------------------------------
     }
     catch (Exception ex)
@@ -224,11 +310,15 @@ if (app.Environment.IsDevelopment())
 
 app.MapGet("/health", () => Results.Ok(new { ok = true }));
 
-app.UseIpRateLimiting(); // Rate Limiting Middleware
+
 app.UseCors("frontend");
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// --- SignalR Hub Mapping ---
+app.MapHub<Backend.Hubs.ChatHub>("/hubs/chat");
+// ---------------------------
 
 app.Run();

@@ -12,6 +12,7 @@ import OfferForm from '../OfferForm'; // Yenilenen ana form
 
 // VERİLER
 import { userMedicationsData, MedicationItem } from '@/data/dashboardData';
+import { useAuth } from '@/context/AuthContext';
 
 const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
 
@@ -23,25 +24,78 @@ export default function DuzenleTeklifPage() {
   const [medicationToEdit, setMedicationToEdit] = useState<MedicationItem | null | undefined>(undefined); 
   const [isSaving, setIsSaving] = useState(false);
 
-  useEffect(() => {
-      console.log(`API Çağrısı: ${offerId} ID'li teklif detayları getiriliyor...`);
-      // Simülasyon: API'den veriyi bul
-      setTimeout(() => {
-          const foundMedication = userMedicationsData.find(m => m.id.toString() === offerId);
-          setMedicationToEdit(foundMedication || null);
-      }, 300);
-  }, [offerId]);
+  const { token } = useAuth(); // Auth token for API calls
 
-  // Form Kaydetme Fonksiyonu (Simülasyon)
+  useEffect(() => {
+      if (!offerId || !token) return;
+
+      const fetchOffer = async () => {
+          try {
+              const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+              const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}`, {
+                  headers: {
+                      'Authorization': `Bearer ${token}`,
+                      'Content-Type': 'application/json',
+                  },
+              });
+
+              if (!response.ok) {
+                  throw new Error('Teklif bulunamadı');
+              }
+
+              const data = await response.json();
+              
+              // Map API response to MedicationItem format expected by OfferForm
+              const medicationItem: MedicationItem = {
+                  id: data.id,
+                  productName: data.productName,
+                  stock: data.stock, // "100 + 10" format
+                  price: data.price,
+                  expirationDate: '', // Backend doesn't return expiration date in OfferDto yet, assuming empty or handled in form
+                  status: data.status as any,
+                  dateAdded: '', // Not needed for form
+                  barcode: '', // Not needed for form
+              };
+              
+              setMedicationToEdit(medicationItem);
+          } catch (err) {
+              console.error('Error fetching offer:', err);
+              setMedicationToEdit(null);
+          }
+      };
+
+      fetchOffer();
+  }, [offerId, token]);
+
+  // Form Kaydetme Fonksiyonu
   const handleUpdateOffer = useCallback(async (formData: any) => {
-      if (!medicationToEdit) return;
+      if (!medicationToEdit || !token) return;
       setIsSaving(true);
-      console.log(`API Çağrısı: ${offerId} ID'li teklif güncelleniyor...`, formData);
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      console.log("Teklif başarıyla güncellendi.");
-      setIsSaving(false);
-      router.push('/tekliflerim');
-  }, [medicationToEdit, offerId, router]);
+
+      try {
+          const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+          const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}`, {
+              method: 'PUT',
+              headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(formData),
+          });
+
+          if (!response.ok) {
+              throw new Error('Güncelleme başarısız oldu');
+          }
+
+          console.log("Teklif başarıyla güncellendi.");
+          router.push('/tekliflerim');
+      } catch (err) {
+          console.error('Error updating offer:', err);
+          alert('Güncelleme sırasında bir hata oluştu.');
+      } finally {
+          setIsSaving(false);
+      }
+  }, [medicationToEdit, offerId, router, token]);
 
   return (
     <div className={styles.pageContainer}>

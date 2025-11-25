@@ -8,7 +8,7 @@ namespace Backend.Models
         [Key]
         public int Id { get; set; }
 
-        public int PharmacyProfileId { get; set; }
+        public long PharmacyProfileId { get; set; }
         public int MedicationId { get; set; }
 
         [Required]
@@ -27,6 +27,13 @@ namespace Backend.Models
         public decimal? SalePrice { get; set; } // Eczanenin satış fiyatı (opsiyonel, teklif için baz)
         
         public int BonusQuantity { get; set; } = 0; // Mal fazlası (MF) stok
+        
+        [StringLength(20)]
+        public string? ShelfLocation { get; set; } // Raf konumu (örn: A-12)
+        
+        public bool IsAlarmSet { get; set; } = false; // Stok uyarısı aktif mi?
+        
+        public int MinStockLevel { get; set; } = 0; // Minimum stok seviyesi
 
         [ForeignKey(nameof(PharmacyProfileId))]
         public PharmacyProfile PharmacyProfile { get; set; } = null!; // hangi eczanenin 

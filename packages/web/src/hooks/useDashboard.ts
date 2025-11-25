@@ -43,9 +43,19 @@ export const useDashboard = () => {
         }
 
         const result = await response.json();
-        // Ensure keys match what frontend expects (camelCase vs PascalCase from API)
-        // If API returns PascalCase (default .NET), we might need to map it or configure API to return camelCase.
-        // Assuming default .NET Core defaults to camelCase JSON unless configured otherwise.
+        console.log('Dashboard API Result:', result); // Debug log
+
+        // Manual mapping to ensure correct casing
+        if (result.recentOffers) {
+            result.recentOffers = result.recentOffers.map((offer: any) => ({
+                ...offer,
+                productName: offer.productName || offer.ProductName || 'İsimsiz Ürün',
+                stock: offer.stock || offer.Stock,
+                price: offer.price || offer.Price,
+                status: (offer.status || offer.Status || '').toLowerCase(),
+            }));
+        }
+
         setData(result);
       } catch (err) {
         console.error(err);

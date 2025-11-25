@@ -132,7 +132,12 @@ const ProfileDetails: React.FC<ProfileDetailsProps> = ({ pharmacy, isOwnProfile 
                 {/* --- DEĞİŞİKLİK SONU --- */}
                 <li>
                     <LocationIcon />
-                    <span><strong>Adres:</strong> {pharmacy.location}</span>
+                    <span>
+                      <strong>Adres:</strong>{' '}
+                      {pharmacy.address && pharmacy.district && pharmacy.city
+                        ? `${pharmacy.address}, ${pharmacy.district}/${pharmacy.city}`
+                        : pharmacy.location}
+                    </span>
                 </li>
                  <li>
                     <CalendarIcon />

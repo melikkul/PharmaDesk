@@ -14,7 +14,7 @@ import SlidePanel from '@/components/ui/SlidePanel';
 import NotificationItem from '@/components/notifications/NotificationItem';
 import MessageItem from '@/components/notifications/MessageItem';
 import NotificationModal from '@/components/notifications/NotificationModal';
-import ChatWindow from '@/components/chat/ChatWindow';
+import { ChatPanel } from '@/components/chat/ChatPanel';
 import CartPanel from '@/components/cart/CartPanel';
 
 // Veri
@@ -26,7 +26,8 @@ import { useDashboardPanels } from '@/hooks/useDashboardPanels';
 import { DashboardContext, useDashboardContext, Notification, Message } from '@/context/DashboardContext';
 import { useAuth } from '@/context/AuthContext';
 // HATA DÜZELTME: CartProvider'ı import et
-import { CartProvider } from '@/context/CartContext';
+// import { CartProvider } from '@/context/CartContext';
+import { SignalRProvider } from '@/context/SignalRContext';
 
 
 // ### OPTİMİZASYON: Bildirim Listesi Ayrı Bileşene Taşındı ve Memoize Edildi ###
@@ -111,61 +112,62 @@ export default function DashboardLayout({
 
   // 2. ADIM: Değerleri (panelValues) Context Provider ile sarmala
   return (
-    <CartProvider>
-      <DashboardContext.Provider value={panelValues}>
-        <div className="dashboard-container">
-          <Sidebar />
-          
-          <Header
-            userData={headerUserData}
-            onMessageClick={panelValues.toggleMessagesPanel}
-            onNotificationClick={panelValues.toggleNotificationsPanel}
-            onCartClick={panelValues.toggleCartPanel}
-            unreadNotificationCount={panelValues.unreadNotificationCount}
-            unreadMessageCount={panelValues.unreadMessageCount}
-            onLogout={logout}
-          />
-
-          <main className="main-content">
-            {children} {/* children (sayfalar) artık context'e erişebilir */}
-          </main>
-
-          <SlidePanel
-            title="Bildirimler"
-            show={panelValues.showNotificationsPanel}
-            onClose={panelValues.toggleNotificationsPanel}
-            onMarkAllRead={panelValues.markAllNotificationsAsRead}
-          >
-            {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
-            <NotificationList 
-              items={panelValues.notifications} 
-              onClick={panelValues.handleNotificationClick} 
+        <DashboardContext.Provider value={panelValues}>
+          <SignalRProvider>
+          <div className="dashboard-container">
+            <Sidebar />
+            
+            <Header
+              userData={headerUserData}
+              onMessageClick={panelValues.toggleMessagesPanel}
+              onNotificationClick={panelValues.toggleNotificationsPanel}
+              onCartClick={panelValues.toggleCartPanel}
+              onLogout={logout}
             />
-          </SlidePanel>
 
-          <SlidePanel
-            title="Mesajlar"
-            show={panelValues.showMessagesPanel}
-            onClose={panelValues.toggleMessagesPanel}
-            onMarkAllRead={panelValues.markAllMessagesAsRead}
-          >
-            {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
-            <MessageList 
-              items={panelValues.messages} 
-              onClick={panelValues.handleMessageClick} 
+            <main className="main-content">
+              {children} {/* children (sayfalar) artık context'e erişebilir */}
+            </main>
+
+            <SlidePanel
+              title="Bildirimler"
+              show={panelValues.showNotificationsPanel}
+              onClose={panelValues.toggleNotificationsPanel}
+              onMarkAllRead={panelValues.markAllNotificationsAsRead}
+            >
+              {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
+              <NotificationList 
+                items={panelValues.notifications} 
+                onClick={panelValues.handleNotificationClick} 
+              />
+            </SlidePanel>
+
+            <SlidePanel
+              title="Mesajlar"
+              show={panelValues.showMessagesPanel}
+              onClose={panelValues.toggleMessagesPanel}
+              onMarkAllRead={panelValues.markAllMessagesAsRead}
+            >
+              {/* <MessageList 
+                items={panelValues.messages} 
+                onClick={panelValues.handleMessageClick} 
+              /> */}
+              <ChatPanel 
+                activeUserId={panelValues.activeChatUserId}
+                onSelectUser={panelValues.setActiveChatUserId}
+              />
+            </SlidePanel>
+
+            <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />
+
+            <NotificationModal
+              notification={panelValues.selectedNotification}
+              onClose={panelValues.closeNotificationModal}
             />
-          </SlidePanel>
 
-          <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />
-
-          <NotificationModal
-            notification={panelValues.selectedNotification}
-            onClose={panelValues.closeNotificationModal}
-          />
-
-          <ChatWindow chat={panelValues.selectedChat} onClose={panelValues.closeChatWindow} />
-        </div>
-      </DashboardContext.Provider>
-    </CartProvider>
+            {/* <ChatWindow chat={panelValues.selectedChat} onClose={panelValues.closeChatWindow} /> */}
+          </div>
+          </SignalRProvider>
+        </DashboardContext.Provider>
   );
 }

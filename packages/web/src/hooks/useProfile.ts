@@ -39,14 +39,19 @@ export const useProfile = (username: string) => {
             // Let's assume we need to map it.
             
             const mappedProfile: PharmacyProfileData = {
-                id: data.id,
+                id: String(data.id), // Convert to string to prevent JS Number precision loss with Int64
                 pharmacyName: data.pharmacyName,
                 gln: data.gln,
                 location: `${data.city || ''} / ${data.district || ''}`,
+                address: data.address1 || "", // Full address
+                city: data.city || "",
+                district: data.district || "",
                 registrationDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('tr-TR') : 'Tarih Yok',
                 about: "Eczane hakkında bilgi...", // API doesn't have 'about' yet
                 username: username === 'me' ? data.email : username, // Fallback
-                pharmacistInCharge: "Eczacı Adı", // Placeholder
+                pharmacistInCharge: data.pharmacistFirstName && data.pharmacistLastName 
+                    ? `${data.pharmacistFirstName} ${data.pharmacistLastName}` 
+                    : "Eczacı Bilgisi Yok",
                 logoUrl: data.profileImagePath,
                 // Default values for missing fields
                 balance: 0,

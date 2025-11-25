@@ -3,7 +3,7 @@ namespace Backend.Dtos
 {
     public class UserMeResponse
     {
-        public int Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public string GLN { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string PharmacyName { get; set; } = string.Empty;
@@ -17,6 +17,8 @@ namespace Backend.Dtos
         public string? ServicePackage { get; set; }
         public string? Role { get; set; }
         public string? ProfileImagePath { get; set; }
+        public string? PharmacistFirstName { get; set; } // Eczacı Adı
+        public string? PharmacistLastName { get; set; }  // Eczacı Soyadı
         public DateTime CreatedAt { get; set; }
     }
 

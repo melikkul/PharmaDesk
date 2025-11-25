@@ -106,8 +106,8 @@
 
 .productGrid {
     display: grid;
-    /* auto-fill yerine auto-fit kullanarak daha esnek bir yapı sağlıyoruz */
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    /* auto-fill ile kartlar maksimum genişlikte kalır, tek kart tüm sayfayı kaplamaz */
+    grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
     gap: 25px;
     width: 100%;
 }

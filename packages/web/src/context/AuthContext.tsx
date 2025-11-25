@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 interface User {
   fullName: string;
   pharmacyName: string;
+  pharmacyId?: string; // Changed to string to match backend MessageDto
   publicId?: string;
   username?: string; // Email or username for routing
   email?: string;

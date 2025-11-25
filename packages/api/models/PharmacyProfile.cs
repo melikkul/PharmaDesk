@@ -7,7 +7,8 @@ namespace Backend.Models
     public class PharmacyProfile
     {
         [Key]
-        public int Id { get; set; }
+        [DatabaseGenerated(DatabaseGeneratedOption.None)] // We will manually set the ID
+        public long Id { get; set; }
 
         public string PublicId { get; set; } = string.Empty;
 
@@ -24,12 +25,19 @@ namespace Backend.Models
         public string? District { get; set; }
         public string? Address { get; set; } // Consolidated Address
         
+        [StringLength(20)]
+        public string? TaxNumber { get; set; } // Vergi No
+        
+        [StringLength(100)]
+        public string? TaxOffice { get; set; } // Vergi Dairesi
+        
         // Foreign Key for Group
         public int? GroupId { get; set; }
         public Group? Group { get; set; }
 
         public string? ServicePackage { get; set; }
         public string? ProfileImagePath { get; set; }
+        public string? LogoUrl { get; set; } // Logo URL
         public string? About { get; set; }
         
         // --- YENİ ALANLAR: Frontend Entegrasyonu için ---

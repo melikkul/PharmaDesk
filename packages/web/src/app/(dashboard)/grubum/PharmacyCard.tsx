@@ -48,7 +48,7 @@ const PharmacyCard: React.FC<PharmacyCardProps> = ({ pharmacy }) => {
             <MessageIcon />
             Mesaj Gönder
         </button>
-        <Link href={`/profil/${pharmacy.username}`} className={`${styles.cardButton} ${styles.btnPrimary}`}>
+        <Link href={`/profile/${pharmacy.username}`} className={`${styles.cardButton} ${styles.btnPrimary}`}>
             <ProfileIcon />
             Profili Gör
         </Link>

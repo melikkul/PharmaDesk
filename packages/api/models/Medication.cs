@@ -14,10 +14,20 @@ namespace Backend.Models
         [Required, StringLength(255)]
         public string Name { get; set; } = string.Empty;
 
-        [StringLength(50)]
+        [StringLength(200)]
         public string? Manufacturer { get; set; }
+        
+        [StringLength(100)]
+        public string? Barcode { get; set; }
+        
+        [StringLength(1000)]
+        public string? Description { get; set; }
+        
+        [StringLength(100)]
+        public string? PackageType { get; set; } // Tablet, Şurup, vb.
 
-        public decimal Price { get; set; }
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal BasePrice { get; set; } // İlaç Fiyat Kararnamesi fiyatı
 
         public ICollection<InventoryItem> InventoryItems { get; set; } = new List<InventoryItem>();
     }

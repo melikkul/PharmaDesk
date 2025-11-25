@@ -19,9 +19,11 @@ namespace Backend.Models
 
         [Required, StringLength(50)]
         public string OrderNumber { get; set; } = string.Empty; // Sipariş numarası
+        
+        public int? OrderId { get; set; } // Bağlı sipariş
 
-        public int SenderPharmacyId { get; set; }
-        public int ReceiverPharmacyId { get; set; }
+        public long SenderPharmacyId { get; set; }
+        public long ReceiverPharmacyId { get; set; }
         public int MedicationId { get; set; }
 
         [Required]
@@ -35,13 +37,15 @@ namespace Backend.Models
 
         [Required, StringLength(100)]
         public string Carrier { get; set; } = string.Empty; // Kargo firması (Yurtiçi, MNG, Aras, vb.)
+        
+        public DateTime? ShippedDate { get; set; } // Kargoya verilme tarihi
+        public DateTime? EstimatedDeliveryDate { get; set; } // Tahmini teslimat
+        
+        [StringLength(200)]
+        public string? CurrentLocation { get; set; } // Güncel konum
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-
-        // JSON formatında kargo geçmişi (TrackingEvent array)
-        [Column(TypeName = "jsonb")]
-        public string? TrackingHistory { get; set; }
 
         // Navigation Properties
         [ForeignKey(nameof(SenderPharmacyId))]

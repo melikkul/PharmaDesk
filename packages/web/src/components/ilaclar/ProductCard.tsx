@@ -2,6 +2,7 @@
 // ### OPTİMİZASYON: 'React.memo' için 'React' import edildi ###
 import React from 'react';
 import Link from 'next/link'; // Yönlendirme için Link import ediyoruz
+import { useAuth } from '@/context/AuthContext'; // Auth context for user comparison
 import type { ShowroomMedication } from '../../data/dashboardData';
 import styles from './ProductCard.module.css';
 
@@ -10,6 +11,7 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
+  const { user } = useAuth();
   const isOutOfStock = medication.currentStock === 0;
   const barWidth = medication.initialStock > 0 ? (medication.currentStock / medication.initialStock) * 100 : 0;
 
@@ -19,7 +21,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
 
   return (
     <div className={`${styles.cardWrapper} ${isOutOfStock ? styles.outOfStock : ''}`}>
-      <Link href={`/ilaclar/${medicationSlug}`} className={styles.productLink}>
+      <Link href={`/ilaclar/${medication.id}`} className={styles.productLink}>
         <div className={styles.imageContainer}>
           {isOutOfStock && <div className={styles.outOfStockBanner}><span>TÜKENDİ</span></div>}
           <img src={medication.imageUrl || "/dolorex_placeholder.png"} alt={medication.name} className={styles.productImage} />
@@ -31,11 +33,25 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
         
         <div className={styles.pharmacyList}>
           {medication.sellers.length > 0 ? (
-            medication.sellers.map(seller => (
-              <Link key={seller.pharmacyUsername} href={`/profil/${seller.pharmacyUsername}`} className={styles.pharmacyLink}>
-                {seller.pharmacyName}
-              </Link>
-            ))
+            medication.sellers.map(seller => {
+              // Determine if this pharmacy belongs to the current user
+              const isOwnPharmacy = user && String(user.pharmacyId) === String(seller.pharmacyId);
+              // Use /profile/me for own pharmacy, /profile/{pharmacyId} for others
+              const profileUrl = isOwnPharmacy ? '/profile/me' : `/profile/${seller.pharmacyId}`;
+              
+              console.log('[ProductCard] Pharmacy Link:', { 
+                name: seller.pharmacyName, 
+                id: seller.pharmacyId, 
+                url: profileUrl 
+              });
+
+              
+              return (
+                <Link key={seller.pharmacyId} href={profileUrl} className={styles.pharmacyLink}>
+                  {seller.pharmacyName}
+                </Link>
+              );
+            })
           ) : (
             <span className={styles.noSeller}>Satan eczane bulunmuyor</span>
           )}
@@ -48,7 +64,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication }) => {
 
         <div className={styles.price}>{medication.price.toFixed(2).replace('.', ',')}₺</div>
         
-        <Link href={`/ilaclar/${medicationSlug}`} className={styles.productLink}>
+        <Link href={`/ilaclar/${medication.id}`} className={styles.productLink}>
             <button className={styles.addToCartBtn} disabled={isOutOfStock}>
             {isOutOfStock ? 'Stokta Yok' : 'İncele'}
             </button>

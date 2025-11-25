@@ -28,6 +28,8 @@ services:
       - "8081:8081"
     networks:
       - pharmanet
+    volumes:
+      - ./ilac_verileri.csv:/app/ilac_verileri.csv:ro
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db

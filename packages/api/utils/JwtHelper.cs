@@ -21,9 +21,9 @@ namespace Backend.Utils
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim("sub", user.Id.ToString()),
                 new Claim(ClaimTypes.Email, user.Email),
-                // DÜZELTME: PharmacyName yerine fullName kullanıldı
-                new Claim(ClaimTypes.Name, string.IsNullOrWhiteSpace(fullName) ? user.Email : fullName),
-                new Claim(ClaimTypes.Role, user.Role ?? "User")
+                new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+                new Claim(ClaimTypes.Role, user.Role ?? "User"),
+                new Claim("PharmacyId", user.PharmacyId.ToString()) // Add PharmacyId claim
             };
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey));

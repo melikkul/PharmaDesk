@@ -40,6 +40,9 @@ namespace Backend.Dtos
         public string PublicId { get; set; } = string.Empty; // YENİ
         public string City { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;
+        
+        [System.Text.Json.Serialization.JsonPropertyName("pharmacyId")]
+        public string PharmacyId { get; set; } = string.Empty; // Changed from long to string for JSON serialization
     }
     public class ForgotRequest { public string Email { get; set; } = string.Empty; }
     public class ResetRequest { public string Token { get; set; } = string.Empty; public string NewPassword { get; set; } = string.Empty; }

@@ -4,7 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import type { WarehouseOffer } from '../../data/dashboardData';
 // === DÜZELTME BURADA ===
 // Hatalı yol: import styles from '../../app/ilaclar/[ilacAdi]/ilacDetay.module.css';
-import styles from '@/app/(dashboard)/ilaclar/[ilacAdi]/ilacDetay.module.css'; // Yeni doğru yol
+import styles from '@/app/(dashboard)/ilaclar/[id]/ilacDetay.module.css'; // Yeni doğru yol
 // =======================
 
 // İkonlar (Basit SVG)

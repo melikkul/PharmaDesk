@@ -133,3 +133,24 @@
     background-size: cover; /* Logo varsa kaplaması için */
     background-position: center; /* Logo varsa ortalaması için */
 }
+
+/* === NOTIFICATION ANIMATIONS === */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+}
+
+@keyframes pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+    50% { box-shadow: 0 0 0 6px rgba(231, 76, 60, 0); }
+}
+
+.iconButton.hasBadge::after {
+    animation: pulse 2s infinite;
+}
+
+/* YENİ: Mesaj geldiğinde ikon animasyonu */
+.iconButton.hasNewMessage {
+    animation: shake 0.5s ease-in-out;
+}

@@ -32,6 +32,8 @@ export interface DashboardContextType {
   closeNotificationModal: () => void;
   closeChatWindow: () => void;
   handleStartChat: (pharmacy: PharmacyProfileData) => void;
+  activeChatUserId: number | null;
+  setActiveChatUserId: (userId: number | null) => void;
 }
 
 // Context'i oluştur

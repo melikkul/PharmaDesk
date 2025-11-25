@@ -24,7 +24,7 @@ namespace Backend.Models
         [Key]
         public int Id { get; set; }
 
-        public int PharmacyProfileId { get; set; }
+        public long PharmacyProfileId { get; set; }
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Amount { get; set; } // Pozitif veya negatif tutar
@@ -43,7 +43,7 @@ namespace Backend.Models
         [Required]
         public TransactionStatus Status { get; set; } = TransactionStatus.Completed;
 
-        public int? CounterpartyPharmacyId { get; set; } // Karşı taraf eczane (alış/satışta)
+        public long? CounterpartyPharmacyId { get; set; } // Karşı taraf eczane (alış/satışta)
 
         // Navigation Properties
         [ForeignKey(nameof(PharmacyProfileId))]

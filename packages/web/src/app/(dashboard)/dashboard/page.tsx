@@ -13,7 +13,7 @@ import ShipmentsCard from '@/components/dashboard/ShipmentsCard';
 import { useDashboard } from '@/hooks/useDashboard';
 
 // Her kart için ayrı limitler
-const OFFERS_LIMIT = 4;
+const OFFERS_LIMIT = 5;
 const BALANCE_HISTORY_LIMIT = 5;
 const TRANSFERS_LIMIT = 4;
 const SHIPMENTS_LIMIT = 4;

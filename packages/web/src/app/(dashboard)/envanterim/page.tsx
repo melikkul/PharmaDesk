@@ -3,13 +3,10 @@
 
 import React, { useState } from 'react';
 import FullInventoryTable from './FullInventoryTable';
-import { fullInventoryData } from '@/data/dashboardData';
+import { useInventory } from '@/hooks/useInventory';
 import styles from './envanterim.module.css';
-
-// Toplu alarm modal'ı import edildi
 import SetBulkAlarmModal from './SetBulkAlarmModal';
 
-// Toplu alarm ikonu
 const AlarmsIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -20,32 +17,55 @@ const AlarmsIcon = () => (
   </svg>
 );
 
-
 export default function EnvanterimPage() {
-  // Toplu alarm modal'ı için state
   const [isBulkAlarmModalOpen, setIsBulkAlarmModalOpen] = useState(false);
+  
+  // ✅ Backend'den envanter verisi çek
+  const { inventory, loading, error } = useInventory();
 
-  // Normalde burada API'den gelen tam envanter verisi olur
-  const inventoryData = fullInventoryData;
-
-  // Toplu alarmı kaydetme fonksiyonu
   const handleSaveBulkAlarm = (minStock: number) => {
     console.log(`TOPLU ALARM KURULDU: Varsayılan limit ${minStock} olarak ayarlandı.`);
-    
-    // Bu noktada backend'e bu varsayılan limit kaydedilir.
-    // Backend, tüm ilaçları kontrol ederken, özel alarmı olmayan
-    // ilaçlar için bu varsayılan limiti baz alır.
-    
     alert(`Varsayılan stok alarmı ${minStock} adet olarak ayarlandı.`);
-    setIsBulkAlarmModalOpen(false); // Modalı kapat
+    setIsBulkAlarmModalOpen(false);
   };
+
+  if (loading) {
+    return (
+      <div className={styles.pageContainer}>
+        <div style={{ textAlign: 'center', padding: '50px' }}>Envanter yükleniyor...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.pageContainer}>
+        <div style={{ textAlign: 'center', padding: '50px', color: 'red' }}>Hata: {error}</div>
+      </div>
+    );
+  }
+
+  // Convert API data to match the expected format for FullInventoryTable
+  const inventoryData = inventory.map(item => ({
+    id: item.id,
+    productName: item.medication.name,
+    barcode: item.medication.barcode || '-',
+    currentStock: item.quantity,
+    bonusStock: item.bonusQuantity,
+    costPrice: item.costPrice,
+    stock: item.quantity.toString(),
+    price: item.salePrice || item.costPrice,
+    dateAdded: new Date().toISOString(),
+    expirationDate: item.expiryDate,
+    status: (item.quantity > (item.minStockLevel || 0) ? 'active' : 'low_stock') as any,
+    alarmSet: item.isAlarmSet,
+  }));
 
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Envanterim</h1>
         
-        {/* Toplu Alarm Butonu */}
         <button 
           className={styles.secondaryButton} 
           onClick={() => setIsBulkAlarmModalOpen(true)}
@@ -55,13 +75,8 @@ export default function EnvanterimPage() {
         </button>
       </div>
 
-      {/* Burada normalde filtre bileşenleri olur. 
-        <InventoryFilter /> 
-      */}
-
       <FullInventoryTable data={inventoryData} />
 
-      {/* Toplu alarm modal'ını burada render et */}
       {isBulkAlarmModalOpen && (
         <SetBulkAlarmModal
           onClose={() => setIsBulkAlarmModalOpen(false)}

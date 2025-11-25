@@ -1,6 +1,7 @@
 // frontend/pharma-desk/src/data/dashboardData.ts
 
 export interface SellerInfo {
+  pharmacyId: string;
   pharmacyUsername: string;
   pharmacyName: string;
 }
@@ -19,7 +20,7 @@ export interface ShowroomMedication {
 
 
 export interface PharmacyProfileData {
-  id?: number; // YENİ: Backend entegrasyonu için eklendi
+  id?: string; // YENİ: Backend entegrasyonu için eklendi
   pharmacyName: string;
   pharmacistInCharge: string;
   balance: number;
@@ -27,6 +28,7 @@ export interface PharmacyProfileData {
   coverImageUrl: string | null;
   about: string;
   location: string; // Adres (örn: "Örnek Mah. No: 1, Çankaya, Ankara")
+  address?: string; // Açık adres (detaylı adres bilgisi)
   registrationDate: string;
   gln: string; // <-- DEĞİŞİKLİK: licenseNumber -> gln
   phone: string;
@@ -181,6 +183,136 @@ export const warehouseBaremsData: WarehouseBarem[] = [
 // --- YENİ VERİ SONU ---
 // =================================================================
 
+// =================================================================
+// --- YENİ TİPLER: DATABASE ENTEGRASYONU ---
+// =================================================================
+
+/** PharmacySettings - Kullanıcı tercihleri */
+export interface PharmacySettings {
+  id: number;
+  pharmacyProfileId: number;
+  emailNotifications: boolean;
+  smsNotifications: boolean;
+  autoAcceptOrders: boolean;
+  showStockToGroupOnly: boolean;
+  language: string;
+}
+
+/** Cart & CartItem - Alışveriş sepeti */
+export interface Cart {
+  id: number;
+  pharmacyProfileId: number;
+  cartItems: CartItem[];
+  updatedAt: string;
+}
+
+export interface CartItem {
+  id: number;
+  cartId: number;
+  offerId: number;
+  quantity: number;
+  addedAt?: string;
+  offer?: Offer; // Include offer details when fetched
+}
+
+/** Order & OrderItem - Siparişler */
+export enum OrderStatus {
+  Pending = 'pending',
+  Approved = 'approved',
+  Shipped = 'shipped',
+  Delivered = 'delivered',
+  Cancelled = 'cancelled',
+  Completed = 'completed'
+}
+
+export enum PaymentStatus {
+  Pending = 'pending',
+  Paid = 'paid'
+}
+
+export interface Order {
+  id: number;
+  orderNumber: string;
+  buyerPharmacyId: number;
+  sellerPharmacyId: number;
+  totalAmount: number;
+  orderDate: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  orderItems?: OrderItem[];
+  buyerPharmacy?: PharmacyProfileData;
+  sellerPharmacy?: PharmacyProfileData;
+}
+
+export interface OrderItem {
+  id: number;
+  orderId: number;
+  medicationId: number;
+  quantity: number;
+  unitPrice: number;
+  bonusQuantity: number;
+  medication?: ShowroomMedication;
+}
+
+/** ShipmentEvent - Kargo geçmişi */
+export interface ShipmentEvent {
+  id: number;
+  shipmentId: number;
+  status: string;
+  location?: string;
+  eventDate: string;
+}
+
+/** Report & MarketDemand - Raporlar */
+export enum ReportType {
+  Inventory = 'inventory',
+  Expiration = 'expiration',
+  Sales = 'sales',
+  Demand = 'demand'
+}
+
+export interface Report {
+  id: number;
+  pharmacyProfileId: number;
+  reportType: ReportType;
+  generatedDate: string;
+  dataJson?: string;
+}
+
+export interface MarketDemand {
+  id: number;
+  medicationId: number;
+  searchCount: number;
+  lastSearchedDate: string;
+  city?: string;
+  medication?: ShowroomMedication;
+}
+
+/** Conversation & Message - Mesajlaşma */
+export interface Conversation {
+  id: number;
+  user1Id: number;
+  user2Id: number;
+  lastMessageDate: string;
+  user1?: PharmacyProfileData;
+  user2?: PharmacyProfileData;
+  messages?: ConversationMessage[];
+}
+
+export interface ConversationMessage {
+  id: number;
+  conversationId: number;
+  senderPharmacyId: number;
+  content: string;
+  isRead: boolean;
+  createdAt: string;
+  senderPharmacy?: PharmacyProfileData;
+}
+
+// =================================================================
+// --- YENİ TİPLER SONU ---
+// =================================================================
+
 
 export const pharmacyData: PharmacyProfileData = {
     pharmacyName: "Yıldız Eczanesi",
@@ -235,17 +367,10 @@ export const transfersData: TransferItem[] = [
 
 export type NotificationType = 'offer' | 'shipment' | 'balance' | 'message';
 
-export const initialNotifications: Notification[] = [
-    { id: 1, read: false, type: 'offer', title: 'Yeni Teklif', message: 'Dolorex için yeni bir teklif aldınız. Detaylar için tıklayın.' },
-    { id: 2, read: true, type: 'shipment', title: 'Sipariş Kargolandı', message: '123-12312321 numaralı siparişiniz kargoya verildi. Kargo takip no: XYZ123' },
-    { id: 3, read: false, type: 'balance', title: 'Bakiye Yüklendi', message: 'Hesabınıza 500.00 TL yüklendi. Yeni bakiye: 15,500.00 TL' }
-];
 
-export const initialMessages: Message[] = [
-    { id: 1, sender: 'Ahmet Kaya', lastMessage: 'Merhaba, siparişim hakkında bilgi alabilir miyim?', avatar: null, read: false },
-    { id: 2, sender: 'Ayşe Demir', lastMessage: 'Teşekkürler, iyi çalışmalar.', avatar: null, read: true },
-    { id: 3, sender: 'Destek Ekibi', lastMessage: 'Yeni kampanya detayları için tıklayın.', avatar: null, read: false }
-];
+export const initialNotifications: Notification[] = [];
+
+export const initialMessages: Message[] = [];
 
 // BU, KULLANICININ TEKLİF SAYFASINDA GÖRDÜĞÜ, SATIŞA KOYDUĞU İLAÇLARDIR
 export const userMedicationsData: MedicationItem[] = [
@@ -361,11 +486,11 @@ export const fullInventoryData: MedicationItem[] = [
 
 
 export const ilaclarShowroomData: ShowroomMedication[] = [
-  { id: 1, name: 'Dolorex', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/j1umlb5.png', price: 48.23, expirationDate: '2026-12', initialStock: 60, currentStock: 60, bonus: 5, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }] },
-  { id: 2, name: 'Parol 500mg', manufacturer: 'Atabay', imageUrl: 'https://i.hizliresim.com/21s3irj.png', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
-  { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/gle5dcm.png', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eçzanesi' }, { pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 1, name: 'Dolorex', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/j1umlb5.png', price: 48.23, expirationDate: '2026-12', initialStock: 60, currentStock: 60, bonus: 5, sellers: [{ pharmacyId: '2', pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eczanesi' }] },
+  { id: 2, name: 'Parol 500mg', manufacturer: 'Atabay', imageUrl: 'https://i.hizliresim.com/21s3irj.png', price: 25.50, expirationDate: '2027-08', initialStock: 100, currentStock: 80, bonus: 10, sellers: [{ pharmacyId: '3', pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 3, name: 'Apranax Forte', manufacturer: 'Abdi İbrahim', imageUrl: 'https://i.hizliresim.com/gle5dcm.png', price: 52.75, expirationDate: '2025-11', initialStock: 50, currentStock: 10, bonus: 0, sellers: [{ pharmacyId: '2', pharmacyUsername: 'gunes-eczanesi', pharmacyName: 'Güneş Eçzanesi' }, { pharmacyId: '3', pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
   { id: 9, name: 'Minoset Plus 250mg/150mg', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/mm5sy8z.png', price: 22.40, expirationDate: '2027-05', initialStock: 40, currentStock: 0, bonus: 0, sellers: [] },
-  { id: 5, name: 'Benical Cold 20 Tablet', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/jrqzrdq.png', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
+  { id: 5, name: 'Benical Cold 20 Tablet', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/jrqzrdq.png', price: 65.20, expirationDate: '2025-10', initialStock: 40, currentStock: 40, bonus: 4, sellers: [{ pharmacyId: '3', pharmacyUsername: 'meltem-eczanesi', pharmacyName: 'Meltem Eczanesi' }] },
   { id: 6, name: 'Aspirin 100mg', manufacturer: 'Bayer', imageUrl: 'https://i.hizliresim.com/tkz0vdm.png', price: 15.00, expirationDate: '2027-09', initialStock: 300, currentStock: 150, bonus: 50, sellers: [] },
 ];
 
@@ -381,6 +506,7 @@ export const allDrugNames: string[] = Array.from(allNames);
 
 export const otherPharmaciesData: PharmacyProfileData[] = [
     {
+        id: "20251124104807246", // Mock ID
         pharmacyName: "Güneş Eczanesi",
         pharmacistInCharge: "Ahmet Çelik",
         balance: -500.75, // Eksi bakiye
@@ -409,6 +535,7 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         // --- YENİ ALANLAR SONU ---
     },
     {
+        id: "20251124104807247", // Mock ID
         pharmacyName: "Meltem Eczanesi",
         pharmacistInCharge: "Fatma Aydın",
         balance: 1250.00,
@@ -437,6 +564,7 @@ export const otherPharmaciesData: PharmacyProfileData[] = [
         // --- YENİ ALANLAR SONU ---
     },
     {
+        id: "20251124104807248", // Mock ID
         pharmacyName: "Defne Eczanesi",
         pharmacistInCharge: "Mehmet Öztürk",
         balance: 0,

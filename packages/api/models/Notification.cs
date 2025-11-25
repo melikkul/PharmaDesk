@@ -8,7 +8,9 @@ namespace Backend.Models
         Offer,      // Teklif bildirimi
         Shipment,   // Sevkiyat bildirimi
         Balance,    // Bakiye bildirimi
-        Message     // Mesaj bildirimi
+        Message,    // Mesaj bildirimi
+        Order,      // Sipariş bildirimi
+        System      // Sistem bildirimi
     }
 
     public class Notification
@@ -16,7 +18,7 @@ namespace Backend.Models
         [Key]
         public int Id { get; set; }
 
-        public int PharmacyProfileId { get; set; }
+        public long PharmacyProfileId { get; set; }
 
         [Required]
         public NotificationType Type { get; set; }
@@ -26,6 +28,9 @@ namespace Backend.Models
 
         [Required, StringLength(1000)]
         public string Message { get; set; } = string.Empty;
+        
+        [StringLength(500)]
+        public string? LinkUrl { get; set; } // Tıklayınca gideceği yer
 
         public bool IsRead { get; set; } = false;
 

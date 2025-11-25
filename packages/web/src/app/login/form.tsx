@@ -54,13 +54,23 @@ export default function Form() {
         setErrorMessage(data.error || "Giriş yapılamadı.");
       } else {
         // Construct user object from response
+        console.log('[Login] API Response data.user:', data.user);
+        console.log('[Login] data.user.PharmacyId:', data.user.PharmacyId);
+        console.log('[Login] data.user.pharmacyId:', data.user.pharmacyId);
+        
         const userData = {
             ...data.user,
+            pharmacyId: data.user.PharmacyId, // Use PharmacyId (capital P) from backend, matches JWT token
             username: data.user.email, // Use email as username for routing
             isFirstLogin: data.isFirstLogin
         };
+        
+        console.log('[Login] Constructed userData:', userData);
+        console.log('[Login] userData.pharmacyId:', userData.pharmacyId);
+        
         login(data.token, userData, rememberMe);
-        router.push("/dashboard");
+        // Force full page reload as requested
+        window.location.href = "/dashboard";
       }
     } catch (error) {
       console.error("Login error:", error);
