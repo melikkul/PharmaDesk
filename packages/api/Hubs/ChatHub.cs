@@ -95,5 +95,55 @@ namespace Backend.Hubs
             await Clients.Caller.SendAsync("ReceiveMessage", messagePayload);
             Console.WriteLine($"[ChatHub.SendMessage] Message sent to sender");
         }
+
+        public async Task MarkAsRead(string messageId)
+        {
+            try
+            {
+                if (long.TryParse(messageId, out long id))
+                {
+                    var message = await _context.ChatMessages.FindAsync(id);
+                    if (message != null && !message.IsRead)
+                    {
+                        message.IsRead = true;
+                        await _context.SaveChangesAsync();
+
+                        // Notify sender that message was read
+                        await Clients.User(message.SenderId.ToString())
+                            .SendAsync("MessageRead", new { messageId });
+                        
+                        Console.WriteLine($"[ChatHub.MarkAsRead] Message {messageId} marked as read");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[ChatHub.MarkAsRead] ERROR: {ex.Message}");
+            }
+        }
+
+        public override async Task OnConnectedAsync()
+        {
+            var userId = Context.UserIdentifier;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                // Broadcast to all users that this user is online
+                await Clients.All.SendAsync("UserOnline", userId);
+                Console.WriteLine($"[ChatHub] User {userId} connected and broadcasted as online");
+            }
+            await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception? exception)
+        {
+            var userId = Context.UserIdentifier;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                // Broadcast to all users that this user is offline
+                await Clients.All.SendAsync("UserOffline", userId);
+                Console.WriteLine($"[ChatHub] User {userId} disconnected and broadcasted as offline");
+            }
+            await base.OnDisconnectedAsync(exception);
+        }
     }
 }

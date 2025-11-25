@@ -148,5 +148,27 @@ namespace Backend.Controllers
 
             return Ok(messages);
         }
+
+        [HttpGet("profile/{pharmacyId}")]
+        public async Task<IActionResult> GetPharmacyProfile(long pharmacyId)
+        {
+            var profile = await _context.PharmacyProfiles
+                .Where(p => p.Id == pharmacyId)
+                .Select(p => new
+                {
+                    Id = p.Id.ToString(),
+                    p.PharmacyName,
+                    p.ProfileImagePath,
+                    p.City
+                })
+                .FirstOrDefaultAsync();
+
+            if (profile == null)
+            {
+                return NotFound("Pharmacy profile not found");
+            }
+
+            return Ok(profile);
+        }
     }
 }
