@@ -26,9 +26,8 @@ import { pharmacyData } from '@/data/dashboardData';
 import { useDashboardPanels } from '@/hooks/useDashboardPanels';
 import { DashboardContext, useDashboardContext, Notification, Message } from '@/context/DashboardContext';
 import { useAuth } from '@/context/AuthContext';
-// HATA DÜZELTME: CartProvider'ı import et
-// import { CartProvider } from '@/context/CartContext';
-import { SignalRProvider } from '@/context/SignalRContext';
+import { MockChatProvider } from '@/context/MockChatContext';
+import { ChatProvider } from '@/context/ChatContext';
 
 
 // ### OPTİMİZASYON: Bildirim Listesi Ayrı Bileşene Taşındı ve Memoize Edildi ###
@@ -114,65 +113,67 @@ export default function DashboardLayout({
   // 2. ADIM: Değerleri (panelValues) Context Provider ile sarmala
   return (
         <DashboardContext.Provider value={panelValues}>
-          <SignalRProvider>
-          <div className="dashboard-container">
-            <Sidebar />
-            
-            <Header
-              userData={headerUserData}
-              onMessageClick={panelValues.toggleMessagesPanel}
-              onNotificationClick={panelValues.toggleNotificationsPanel}
-              onCartClick={panelValues.toggleCartPanel}
-              onLogout={logout}
-            />
+          <MockChatProvider>
+            <ChatProvider>
+              <div className="dashboard-container">
+                <Sidebar />
+                
+                <Header
+                  userData={headerUserData}
+                  onMessageClick={panelValues.toggleMessagesPanel}
+                  onNotificationClick={panelValues.toggleNotificationsPanel}
+                  onCartClick={panelValues.toggleCartPanel}
+                  onLogout={logout}
+                />
 
-            <main className="main-content">
-              {children} {/* children (sayfalar) artık context'e erişebilir */}
-            </main>
+                <main className="main-content">
+                  {children} {/* children (sayfalar) artık context'e erişebilir */}
+                </main>
 
-            <SlidePanel
-              title="Bildirimler"
-              show={panelValues.showNotificationsPanel}
-              onClose={panelValues.toggleNotificationsPanel}
-              onMarkAllRead={panelValues.markAllNotificationsAsRead}
-            >
-              {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
-              <NotificationList 
-                items={panelValues.notifications} 
-                onClick={panelValues.handleNotificationClick} 
-              />
-            </SlidePanel>
+                <SlidePanel
+                  title="Bildirimler"
+                  show={panelValues.showNotificationsPanel}
+                  onClose={panelValues.toggleNotificationsPanel}
+                  onMarkAllRead={panelValues.markAllNotificationsAsRead}
+                >
+                  {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
+                  <NotificationList 
+                    items={panelValues.notifications} 
+                    onClick={panelValues.handleNotificationClick} 
+                  />
+                </SlidePanel>
 
-            <SlidePanel
-              title="Mesajlar"
-              show={panelValues.showMessagesPanel}
-              onClose={panelValues.toggleMessagesPanel}
-            >
-              <ChatPanel 
-                onSelectUser={panelValues.openFloatingChat}
-              />
-            </SlidePanel>
+                <SlidePanel
+                  title="Mesajlar"
+                  show={panelValues.showMessagesPanel}
+                  onClose={panelValues.toggleMessagesPanel}
+                >
+                  <ChatPanel 
+                    onSelectUser={panelValues.openFloatingChat}
+                  />
+                </SlidePanel>
 
-            <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />
+                <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />
 
-            <NotificationModal
-              notification={panelValues.selectedNotification}
-              onClose={panelValues.closeNotificationModal}
-            />
+                <NotificationModal
+                  notification={panelValues.selectedNotification}
+                  onClose={panelValues.closeNotificationModal}
+                />
 
-            {/* Floating Chat Windows */}
-            {panelValues.openChats.map((chatUserId, index) => (
-              <FloatingChatWindow
-                key={chatUserId}
-                otherUserId={chatUserId}
-                isMinimized={panelValues.minimizedChats.includes(chatUserId)}
-                onMinimize={() => panelValues.toggleMinimizeChat(chatUserId)}
-                onClose={() => panelValues.closeChat(chatUserId)}
-                position={{ bottom: 0, right: 20 + (index * 370) }}
-              />
-            ))}
-          </div>
-          </SignalRProvider>
+                {/* Floating Chat Windows */}
+                {panelValues.openChats.map((chatUserId, index) => (
+                  <FloatingChatWindow
+                    key={chatUserId}
+                    otherUserId={chatUserId}
+                    isMinimized={panelValues.minimizedChats.includes(chatUserId)}
+                    onMinimize={() => panelValues.toggleMinimizeChat(chatUserId)}
+                    onClose={() => panelValues.closeChat(chatUserId)}
+                    position={{ bottom: 0, right: 20 + (index * 370) }}
+                  />
+                ))}
+              </div>
+            </ChatProvider>
+          </MockChatProvider>
         </DashboardContext.Provider>
   );
 }

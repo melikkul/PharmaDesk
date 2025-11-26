@@ -11,7 +11,6 @@ using System.Text;
 using Microsoft.AspNetCore.Diagnostics;
 using System.Net;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,10 +25,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddProblemDetails();
 
-// --- SignalR Service ---
-builder.Services.AddSignalR();
-builder.Services.AddSingleton<IUserIdProvider, CustomUserIdProvider>();
-// -----------------------
+
 
 
 
@@ -75,23 +71,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = "PharmaDeskApi",
             ValidAudience = "PharmaDeskClient",
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-        
-        // Allow SignalR to pass token via query string
-        opt.Events = new JwtBearerEvents
-        {
-            OnMessageReceived = context =>
-            {
-                var accessToken = context.Request.Query["access_token"];
-                var path = context.HttpContext.Request.Path;
-                
-                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
-                {
-                    context.Token = accessToken;
-                }
-                
-                return Task.CompletedTask;
-            }
         };
     });
 
@@ -317,9 +296,5 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// --- SignalR Hub Mapping ---
-app.MapHub<Backend.Hubs.ChatHub>("/hubs/chat");
-// ---------------------------
 
 app.Run();

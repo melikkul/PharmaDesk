@@ -4,6 +4,7 @@
     grid-template-columns: 240px 1fr;
     gap: 40px;
     height: 100%;
+    font-family: 'Montserrat', sans-serif;
 }
 
 .settingsContent {

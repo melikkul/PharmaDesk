@@ -107,65 +107,7 @@ namespace api.Migrations
                     b.ToTable("CartItems");
                 });
 
-            modelBuilder.Entity("Backend.Models.ChatMessage", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
 
-                    b.Property<Guid>("ChatRoomId")
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<bool>("IsRead")
-                        .HasColumnType("boolean");
-
-                    b.Property<long>("SenderId")
-                        .HasColumnType("bigint");
-
-                    b.Property<DateTime>("SentAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("ChatRoomId");
-
-                    b.ToTable("ChatMessages");
-                });
-
-            modelBuilder.Entity("Backend.Models.ChatRoom", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Name")
-                        .HasColumnType("text");
-
-                    b.Property<DateTime>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<long>("User1Id")
-                        .HasColumnType("bigint");
-
-                    b.Property<long>("User2Id")
-                        .HasColumnType("bigint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("User2Id");
-
-                    b.HasIndex("User1Id", "User2Id")
-                        .IsUnique();
-
-                    b.ToTable("ChatRooms");
-                });
 
             modelBuilder.Entity("Backend.Models.Group", b =>
                 {
@@ -877,35 +819,7 @@ namespace api.Migrations
                     b.Navigation("Offer");
                 });
 
-            modelBuilder.Entity("Backend.Models.ChatMessage", b =>
-                {
-                    b.HasOne("Backend.Models.ChatRoom", "ChatRoom")
-                        .WithMany("Messages")
-                        .HasForeignKey("ChatRoomId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
 
-                    b.Navigation("ChatRoom");
-                });
-
-            modelBuilder.Entity("Backend.Models.ChatRoom", b =>
-                {
-                    b.HasOne("Backend.Models.PharmacyProfile", "User1")
-                        .WithMany()
-                        .HasForeignKey("User1Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Backend.Models.PharmacyProfile", "User2")
-                        .WithMany()
-                        .HasForeignKey("User2Id")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User1");
-
-                    b.Navigation("User2");
-                });
 
             modelBuilder.Entity("Backend.Models.InventoryItem", b =>
                 {
@@ -1107,10 +1021,7 @@ namespace api.Migrations
                     b.Navigation("CartItems");
                 });
 
-            modelBuilder.Entity("Backend.Models.ChatRoom", b =>
-                {
-                    b.Navigation("Messages");
-                });
+
 
             modelBuilder.Entity("Backend.Models.Medication", b =>
                 {

@@ -1,20 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useSignalR } from "@/context/SignalRContext";
-
-interface Conversation {
-  id: string;
-  otherUser: {
-    id: string; // Changed to string to handle large numbers
-    pharmacyName: string;
-    profileImagePath: string | null;
-  };
-  lastMessage: string;
-  lastMessageDate: string;
-  unreadCount: number;
-}
+import React, { useMemo } from "react";
+import { useMockChat } from "@/context/MockChatContext";
 
 interface ChatListProps {
   onSelectChat: (userId: string) => void;
@@ -22,50 +9,33 @@ interface ChatListProps {
 }
 
 export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId }) => {
-  const { token } = useAuth();
-  const { connection } = useSignalR();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { users, messages, onlineUsers } = useMockChat();
 
-  const fetchConversations = async () => {
-    if (!token) return;
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081"}/api/chat/conversations`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+  // Build conversations from mock data
+  const conversations = useMemo(() => {
+    return users.map(user => {
+      const userMessages = messages[user.id] || [];
+      const lastMessage = userMessages[userMessages.length - 1];
+      const unreadCount = userMessages.filter(msg => !msg.isRead && msg.senderId !== 2).length; // 2 is the current user
+      
+      return {
+        id: user.id,
+        otherUser: {
+          id: user.id,
+          pharmacyName: user.pharmacyName,
+          profileImagePath: user.profileImagePath || null,
+          city: user.city || "",
         },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setConversations(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch conversations", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchConversations();
-    // Poll for updates every 10 seconds (optional, SignalR should handle real-time updates ideally)
-    const interval = setInterval(fetchConversations, 10000);
-    return () => clearInterval(interval);
-  }, [token]);
-
-  useEffect(() => {
-    if (!connection) return;
-
-    connection.on("ReceiveMessage", () => {
-      fetchConversations();
+        lastMessage: lastMessage?.content || "Henüz mesaj yok",
+        lastMessageDate: lastMessage?.sentAt || new Date().toISOString(),
+        unreadCount: unreadCount,
+        isOnline: onlineUsers.has(user.id)
+      };
+    }).sort((a, b) => {
+      // Sort by last message date, most recent first
+      return new Date(b.lastMessageDate).getTime() - new Date(a.lastMessageDate).getTime();
     });
-
-    return () => {
-      connection.off("ReceiveMessage");
-    };
-  }, [connection]);
-
-  if (loading) return <div className="p-4">Yükleniyor...</div>;
+  }, [users, messages, onlineUsers]);
 
   return (
     <div className="flex flex-col h-full bg-white w-full">
@@ -89,6 +59,11 @@ export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId
                     conv.otherUser.pharmacyName.charAt(0).toUpperCase()
                   )}
                 </div>
+                {/* Online Indicator */}
+                {conv.isOnline && (
+                  <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
+                )}
+                {/* Unread Count Badge */}
                 {conv.unreadCount > 0 && (
                   <div className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
                     {conv.unreadCount}
@@ -102,7 +77,12 @@ export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId
                     {new Date(conv.lastMessageDate).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 truncate">{conv.lastMessage}</p>
+                <div className="flex items-center gap-1">
+                  <p className="text-sm text-gray-500 truncate flex-1">{conv.lastMessage}</p>
+                  {conv.otherUser.city && (
+                    <span className="text-xs text-gray-400">• {conv.otherUser.city}</span>
+                  )}
+                </div>
               </div>
             </div>
           ))

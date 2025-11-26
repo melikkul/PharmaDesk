@@ -32,8 +32,6 @@ namespace Backend.Data
         
         // --- COMMUNICATION ---
         public DbSet<Notification> Notifications { get; set; }
-        public DbSet<ChatRoom> ChatRooms { get; set; }
-        public DbSet<ChatMessage> ChatMessages { get; set; }
         
         // --- EXTERNAL RESOURCES ---
         public DbSet<WarehouseBarem> WarehouseBarems { get; set; }
@@ -93,10 +91,7 @@ namespace Backend.Data
             modelBuilder.Entity<MarketDemand>()
                 .HasIndex(md => new { md.City, md.LastSearchedDate });
             
-            // ChatRoom unique constraint (prevent duplicate conversations)
-            modelBuilder.Entity<ChatRoom>()
-                .HasIndex(c => new { c.User1Id, c.User2Id })
-                .IsUnique();
+
             
             // Report indexing
             modelBuilder.Entity<Report>()

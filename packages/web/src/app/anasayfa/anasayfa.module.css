@@ -2,7 +2,7 @@
 /* CSS değişkenleri globals.css dosyasında :root içinde tanımlanmıştır */
 
 .pageContainer {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: 'Montserrat', sans-serif;
     color: var(--dark-color);
     background-color: var(--white-color);
     overflow-x: hidden;
