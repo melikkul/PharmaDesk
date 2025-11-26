@@ -5,7 +5,9 @@ import React, { useEffect, useState } from 'react';
 import SettingsCard from '../../../../components/settings/SettingsCard';
 import styles from './profil.module.css';
 import { useProfile } from '@/hooks/useProfile';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/store/AuthContext';
+import { userService } from '@/services/userService';
+
 
 const ProfilimPage = () => {
   const { profile, loading } = useProfile('me');
@@ -22,23 +24,12 @@ const ProfilimPage = () => {
     if (!token) return;
 
     try {
-      // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-      const response = await fetch(`/api/users/me`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          about: bio
-        }),
+      // @ts-ignore - about field might not exist in backend DTO yet
+      await userService.updateProfile(token, {
+        about: bio
       });
 
-      if (response.ok) {
-        alert('Biyografi kaydedildi.');
-      } else {
-        alert('Kaydedilirken hata oluştu.');
-      }
+      alert('Biyografi kaydedildi.');
     } catch (error) {
       console.error('Save error:', error);
       alert('Bir hata oluştu.');

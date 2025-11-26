@@ -4,6 +4,8 @@ import { useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import styles from './form.module.css'; // Ortak stili kullan
 import Link from 'next/link';
+import { authService } from '@/services/authService';
+
 
 function ResetPasswordForm() {
   const searchParams = useSearchParams();
@@ -36,12 +38,7 @@ function ResetPasswordForm() {
     // --- API ÇAĞRISI BURADA YAPILACAK ---
     try {
       console.log('Yeni şifre ayarlanıyor, token:', token);
-      // const response = await fetch('/api/auth/reset-password', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify({ token, password }),
-      // });
-      // if (!response.ok) throw new Error('Şifre sıfırlanamadı.');
+      await authService.resetPassword(token, password);
 
       // Başarılı simülasyonu
       setMessage('Şifreniz başarıyla güncellendi. Giriş sayfasına yönlendiriliyorsunuz...');

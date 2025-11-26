@@ -3,8 +3,8 @@
 
 import React from 'react';
 import { useParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { useDashboardContext } from '@/context/DashboardContext';
+import { useAuth } from '@/store/AuthContext';
+import { useDashboardContext } from '@/store/DashboardContext';
 import { useProfile } from '@/hooks/useProfile';
 import ProfileHeader from '@/components/profile/ProfileHeader';
 import ProfileDetails from '@/components/profile/ProfileDetails';

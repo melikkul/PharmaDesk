@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import styles from './form.module.css'; // Hata veren satır buydu, şimdi dosyayı bulacak
 import Link from 'next/link';
+import { authService } from '@/services/authService';
+
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -22,8 +24,7 @@ export default function ForgotPasswordPage() {
     // --- API ÇAĞRISI BURADA YAPILACAK ---
     try {
       console.log('Sıfırlama talebi gönderiliyor:', email);
-      // const response = await fetch('/api/auth/forgot-password', { ... });
-      // if (!response.ok) throw new Error('E-posta gönderilemedi.');
+      await authService.forgotPassword(email);
       
       // Başarılı simülasyonu
       setMessage('Şifre sıfırlama bağlantısı e-posta adresinize gönderildi.');

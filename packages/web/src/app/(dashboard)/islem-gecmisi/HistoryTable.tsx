@@ -4,7 +4,7 @@
 // ### OPTİMİZASYON: 'useCallback' import edildi ###
 import React, { useState, useMemo, useCallback } from 'react';
 // Tipler ve Bileşenler
-import { TransactionHistoryItem, TransactionStatus, TransactionType } from '@/data/dashboardData';
+import { TransactionHistoryItem, TransactionStatus, TransactionType } from '@/lib/dashboardData';
 import DashboardCard from '@/components/DashboardCard';
 import tableStyles from '@/components/dashboard/Table.module.css';
 // === DÜZELTME BURADA ===

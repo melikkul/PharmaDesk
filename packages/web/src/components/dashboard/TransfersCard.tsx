@@ -2,7 +2,7 @@
 
 import React from 'react';
 import DashboardCard from '../DashboardCard';
-import type { TransferItem } from '../../data/dashboardData';
+import type { TransferItem } from '../../lib/dashboardData';
 import tableStyles from './Table.module.css';
 
 interface TransfersCardProps {

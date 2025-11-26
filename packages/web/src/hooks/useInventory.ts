@@ -1,28 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../store/AuthContext';
+import { medicationService } from '../services/medicationService';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-
-export interface InventoryItem {
-  id: number;
-  medicationId: number;
-  quantity: number;
-  bonusQuantity: number;
-  costPrice: number;
-  salePrice?: number;
-  expiryDate: string;
-  batchNumber: string;
-  shelfLocation?: string;
-  isAlarmSet: boolean;
-  minStockLevel?: number;
-  medication: {
-    id: number;
-    name: string;
-    barcode?: string;
-    atcCode: string;
-    basePrice: number;
-  };
-}
+import { InventoryItem } from '../types';
 
 export const useInventory = () => {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -38,18 +18,7 @@ export const useInventory = () => {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/inventory/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Envanter yüklenemedi');
-        }
-
-        const data = await response.json();
+        const data: any = await medicationService.getMyInventory(token);
         setInventory(data);
       } catch (err) {
         console.error('Inventory error:', err);

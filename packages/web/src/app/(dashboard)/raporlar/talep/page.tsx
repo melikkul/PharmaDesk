@@ -16,7 +16,7 @@ import DashboardCard from '@/components/DashboardCard';
 // Veriler
 import {
   demandReportData,
-} from '@/data/dashboardData';
+} from '@/lib/dashboardData';
 
 // Tipler (TÜMÜ SİLİNDİ)
 

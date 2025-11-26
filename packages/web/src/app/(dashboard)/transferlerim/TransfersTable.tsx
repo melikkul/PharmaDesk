@@ -1,16 +1,13 @@
 // src/app/(dashboard)/transferlerim/TransfersTable.tsx
 'use client';
 
-// ### OPTİMİZASYON: 'useCallback' import edildi ###
 import React, { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { ShipmentItem, ShipmentStatus, TransferType } from '@/data/dashboardData';
+import { ShipmentItem, ShipmentStatus, TransferType } from '@/lib/dashboardData';
 import DashboardCard from '@/components/DashboardCard';
+import { DateDisplay, StatusBadge } from '@/components/common';
 import tableStyles from '@/components/dashboard/Table.module.css';
-// === DÜZELTME BURADA ===
-// Hatalı yol: import filterStyles from '@/app/tekliflerim/InventoryFilter.module.css';
-import filterStyles from '@/app/(dashboard)/tekliflerim/InventoryFilter.module.css'; // Yeni doğru yol
-// =======================
+import filterStyles from '@/app/(dashboard)/tekliflerim/InventoryFilter.module.css';
 import pageStyles from './transferlerim.module.css';
 
 // İkonlar
@@ -21,34 +18,16 @@ const SortDescIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill=
 const SortIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 6l-4 4h8l-4-4zm0 12l-4-4h8l-4 4z"/></svg>;
 
 
-// ### OPTİMİZASYON: Yardımcı Fonksiyonlar Component Dışına Taşındı ###
+// ### Date parsing helper for filtering and sorting ###
 const parseDate = (dateStr: string): Date => new Date(dateStr);
-const formatDate = (dateStr: string): string => {
-  return parseDate(dateStr).toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' });
-};
 
-// Kargo Durumuna göre stil
-const getStatusBadge = (status: ShipmentStatus) => {
-  switch (status) {
-    case 'delivered': return <span className={`${filterStyles.badge} ${filterStyles.badgeSuccess}`}>Teslim Edildi</span>;
-    case 'in_transit': return <span className={`${filterStyles.badge} ${pageStyles.badgeInfo}`}>Dağıtımda</span>;
-    case 'shipped': return <span className={`${filterStyles.badge} ${filterStyles.badgeWarning}`}>Kargoya Verildi</span>;
-    case 'pending': return <span className={`${filterStyles.badge} ${filterStyles.badgeSecondary}`}>Bekleniyor</span>;
-    case 'cancelled': return <span className={`${filterStyles.badge} ${filterStyles.badgeDanger}`}>İptal Edildi</span>;
-    default: return <span className={filterStyles.badge}>Bilinmiyor</span>;
-  }
-};
-
-// Transfer Yönü (Alış/Satış)
 const getTransferType = (type: TransferType) => {
     return type === 'inbound' ? 
         <span style={{color: 'var(--positive-color)', fontWeight: 600}}>Alış</span> : 
         <span style={{color: 'var(--negative-color)', fontWeight: 600}}>Satış</span>;
 };
-// ### Optimizasyon Sonu: Yardımcı Fonksiyonlar ###
 
 
-// Tipler
 type SortField = keyof ShipmentItem | null;
 type SortDirection = 'asc' | 'desc';
 interface FilterState {
@@ -216,15 +195,17 @@ const TransfersTable: React.FC<TransfersTableProps> = ({ data }) => {
           )}
           {paginatedData.map(item => (
             <tr key={item.id}>
-              <td>{formatDate(item.date)}</td>
+              <td>
+                <DateDisplay date={item.date} format="date" />
+              </td>
               <td>{getTransferType(item.transferType)}</td>
               <td>{item.orderNumber}</td>
               <td>{item.counterparty}</td>
               <td>{item.productName}</td>
-              {/* ISTEK 6: Kargo Firması kaldırıldı */}
-              {/* <td>{item.shippingProvider}</td> */}
               <td>{item.trackingNumber}</td>
-              <td>{getStatusBadge(item.status)}</td>
+              <td>
+                <StatusBadge status={item.status} type="order" />
+              </td>
               <td className={pageStyles.actionCell}>
                 {/* ISTEK 6: Link ve ikon güncellendi */}
                 <Link 

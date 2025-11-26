@@ -2,7 +2,7 @@
 
 import React from 'react';
 import DashboardCard from '../DashboardCard'; 
-import type { Offer } from '../../data/dashboardData';
+import type { Offer } from '../../lib/dashboardData';
 import tableStyles from './Table.module.css';
 
 interface OffersCardProps {

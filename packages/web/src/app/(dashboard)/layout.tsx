@@ -19,15 +19,15 @@ import { FloatingChatWindow } from '@/components/chat/FloatingChatWindow';
 import CartPanel from '@/components/cart/CartPanel';
 
 // Veri
-import { pharmacyData } from '@/data/dashboardData';
+import { pharmacyData } from '@/lib/dashboardData';
 
 // GÜNCELLEME: Hook'u ve Context'i import et
 // GÜNCELLEME: Hook'u ve Context'i import et
 import { useDashboardPanels } from '@/hooks/useDashboardPanels';
-import { DashboardContext, useDashboardContext, Notification, Message } from '@/context/DashboardContext';
-import { useAuth } from '@/context/AuthContext';
-import { MockChatProvider } from '@/context/MockChatContext';
-import { ChatProvider } from '@/context/ChatContext';
+import { DashboardContext, useDashboardContext, Notification, Message } from '@/store/DashboardContext';
+import { useAuth } from '@/store/AuthContext';
+import { MockChatProvider } from '@/store/MockChatContext';
+import { ChatProvider } from '@/store/ChatContext';
 
 
 // ### OPTİMİZASYON: Bildirim Listesi Ayrı Bileşene Taşındı ve Memoize Edildi ###

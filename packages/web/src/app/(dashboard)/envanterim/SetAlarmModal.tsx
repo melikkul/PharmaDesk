@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MedicationItem } from '@/data/dashboardData';
+import { MedicationItem } from '@/lib/dashboardData';
 import styles from './SetAlarmModal.module.css';
 
 interface SetAlarmModalProps {

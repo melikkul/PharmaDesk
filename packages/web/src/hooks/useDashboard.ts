@@ -1,26 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-
-// Define types matching the card components' expectations
-// We might need to import these types or define them here if they are not exported
-// For now, using any[] or matching the structure from dashboardData.ts if possible
-// But since we are removing dashboardData.ts, we should define them here or in a types file.
+import { useAuth } from '../store/AuthContext';
+import { dashboardService } from '../services/dashboardService';
+import { DashboardStats } from '../types';
 
 export interface DashboardData {
-  stats: {
-    totalInventory: number;
-    totalMedications: number;
-    activeOrders: number;
-    activeOffers: number;
-    totalSales: number;
-  };
+  stats: DashboardStats;
   recentOffers: any[];
   balanceHistory: any[];
   transfers: any[];
   shipments: any[];
 }
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
 
 export const useDashboard = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -30,20 +19,14 @@ export const useDashboard = () => {
 
   useEffect(() => {
     const fetchStats = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       try {
-        const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch dashboard stats');
-        }
-
-        const result = await response.json();
-        console.log('Dashboard API Result:', result); // Debug log
+        const result: any = await dashboardService.getStats(token);
+        console.log('Dashboard API Result:', result);
 
         // Manual mapping to ensure correct casing
         if (result.recentOffers) {
@@ -65,11 +48,7 @@ export const useDashboard = () => {
       }
     };
 
-    if (token) {
-      fetchStats();
-    } else {
-      setLoading(false);
-    }
+    fetchStats();
   }, [token]);
 
   return { data, loading, error };

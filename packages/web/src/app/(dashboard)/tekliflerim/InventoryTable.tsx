@@ -3,10 +3,11 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { MedicationItem, OfferStatus } from '@/data/dashboardData';
+import { MedicationItem, OfferStatus } from '@/lib/dashboardData';
 import DashboardCard from '@/components/DashboardCard';
+import { PriceDisplay, StatusBadge, DateDisplay } from '@/components/common';
 import tableStyles from '@/components/dashboard/Table.module.css';
-import pageStyles from './tekliflerim.module.css'; // Ana stil dosyası
+import pageStyles from './tekliflerim.module.css';
 import filterStyles from './InventoryFilter.module.css'; 
 
 // İkonlar
@@ -21,6 +22,7 @@ const SortIcon = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="non
 
 
 // ### YARDIMCI FONKSİYONLAR ###
+// Date parsing helper for filtering and sorting
 const parseDate = (dateStr: string): Date | null => {
   if (!dateStr) return null;
   const parts = dateStr.split('/');
@@ -34,21 +36,6 @@ const parseDate = (dateStr: string): Date | null => {
     return new Date(dateStr);
   }
   return null;
-};
-
-const formatDate = (dateStr: string): string => {
-    const date = parseDate(dateStr);
-    return date ? date.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
-};
-
-const getStatusBadge = (status: OfferStatus) => {
-    switch (status) {
-        case 'active': return <span className={`${filterStyles.badge} ${filterStyles.badgeSuccess}`}>Aktif</span>;
-        case 'paused': return <span className={`${filterStyles.badge} ${filterStyles.badgeWarning}`}>Pasif</span>;
-        case 'expired': return <span className={`${filterStyles.badge} ${filterStyles.badgeDanger}`}>Miadı Doldu</span>;
-        case 'out_of_stock': return <span className={`${filterStyles.badge} ${filterStyles.badgeSecondary}`}>Stokta Yok</span>;
-        default: return <span className={filterStyles.badge}>Bilinmiyor</span>;
-    }
 };
 // ### YARDIMCI FONKSİYONLAR SONU ###
 
@@ -375,10 +362,14 @@ const OffersTable: React.FC<OffersTableProps> = ({
               <td>{item.stock}</td>
               <td>{item.expirationDate}</td>
               <td className={`${tableStyles.textRight} ${tableStyles.fontBold}`}>
-                {item.price.toFixed(2)} ₺
+                <PriceDisplay amount={item.price} />
               </td>
-               <td>{formatDate(item.dateAdded)}</td>
-              <td>{getStatusBadge(item.status)}</td>
+              <td>
+                <DateDisplay date={item.dateAdded} format="date" />
+              </td>
+              <td>
+                <StatusBadge status={item.status} type="offer" />
+              </td>
               <td className={pageStyles.actionCell}>
                 <Link href={`/tekliflerim/${item.id}`} passHref>
                   <button className={`${pageStyles.actionButton} ${pageStyles.editButton}`} title="Düzenle" disabled={isProcessing}>

@@ -5,13 +5,13 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/store/CartContext';
 
 // Bileşenleri import et
 import SettingsCard from '@/components/settings/SettingsCard';
 
 // Verileri import et
-import { pharmacyData } from '@/data/dashboardData';
+import { pharmacyData } from '@/lib/dashboardData';
 
 // Stilleri import et
 // DÜZELTME: dashboard.css yolunu (dashboard) içine al

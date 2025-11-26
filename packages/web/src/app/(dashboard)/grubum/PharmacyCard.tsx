@@ -1,7 +1,7 @@
 // src/app/grubum/PharmacyCard.tsx
 import React from 'react';
 import Link from 'next/link';
-import { PharmacyProfileData } from '@/data/dashboardData';
+import { PharmacyProfileData } from '@/lib/dashboardData';
 import styles from './grubum.module.css'; // Grubum sayfasının stillerini kullanacağız
 
 // İkonlar

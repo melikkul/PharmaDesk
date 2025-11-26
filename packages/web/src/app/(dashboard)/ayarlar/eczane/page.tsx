@@ -5,7 +5,9 @@ import React, { useEffect, useState } from 'react';
 import SettingsCard from '../../../../components/settings/SettingsCard';
 import styles from './eczane.module.css';
 import { useProfile } from '@/hooks/useProfile';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/store/AuthContext';
+import { userService } from '@/services/userService';
+
 
 const EczaneBilgileriPage = () => {
   const { profile, loading } = useProfile('me');
@@ -43,30 +45,19 @@ const EczaneBilgileriPage = () => {
     if (!token) return;
 
     try {
-      // const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-      const response = await fetch(`/api/users/me`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          pharmacyName: formData.pharmacyName,
-          // GLN is usually read-only or needs specific permission? Let's allow it for now if backend allows.
-          // Backend UpdateMeRequest has PharmacyName, PhoneNumber, City, District, Address1...
-          // It doesn't seem to have GLN in UpdateProfileRequest (checked UserDtos.cs).
-          // So GLN update might not work.
-          // Let's only send what's allowed.
-          address1: formData.address, // Mapping 'address' input to 'Address1'
-          // about: formData.about // Backend doesn't have 'about' yet.
-        }),
+      await userService.updateProfile(token, {
+        pharmacyName: formData.pharmacyName,
+        // GLN is usually read-only or needs specific permission? Let's allow it for now if backend allows.
+        // Backend UpdateMeRequest has PharmacyName, PhoneNumber, City, District, Address1...
+        // It doesn't seem to have GLN in UpdateProfileRequest (checked UserDtos.cs).
+        // So GLN update might not work.
+        // Let's only send what's allowed.
+        // @ts-ignore - address1 mapping
+        address1: formData.address, // Mapping 'address' input to 'Address1'
+        // about: formData.about // Backend doesn't have 'about' yet.
       });
 
-      if (response.ok) {
-        alert('Bilgiler kaydedildi.');
-      } else {
-        alert('Kaydedilirken hata oluştu.');
-      }
+      alert('Bilgiler kaydedildi.');
     } catch (error) {
       console.error('Save error:', error);
       alert('Bir hata oluştu.');

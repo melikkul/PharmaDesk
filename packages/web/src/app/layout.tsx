@@ -1,6 +1,6 @@
 import React from 'react';
-import { AuthProvider } from '../context/AuthContext';
-import { CartProvider } from '../context/CartContext';
+import { AuthProvider } from '../store/AuthContext';
+import { CartProvider } from '../store/CartContext';
 import './globals.css';
 
 export const metadata = {
@@ -9,6 +9,7 @@ export const metadata = {
     icon: '/logoBeyaz.png',
   },
 };
+
 
 export default function RootLayout({
   children,

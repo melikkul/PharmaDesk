@@ -1,35 +1,28 @@
 // components/Header.tsx
 
-// ### OPTİMİZASYON: 'useCallback' import edildi ###
 import React, { useState, useCallback } from 'react';
 import ProfileDropdown from './header/ProfileDropdown';
+import { PriceDisplay } from '@/components/common';
 import styles from './Header.module.css';
-// YENİ: CartIcon import edildi
 import { MessageIcon, NotificationIcon, CartIcon } from './ui/Icons';
-// HATA DÜZELTMESİ: useCart burada import edildi
-import { useCart } from '../context/CartContext'; 
+import { useCart } from '../store/CartContext'; 
 import { useNotifications } from '../hooks/useNotifications';
-// YENİ: useChatContext ile global mesaj yönetimi
-// import { useChatContext } from '../context/ChatContext';
-import { useAuth } from '../context/AuthContext';
+import { useAuth } from '../store/AuthContext';
 
-// Arayüz, eczane verisine göre güncellendi
 interface HeaderPharmacyData {
   pharmacyName: string;
   balance: number;
   logoUrl: string | null;
   pharmacistInCharge: string;
   username: string;
-  publicId?: string; // YENİ
+  publicId?: string;
 }
 
 interface HeaderProps {
-  userData: HeaderPharmacyData; // Prop adı aynı kalsa da tipi artık HeaderPharmacyData
+  userData: HeaderPharmacyData;
   onMessageClick: () => void;
   onNotificationClick: () => void;
-  onCartClick: () => void; // YENİ: Sepet tıklama prop'u
-  // unreadNotificationCount: number; // Hooks kullanacağız
-  // unreadMessageCount: number; // Hooks kullanacağız
+  onCartClick: () => void;
   onLogout: () => void;
 }
 
@@ -37,26 +30,19 @@ const Header: React.FC<HeaderProps> = ({
   userData, 
   onMessageClick, 
   onNotificationClick, 
-  onCartClick, // YENİ
+  onCartClick,
   onLogout 
 }) => {
   const [isDropdownOpen, setDropdownOpen] = useState(false);
-  const { unreadCartItemCount } = useCart(); // YENİ: Sepet sayısını context'ten al
+  const { unreadCartItemCount } = useCart();
   const { token } = useAuth();
   const { unreadCount: unreadNotificationCount } = useNotifications(token);
-  // YENİ: Global unread count ChatContext'ten gelir
-  // During build time, context may be null - provide safe default
-  // const chatContext = useChatContext();
-  const unreadMessageCount = 0; // chatContext?.unreadCount ?? 0;
+  const unreadMessageCount = 0;
 
-  // ### OPTİMİZASYON: useCallback ###
-  // Dropdown'ı açıp kapatan fonksiyon memoize edildi.
   const toggleDropdown = useCallback(() => {
     setDropdownOpen(prev => !prev);
   }, []);
 
-  // ### OPTİMİZASYON: useCallback ###
-  // Dropdown'ı kapatan fonksiyon (ProfileDropdown'a prop olarak geçmek için)
   const closeDropdown = useCallback(() => {
     setDropdownOpen(false);
   }, []);
@@ -69,7 +55,6 @@ const Header: React.FC<HeaderProps> = ({
       <div className={styles.headerActions}>
         <span className={styles.pharmacyName}>{userData.pharmacyName}</span>
         
-        {/* YENİ: Sepet Butonu */}
         <button className={`${styles.iconButton} ${unreadCartItemCount > 0 ? styles.hasBadge : ''}`} onClick={onCartClick} data-badge={unreadCartItemCount > 0 ? unreadCartItemCount : undefined}>
           <CartIcon />
         </button>
@@ -84,13 +69,14 @@ const Header: React.FC<HeaderProps> = ({
         <div className={styles.userProfile} onClick={toggleDropdown}>
           <div className={styles.balanceInfo}>
             <span>Bakiyen</span>
-            <strong>{userData.balance.toLocaleString('tr-TR', { style: 'currency', currency: 'TRY' })}</strong>
+            <strong>
+              <PriceDisplay amount={userData.balance} />
+            </strong>
           </div>
           <div
             className={styles.avatarPlaceholder}
             style={{ backgroundImage: userData.logoUrl ? `url(${userData.logoUrl})` : 'none' }}
           >
-            {/* GÜNCELLENDİ: Logo yoksa Eczane adının ilk harfini göster */}
             {!userData.logoUrl && <span>{userData.pharmacyName.charAt(0)}</span>}
           </div>
           {isDropdownOpen && <ProfileDropdown user={userData} onClose={closeDropdown} onLogout={onLogout} />}

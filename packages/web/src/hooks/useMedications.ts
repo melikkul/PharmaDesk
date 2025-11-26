@@ -1,19 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-
-export interface Medication {
-  id: number;
-  name: string;
-  atcCode: string;
-  manufacturer?: string;
-  barcode?: string;
-  description?: string;
-  packageType?: string;
-  basePrice: number;
-  imageUrl?: string;
-}
+import { useAuth } from '../store/AuthContext';
+import { medicationService } from '../services/medicationService';
+import { Medication } from '../types';
 
 export const useMedications = () => {
   const [medications, setMedications] = useState<Medication[]>([]);
@@ -29,18 +17,7 @@ export const useMedications = () => {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/medications`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('İlaçlar yüklenemedi');
-        }
-
-        const data = await response.json();
+        const data: any = await medicationService.getMedications(token);
         setMedications(data);
       } catch (err) {
         console.error('Medications error:', err);

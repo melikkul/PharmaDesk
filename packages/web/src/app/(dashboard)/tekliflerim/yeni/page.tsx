@@ -9,6 +9,8 @@ import styles from '../tekliflerim.module.css'; // üst bar stilleri için
 
 // ANA BİLEŞEN
 import OfferForm from '../OfferForm'; // Tamamen yenilenen form bileşeni
+import { offerService } from '@/services/offerService';
+
 
 const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
 
@@ -29,8 +31,6 @@ const NewOfferFormContent = () => {
         return;
       }
 
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-      
       // Map offerType to backend OfferType enum
       const offerTypeMap: Record<string, string> = {
         'standard': 'Standard',
@@ -58,22 +58,7 @@ const NewOfferFormContent = () => {
 
       console.log('Sending to backend:', payload);
 
-      const response = await fetch(`${API_BASE_URL}/api/offers`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Teklif oluşturulamadı');
-      }
-
-      const result = await response.json();
-      console.log('Offer created:', result);
+      await offerService.createOffer(token, payload);
       
       alert(`Teklif başarıyla oluşturuldu!`);
       router.push('/tekliflerim');

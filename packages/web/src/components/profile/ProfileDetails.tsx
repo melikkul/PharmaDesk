@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import Link from 'next/link';
 import styles from './ProfileDetails.module.css';
-import { PharmacyProfileData } from '../../data/dashboardData';
+import { PharmacyProfileData } from '../../lib/dashboardData';
 
 interface ProfileDetailsProps {
   pharmacy: {

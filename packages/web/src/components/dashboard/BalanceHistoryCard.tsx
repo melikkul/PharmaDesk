@@ -2,7 +2,7 @@
 
 import React from 'react';
 import DashboardCard from '../DashboardCard';
-import type { BalanceItem } from '../../data/dashboardData';
+import type { BalanceItem } from '../../lib/dashboardData';
 import tableStyles from './Table.module.css';
 
 interface BalanceHistoryCardProps {

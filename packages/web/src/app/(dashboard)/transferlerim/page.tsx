@@ -36,14 +36,14 @@ export default function TransferlerimPage() {
   // Backend ShipmentDto already matches expected format - minimal conversion needed
   const formattedShipments = shipments.map(shipment => ({
     id: shipment.id,
-    orderNumber: shipment.orderNumber,
-    productName: shipment.productName, // Backend already has it
-    quantity: shipment.quantity,
+    orderNumber: shipment.orderNumber || '-',
+    productName: shipment.productName || 'Bilinmiyor', // Backend already has it
+    quantity: shipment.quantity || 0,
     trackingNumber: shipment.trackingNumber,
-    date: shipment.date,
-    transferType: shipment.transferType,
-    counterparty: shipment.counterparty,
-    shippingProvider: shipment.shippingProvider,
+    date: shipment.date || '',
+    transferType: shipment.transferType || 'inbound',
+    counterparty: shipment.counterparty || 'Bilinmiyor',
+    shippingProvider: shipment.shippingProvider || 'Bilinmiyor',
     status: shipment.status as any,
     trackingHistory: shipment.trackingHistory || [],
   }));

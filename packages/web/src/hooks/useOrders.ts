@@ -1,40 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-
-export interface OrderItem {
-  id: number;
-  medicationId: number;
-  quantity: number;
-  unitPrice: number;
-  bonusQuantity: number;
-  medication: {
-    id: number;
-    name: string;
-    atcCode: string;
-  };
-}
-
-export interface Order {
-  id: number;
-  orderNumber: string;
-  buyerPharmacyId: number;
-  sellerPharmacyId: number;
-  totalAmount: number;
-  orderDate: string;
-  status: string;
-  paymentStatus: string;
-  buyerPharmacy?: {
-    id: number;
-    pharmacyName: string;
-  };
-  sellerPharmacy?: {
-    id: number;
-    pharmacyName: string;
-  };
-  orderItems: OrderItem[];
-}
+import { useAuth } from '../store/AuthContext';
+import { orderService } from '../services/orderService';
+import { Order } from '../types';
 
 export const useOrders = (type?: 'buyer' | 'seller') => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -50,26 +17,7 @@ export const useOrders = (type?: 'buyer' | 'seller') => {
       }
 
       try {
-        const url = type 
-          ? `${API_BASE_URL}/api/orders?type=${type}`
-          : `${API_BASE_URL}/api/orders`;
-
-        const response = await fetch(url, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        console.log(`[useOrders ${type || 'all'}] Response status:`, response.status);
-
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`[useOrders ${type || 'all'}] API Error:`, response.status, errorText);
-          throw new Error('Siparişler yüklenemedi');
-        }
-
-        const data = await response.json();
+        const data = await orderService.getOrders(token, type);
         console.log(`[useOrders ${type || 'all'}] Data received:`, data);
         setOrders(data);
       } catch (err) {
@@ -101,18 +49,7 @@ export const useOrder = (orderId: string) => {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error('Sipariş yüklenemedi');
-        }
-
-        const data = await response.json();
+        const data = await orderService.getOrderById(token, orderId);
         setOrder(data);
       } catch (err) {
         console.error('Order detail error:', err);

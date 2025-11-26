@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { useMockChat } from "@/context/MockChatContext";
+import { useMockChat } from "@/store/MockChatContext";
 
 interface ChatListProps {
   onSelectChat: (userId: string) => void;

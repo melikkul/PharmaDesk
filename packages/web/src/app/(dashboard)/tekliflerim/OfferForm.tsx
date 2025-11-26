@@ -9,9 +9,10 @@ import {
   MedicationItem, 
   fullInventoryData,
   allDrugNames
-} from '@/data/dashboardData';
+} from '@/lib/dashboardData';
 import SettingsCard from '@/components/settings/SettingsCard';
 import formStyles from './OfferForm.module.css';
+import { medicationService } from '@/services/medicationService';
 
 // Tipler
 type OfferType = 'standard' | 'campaign' | 'tender';
@@ -177,14 +178,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       // Start new 2-second debounce timer
       const timer = setTimeout(async () => {
           try {
-              const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-              const response = await fetch(`${apiUrl}/api/medications/search?q=${encodeURIComponent(value)}&limit=10`);
-              
-              if (!response.ok) {
-                  throw new Error('Search failed');
-              }
-
-              const medications = await response.json();
+              const medications: any = await medicationService.searchMedications(value, 10);
               
               if (offerType === 'standard') {
                   // For standard offers, also check inventory

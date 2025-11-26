@@ -1,4 +1,6 @@
-**/bin/
-**/obj/
-.vs/
-.vscode/
+bin
+obj
+.git
+.vs
+.vscode
+.env

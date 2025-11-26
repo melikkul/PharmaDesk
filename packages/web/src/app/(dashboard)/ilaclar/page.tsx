@@ -84,18 +84,18 @@ export default function IlaclarPage() {
                         return (
                             <ProductCard key={offer.id} medication={{
                                 id: offer.medicationId,
-                                name: offer.productName,
-                                manufacturer: 'Bilinmiyor', // Backend'den gelmiyor
-                                imageUrl: '/placeholder-med.png',
+                                name: offer.productName || 'Bilinmiyor',
+                                manufacturer: offer.manufacturer || 'Bilinmiyor',
+                                imageUrl: offer.imageUrl || '/placeholder-med.png',
                                 price: offer.price,
-                                expirationDate: '', // Backend'den gelmiyor
+                                expirationDate: offer.expirationDate || '',
                                 initialStock: currentStock + bonus, // Tahmini
                                 currentStock: currentStock,
                                 bonus: bonus,
                                 sellers: [{
-                                    pharmacyId: offer.pharmacyId,
-                                    pharmacyName: offer.pharmacyName,
-                                    pharmacyUsername: offer.pharmacyUsername
+                                    pharmacyId: String(offer.pharmacyId),
+                                    pharmacyName: offer.pharmacyName || 'Bilinmiyor',
+                                    pharmacyUsername: offer.pharmacyUsername || 'bilinmiyor'
                                 }]
                             }} />
                         );

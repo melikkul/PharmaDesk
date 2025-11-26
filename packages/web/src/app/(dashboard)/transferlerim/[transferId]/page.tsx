@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { shipmentsData, ShipmentItem, TrackingEvent } from '@/data/dashboardData';
+import { shipmentsData, ShipmentItem, TrackingEvent } from '@/lib/dashboardData';
 
 // Bileşenleri ve Stilleri import edelim
 import SettingsCard from '@/components/settings/SettingsCard';

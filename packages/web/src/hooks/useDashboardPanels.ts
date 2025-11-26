@@ -3,21 +3,20 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/store/AuthContext';
 import { useNotifications } from './useNotifications';
 // import { useMessages } from './useMessages';
 
-// Tipleri data dosyasından import ediyoruz
+import { Notification as TNotification } from '@/types';
 import { 
-  type Notification as TNotification, 
   type Message as TMessage,
   type PharmacyProfileData
-} from '@/data/dashboardData';
+} from '@/lib/dashboardData';
 
 // Tipleri dışa aktar
-import { SelectedNotification } from '@/context/DashboardContext';
+import { SelectedNotification } from '@/store/DashboardContext';
 // YENİ: ChatContext import et
-// import { useChatContext } from '@/context/ChatContext';
+// import { useChatContext } from '@/store/ChatContext';
 export type Notification = TNotification;
 export type Message = TMessage;
 
@@ -180,12 +179,19 @@ export const useDashboardPanels = () => {
         setShowCartPanel(false);
       } else {
         const errorText = await response.text();
-        console.error('Failed to start chat:', response.status, errorText);
-        alert(`Sohbet başlatılamadı: ${response.status}\n${errorText.substring(0, 200)}`);
+        console.warn('Failed to start chat:', response.status, errorText);
+        
+        // Only show alert for non-404 errors
+        // 404 means chat feature not implemented yet - fail silently
+        if (response.status !== 404) {
+          alert(`Sohbet başlatılamadı: ${response.status}`);
+        } else {
+          console.info('Chat API not yet implemented on backend');
+        }
       }
     } catch (error) {
-      console.error('Error starting chat:', error);
-      alert('Bir hata oluştu. Lütfen tekrar deneyin.');
+      console.warn('Error starting chat:', error);
+      // Don't show alert for network errors - just log
     }
   }, [token]);
 
@@ -193,7 +199,7 @@ export const useDashboardPanels = () => {
   
   const closeChatWindow = useCallback(() => setSelectedChat(null), []);
 
-  const unreadNotificationCount = useMemo(() => notifications.filter(n => !n.read).length, [notifications]);
+  const unreadNotificationCount = useMemo(() => notifications.filter(n => !n.isRead).length, [notifications]);
   // REMOVED: unreadMessageCount - now managed by ChatContext
 
   return useMemo(() => ({

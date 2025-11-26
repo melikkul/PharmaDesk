@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { PharmacyProfileData } from '../data/dashboardData';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+import { useAuth } from '../store/AuthContext';
+import { PharmacyProfileData } from '../lib/dashboardData';
+import { userService } from '../services/userService';
+import { PharmacyProfile } from '../types';
 
 export const useProfile = (username: string) => {
   console.log('useProfile called with:', username);
@@ -14,61 +14,45 @@ export const useProfile = (username: string) => {
 
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!username) return;
+      if (!username || !token) return;
       
       try {
-        const endpoint = username === 'me' ? `/api/users/me` : `/api/users/${username}`;
+        // Handle "me" or specific user ID/username logic in service or here
+        // The service handles /me if userId is not provided.
+        // If username is 'me', we pass undefined to getProfile(token).
+        // If username is actual username/id, we pass it.
+        
+        const userId = username === 'me' ? undefined : username;
+        const data: PharmacyProfile = await userService.getProfile(token, userId);
 
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 404) {
-            setProfile(null); // Not found
-          } else {
-            throw new Error('Failed to fetch profile');
-          }
-        } else {
-            const data = await response.json();
-            // Map API response to PharmacyProfileData interface if needed
-            // API returns UserMeResponse (PascalCase). Frontend expects camelCase usually?
-            // Let's assume we need to map it.
-            
-            const mappedProfile: PharmacyProfileData = {
-                id: String(data.id), // Convert to string to prevent JS Number precision loss with Int64
-                pharmacyName: data.pharmacyName,
-                gln: data.gln,
-                location: `${data.city || ''} / ${data.district || ''}`,
-                address: data.address1 || "", // Full address
-                city: data.city || "",
-                district: data.district || "",
-                registrationDate: data.createdAt ? new Date(data.createdAt).toLocaleDateString('tr-TR') : 'Tarih Yok',
-                about: "Eczane hakkında bilgi...", // API doesn't have 'about' yet
-                username: username === 'me' ? data.email : username, // Fallback
-                pharmacistInCharge: data.pharmacistFirstName && data.pharmacistLastName 
-                    ? `${data.pharmacistFirstName} ${data.pharmacistLastName}` 
-                    : "Eczacı Bilgisi Yok",
-                logoUrl: data.profileImagePath,
-                // Default values for missing fields
-                balance: 0,
-                coverImageUrl: null,
-                phone: data.phoneNumber || "",
-                grupYuku: 0,
-                alimSayisi: 0,
-                alimTutari: 0,
-                sistemKazanci: 0,
-                teklifSayisi: 0,
-                gonderiAdet: 0,
-                gonderiTutari: 0,
-                grubaKazandirdigi: 0,
-                kayitTarihi: data.createdAt ? new Date(data.createdAt).toISOString().split('T')[0] : '2024-01-01'
-            };
-            setProfile(mappedProfile);
-        }
+        // Map API response to PharmacyProfileData interface
+        const mappedProfile: PharmacyProfileData = {
+            id: String(data.id),
+            pharmacyName: data.pharmacyName,
+            gln: data.glnNumber,
+            location: `${data.city || ''} / ${data.district || ''}`,
+            address: data.address || "",
+            city: data.city || "",
+            district: data.district || "",
+            registrationDate: data.joinDate ? new Date(data.joinDate).toLocaleDateString('tr-TR') : 'Tarih Yok',
+            about: data.about || "Eczane hakkında bilgi...",
+            username: username === 'me' ? data.email : username,
+            pharmacistInCharge: data.fullName || "Eczacı Bilgisi Yok",
+            logoUrl: null, // data.profileImagePath not in interface
+            balance: 0,
+            coverImageUrl: null,
+            phone: data.phone || "",
+            grupYuku: 0,
+            alimSayisi: 0,
+            alimTutari: 0,
+            sistemKazanci: 0,
+            teklifSayisi: 0,
+            gonderiAdet: 0,
+            gonderiTutari: 0,
+            grubaKazandirdigi: 0,
+            kayitTarihi: data.joinDate ? new Date(data.joinDate).toISOString().split('T')[0] : '2024-01-01'
+        };
+        setProfile(mappedProfile);
       } catch (err) {
         console.error(err);
         setError('Profil yüklenirken hata oluştu.');
@@ -77,9 +61,7 @@ export const useProfile = (username: string) => {
       }
     };
 
-    if (token) {
-      fetchProfile();
-    }
+    fetchProfile();
   }, [username, token]);
 
   return { profile, loading, error };

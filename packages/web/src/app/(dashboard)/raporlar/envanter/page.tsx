@@ -19,7 +19,7 @@ import {
   envanterReportData,
   financialSummaryData,
   PriceData
-} from '@/data/dashboardData';
+} from '@/lib/dashboardData';
 
 // Tipler (TÜMÜ SİLİNDİ)
 

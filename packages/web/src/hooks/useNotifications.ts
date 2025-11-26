@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Notification } from '../data/dashboardData';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+import { notificationService } from '../services/notificationService';
+import { Notification } from '../types';
 
 export function useNotifications(token: string | null) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -16,21 +15,10 @@ export function useNotifications(token: string | null) {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setNotifications(data);
-      } else {
-        setError('Failed to load notifications');
-      }
+      const data = await notificationService.getNotifications(token);
+      setNotifications(data);
     } catch (err) {
-      setError('Network error');
+      setError('Failed to load notifications');
     } finally {
       setLoading(false);
     }
@@ -40,17 +28,8 @@ export function useNotifications(token: string | null) {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.count);
-      }
+      const count = await notificationService.getUnreadCount(token);
+      setUnreadCount(count);
     } catch (err) {
       console.error('Failed to fetch unread count:', err);
     }
@@ -60,18 +39,9 @@ export function useNotifications(token: string | null) {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        await fetchNotifications();
-        await fetchUnreadCount();
-      }
+      await notificationService.markAsRead(token, id);
+      await fetchNotifications();
+      await fetchUnreadCount();
     } catch (err) {
       console.error('Failed to mark as read:', err);
     }
@@ -81,18 +51,9 @@ export function useNotifications(token: string | null) {
     if (!token) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        await fetchNotifications();
-        await fetchUnreadCount();
-      }
+      await notificationService.markAllAsRead(token);
+      await fetchNotifications();
+      await fetchUnreadCount();
     } catch (err) {
       console.error('Failed to mark all as read:', err);
     }

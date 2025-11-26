@@ -3,10 +3,7 @@
 import React from 'react';
 import styles from './NotificationModal.module.css';
 
-interface Notification {
-  title: string;
-  message: string;
-}
+import { Notification } from '@/types';
 
 interface NotificationModalProps {
   notification: Notification | null;
@@ -20,7 +17,7 @@ const NotificationModal: React.FC<NotificationModalProps> = ({ notification, onC
         <div className={`${styles.modalOverlay} ${styles.show}`} onClick={onClose}>
             <div className={styles.modalContent} onClick={e => e.stopPropagation()}>
                 <button className={styles.modalClose} onClick={onClose}>&times;</button>
-                <h2>{notification.title}</h2>
+                <h2>{notification.type || 'Bildirim'}</h2>
                 <p>{notification.message}</p>
                 <p>Bu, bildirimin detaylı içeriğidir. Burada daha fazla bilgi yer alabilir.</p>
             </div>

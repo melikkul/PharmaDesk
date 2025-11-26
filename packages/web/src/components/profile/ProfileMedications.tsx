@@ -2,7 +2,7 @@
 // ### OPTİMİZASYON: 'React.memo' için 'React' import edildi ###
 import React from 'react';
 import DashboardCard from '../DashboardCard';
-import type { MedicationItem } from '../../data/dashboardData';
+import type { MedicationItem } from '../../lib/dashboardData';
 import tableStyles from '../dashboard/Table.module.css'; // Dashboard'daki tablo stillerini kullanıyoruz
 
 interface ProfileMedicationsProps {

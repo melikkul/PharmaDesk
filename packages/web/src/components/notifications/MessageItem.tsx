@@ -3,7 +3,7 @@ import React from 'react';
 import styles from './MessageItem.module.css';
 
 // YENİ: Doğru tip 'dashboardData'dan import edildi
-import type { Message } from '@/data/dashboardData'; 
+import type { Message } from '@/lib/dashboardData'; 
 
 // --- HATA DÜZELTME: YEREL ARAYÜZ SİLİNDİ ---
 // interface Message {

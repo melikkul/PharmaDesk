@@ -2,13 +2,14 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { useMedicationOffers, OfferDto } from '@/hooks/useOffers';
-import { useCart } from '@/context/CartContext';
+import { useMedicationOffers } from '@/hooks/useOffers';
+import { Offer } from '@/types';
+import { useCart } from '@/store/CartContext';
 import Link from 'next/link';
 import ProductCard from '@/components/ilaclar/ProductCard';
 import PriceChart from '@/components/ilaclar/PriceChart';
 import WarehouseOffers from '@/components/ilaclar/WarehouseOffers';
-import { priceHistoryData, warehouseOffersData, ShowroomMedication } from '@/data/dashboardData';
+import { priceHistoryData, warehouseOffersData, ShowroomMedication } from '@/lib/dashboardData';
 
 import styles from './ilacDetay.module.css';
 import '@/app/(dashboard)/dashboard/dashboard.css';
@@ -41,7 +42,7 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({ quantity, onDecreme
 );
 
 interface OfferItemComponentProps {
-    offer: OfferDto;
+    offer: Offer;
 }
 
 const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offer }) => {
@@ -51,7 +52,7 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
     const { addToCart } = useCart();
 
     // Parse stock
-    const stockParts = offer.stock.split('+').map(s => parseInt(s.trim()) || 0);
+    const stockParts = offer.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
     const currentStock = stockParts[0];
     const bonus = stockParts[1] || 0;
 
@@ -109,7 +110,7 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
         // Map to ShowroomMedication for Cart
         const medicationForCart: ShowroomMedication = {
             id: offer.medicationId,
-            name: offer.productName,
+            name: offer.productName || 'Bilinmiyor',
             manufacturer: offer.manufacturer || 'Bilinmiyor',
             imageUrl: offer.imageUrl || '/placeholder-med.png',
             price: offer.price,
@@ -118,14 +119,14 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
             currentStock: currentStock,
             bonus: bonus,
             sellers: [{
-                pharmacyId: offer.pharmacyId,
-                pharmacyName: offer.pharmacyName,
-                pharmacyUsername: offer.pharmacyUsername
+                pharmacyId: String(offer.pharmacyId),
+                pharmacyName: offer.pharmacyName || 'Bilinmiyor',
+                pharmacyUsername: offer.pharmacyUsername || 'bilinmiyor'
             }]
         };
 
         setIsAdding(true);
-        addToCart(medicationForCart, quantityToAdd, offer.pharmacyName);
+        addToCart(medicationForCart, quantityToAdd, offer.pharmacyName || 'Bilinmiyor');
 
         setTimeout(() => {
             setIsAdding(false);
@@ -234,7 +235,7 @@ export default function IlacDetayPage() {
 
         const medicationForCart: ShowroomMedication = {
             id: mainOffer.medicationId,
-            name: mainOffer.productName,
+            name: mainOffer.productName || 'Bilinmiyor',
             manufacturer: mainOffer.manufacturer || 'Bilinmiyor',
             imageUrl: mainOffer.imageUrl || '/placeholder-med.png',
             price: mainOffer.price,
@@ -243,14 +244,14 @@ export default function IlacDetayPage() {
             currentStock: currentStock,
             bonus: bonus,
             sellers: [{
-                pharmacyId: mainOffer.pharmacyId,
-                pharmacyName: mainOffer.pharmacyName,
-                pharmacyUsername: mainOffer.pharmacyUsername
+                pharmacyId: String(mainOffer.pharmacyId),
+                pharmacyName: mainOffer.pharmacyName || 'Bilinmiyor',
+                pharmacyUsername: mainOffer.pharmacyUsername || 'bilinmiyor'
             }]
         };
 
         setIsMainAdding(true);
-        addToCart(medicationForCart, quantityToAdd, mainOffer.pharmacyName);
+        addToCart(medicationForCart, quantityToAdd, mainOffer.pharmacyName || 'Bilinmiyor');
 
         setTimeout(() => {
             setIsMainAdding(false);

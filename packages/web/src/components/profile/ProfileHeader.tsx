@@ -1,7 +1,7 @@
 // components/profile/ProfileHeader.tsx
 import React from 'react';
 import styles from './ProfileHeader.module.css';
-import { PharmacyProfileData } from '../../data/dashboardData';
+import { PharmacyProfileData } from '../../lib/dashboardData';
 import Link from 'next/link';
 
 interface ProfileHeaderProps {

@@ -16,7 +16,7 @@ import PriceChart from '@/components/ilaclar/PriceChart';
 import {
   financialSummaryData,
   PriceData
-} from '@/data/dashboardData';
+} from '@/lib/dashboardData';
 
 // Tipler (TÜMÜ SİLİNDİ)
 

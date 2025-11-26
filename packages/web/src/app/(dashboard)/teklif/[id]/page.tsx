@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useOffer } from '@/hooks/useOffers';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '@/store/CartContext';
 import Link from 'next/link';
 import '@/app/(dashboard)/dashboard/dashboard.css';
 
@@ -45,7 +45,7 @@ export default function OfferDetailPage() {
 
         const medicationForCart = {
             id: offer.id,
-            name: offer.productName,
+            name: offer.productName || 'Bilinmiyor',
             manufacturer: offer.manufacturer || 'Bilinmiyor',
             imageUrl: offer.imageUrl || '/placeholder-med.png',
             price: offer.price,
@@ -54,14 +54,14 @@ export default function OfferDetailPage() {
             currentStock: currentStock,
             bonus: bonus,
             sellers: [{
-                pharmacyId: offer.pharmacyId,
-                pharmacyName: offer.pharmacyName,
-                pharmacyUsername: offer.pharmacyUsername
+                pharmacyId: String(offer.pharmacyId),
+                pharmacyName: offer.pharmacyName || 'Bilinmiyor',
+                pharmacyUsername: offer.pharmacyUsername || 'bilinmiyor'
             }]
         };
 
         setIsAdding(true);
-        addToCart(medicationForCart, quantity, offer.pharmacyName);
+        addToCart(medicationForCart, quantity, offer.pharmacyName || 'Bilinmiyor');
 
         setTimeout(() => {
             setIsAdding(false);
@@ -222,14 +222,14 @@ export default function OfferDetailPage() {
                                 color: '#666',
                                 marginRight: '15px'
                             }}>
-                                {offer.pharmacyName.charAt(0)}
+                                {(offer.pharmacyName || 'B').charAt(0)}
                             </div>
                             <div>
                                 <Link 
                                     href={`/profile/${offer.pharmacyId}`}
                                     style={{ fontSize: '16px', fontWeight: '600', color: '#0d6efd', textDecoration: 'none' }}
                                 >
-                                    {offer.pharmacyName}
+                                    {offer.pharmacyName || 'Bilinmeyen Eczane'}
                                 </Link>
                                 <div style={{ fontSize: '14px', color: '#666', marginTop: '2px' }}>
                                     Güvenilir Satıcı

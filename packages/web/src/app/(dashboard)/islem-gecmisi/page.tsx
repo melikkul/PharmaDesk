@@ -15,7 +15,7 @@ import HistoryTable from './HistoryTable';
 import {
   transactionHistoryData as initialTransactionHistory,
   TransactionHistoryItem
-} from '@/data/dashboardData';
+} from '@/lib/dashboardData';
 
 // Tipler (TÜMÜ SİLİNDİ)
 

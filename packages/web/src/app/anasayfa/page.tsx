@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/store/AuthContext';
 import styles from './anasayfa.module.css';
 
 // İkonlar için react-icons kütüphanesini kullanabilirsiniz (npm install react-icons)

@@ -14,7 +14,7 @@ import styles from './NotificationItem.module.css';
 // --- ---
 
 // YENİ: Doğru tip 'dashboardData'dan import edildi
-import type { Notification, NotificationType } from '@/data/dashboardData';
+import { Notification } from '@/types';
 
 interface NotificationItemProps {
   item: Notification;
@@ -22,8 +22,7 @@ interface NotificationItemProps {
 }
 
 const NotificationItem: React.FC<NotificationItemProps> = ({ item, onClick }) => {
-    // getIcon fonksiyonu artık 'NotificationType' alabilir
-    const getIcon = (type: NotificationType) => {
+    const getIcon = (type: string) => {
         switch (type) {
             case 'shipment': return <ShipmentIcon />;
             case 'balance': return <NotificationIcon />;
@@ -32,13 +31,13 @@ const NotificationItem: React.FC<NotificationItemProps> = ({ item, onClick }) =>
     };
 
     return (
-        <div className={`${styles.panelItem} ${!item.read ? styles.unread : ''}`} onClick={() => onClick(item)}>
+        <div className={`${styles.panelItem} ${!item.isRead ? styles.unread : ''}`} onClick={() => onClick(item)}>
             {getIcon(item.type)}
             <div className={styles.itemContent}>
-                <strong>{item.title}</strong>
+                <strong>{item.type}</strong>
                 <p>{item.message}</p>
             </div>
-            {!item.read && <div className={styles.unreadDot}></div>}
+            {!item.isRead && <div className={styles.unreadDot}></div>}
         </div>
     );
 };

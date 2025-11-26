@@ -12,8 +12,9 @@ import OffersTable from './InventoryTable';
 
 // ✅ Backend'den teklifleri çek
 import { useMyOffers } from '@/hooks/useMyOffers';
-import { useAuth } from '@/context/AuthContext'; // Import useAuth
-import { OfferStatus } from '@/data/dashboardData';
+import { useAuth } from '@/store/AuthContext'; // Import useAuth
+import { OfferStatus } from '@/lib/dashboardData';
+import { offerService } from '@/services/offerService';
 
 const AddIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>;
 
@@ -31,21 +32,9 @@ export default function TekliflerimPage() {
       }
 
       try {
-          const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-          
           // Delete each offer
           for (const id of ids) {
-              const response = await fetch(`${API_BASE_URL}/api/offers/${id}`, {
-                  method: 'DELETE',
-                  headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json',
-                  },
-              });
-
-              if (!response.ok) {
-                  console.error(`Failed to delete offer ${id}`);
-              }
+              await offerService.deleteOffer(token, id);
           }
 
           // Refresh offers list
@@ -63,22 +52,9 @@ export default function TekliflerimPage() {
       }
 
       try {
-          const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-          
           // Update status for each offer
           for (const id of ids) {
-              const response = await fetch(`${API_BASE_URL}/api/offers/${id}/status`, {
-                  method: 'PATCH',
-                  headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({ status: status.toLowerCase() }),
-              });
-
-              if (!response.ok) {
-                  console.error(`Failed to update status for offer ${id}`);
-              }
+              await offerService.updateOfferStatus(token, id, status.toLowerCase());
           }
 
           // Refresh offers list
@@ -108,7 +84,7 @@ export default function TekliflerimPage() {
   // Convert API data (backend OfferDto) to expected format
   const formattedOffers = offers.map(offer => ({
     id: offer.id,
-    productName: offer.productName, // Backend OfferDto already has productName
+    productName: offer.productName || 'Bilinmiyor', // Backend OfferDto already has productName
     barcode: offer.barcode || '', // Use actual barcode from backend
     currentStock: 0,
     bonusStock: 0,

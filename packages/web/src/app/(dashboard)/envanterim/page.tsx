@@ -48,8 +48,8 @@ export default function EnvanterimPage() {
   // Convert API data to match the expected format for FullInventoryTable
   const inventoryData = inventory.map(item => ({
     id: item.id,
-    productName: item.medication.name,
-    barcode: item.medication.barcode || '-',
+    productName: item.medication?.name || 'Bilinmeyen İlaç',
+    barcode: item.medication?.barcode || '-',
     currentStock: item.quantity,
     bonusStock: item.bonusQuantity,
     costPrice: item.costPrice,

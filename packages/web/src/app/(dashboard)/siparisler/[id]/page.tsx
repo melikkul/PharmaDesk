@@ -2,11 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { useAuth } from '@/context/AuthContext';
-import { Order } from '@/data/dashboardData';
+import { useAuth } from '@/store/AuthContext';
+import { orderService } from '@/services/orderService';
+import { Order } from '@/types';
 import styles from './orderDetail.module.css';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
 
 export default function OrderDetailPage() {
   const router = useRouter();
@@ -31,18 +30,8 @@ export default function OrderDetailPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/orders/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Sipariş detayı yüklenemedi');
-      }
-
-      const data = await response.json();
+      if (!token) throw new Error('Token not found');
+      const data = await orderService.getOrderById(token, id);
       setOrder(data);
     } catch (err) {
       console.error('Order detail fetch error:', err);

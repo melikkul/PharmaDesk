@@ -2,12 +2,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MedicationItem } from '@/data/dashboardData';
-import styles from './envanterim.module.css';
 import Link from 'next/link';
-import SetAlarmModal from './SetAlarmModal'; // Modal bileşeni import edildi
-
-// Alarm (zil) ikonu
+import { MedicationItem } from '@/lib/dashboardData';
+import { PriceDisplay, StatusBadge } from '@/components/common';
+import { Modal } from '@/components/ui';
+import styles from './envanterim.module.css';
 const AlarmIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -15,7 +14,6 @@ const AlarmIcon = () => (
   </svg>
 );
 
-// Düzenle (kalem) ikonu
 const EditIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
@@ -23,7 +21,6 @@ const EditIcon = () => (
   </svg>
 );
 
-// Teklif Ver (dolar) ikonu
 const OfferIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <line x1="12" y1="1" x2="12" y2="23"></line>
@@ -31,33 +28,80 @@ const OfferIcon = () => (
   </svg>
 );
 
+// ===== ALARM MODAL COMPONENT =====
+interface AlarmModalProps {
+  medication: MedicationItem;
+  onClose: () => void;
+  onSave: (medicationId: number, minStock: number) => void;
+}
+
+const AlarmModal: React.FC<AlarmModalProps> = ({ medication, onClose, onSave }) => {
+  const [minStock, setMinStock] = useState<number>(10);
+
+  const handleSave = () => {
+    onSave(medication.id, minStock);
+  };
+
+  return (
+    <Modal
+      isOpen={true}
+      onClose={onClose}
+      title={`Stok Alarmı Kur - ${medication.productName}`}
+      size="small"
+      actions={
+        <>
+          <button onClick={onClose} className={styles.btnSecondary}>
+            İptal
+          </button>
+          <button onClick={handleSave} className={styles.btnPrimary}>
+            Kaydet
+          </button>
+        </>
+      }
+    >
+      <div className={styles.modalBody}>
+        <p className={styles.modalDesc}>
+          Bu ilaç için minimum stok seviyesi belirleyin. Stok bu seviyenin altına düştüğünde bildirim alacaksınız.
+        </p>
+        <div className={styles.formGroup}>
+          <label htmlFor="minStock">Minimum Stok Adedi:</label>
+          <input
+            id="minStock"
+            type="number"
+            min="1"
+            value={minStock}
+            onChange={(e) => setMinStock(Number(e.target.value))}
+            className={styles.input}
+          />
+        </div>
+        <div className={styles.currentStockInfo}>
+          <strong>Mevcut Stok:</strong> {medication.stock}
+        </div>
+      </div>
+    </Modal>
+  );
+};
+
+// ===== MAIN COMPONENT =====
 interface FullInventoryTableProps {
   data: MedicationItem[];
 }
 
 const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredData }) => {
-  
-  // Hangi ilacın alarmı ayarlanıyorsa onu state'de tut
   const [alarmMedication, setAlarmMedication] = useState<MedicationItem | null>(null);
 
-  // Alarmı kaydetme fonksiyonu
   const handleSetAlarm = (medicationId: number, minStock: number) => {
     console.log(
       `ALARM KURULDU: İlaç ID ${medicationId} için minimum stok ${minStock} olarak ayarlandı.`
     );
-    alert("Stok alarmı başarıyla ayarlandı!\n(Bu bilgi backend'e kaydedilmek üzere simüle edildi.)");
-    setAlarmMedication(null); // Modalı kapat
+    alert('Stok alarmı başarıyla ayarlandı!\n(Bu bilgi backend\'e kaydedilmek üzere simüle edildi.)');
+    setAlarmMedication(null);
   };
-
 
   return (
     <>
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
-          {/* HİDRASYON HATASI DÜZELTMESİ:
-            <thead> ve <tr> arasındaki tüm yorumlar, boşluklar ve 
-            yeni satırlar kaldırıldı.
-          */}
           <thead>
             <tr>
               <th>İlaç Adı</th>
@@ -76,38 +120,41 @@ const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredD
                 <td className={styles.productName}>{med.productName}</td>
                 <td>{med.barcode || 'N/A'}</td>
                 <td>{med.stock}</td>
-                <td className={styles.price}>{med.costPrice?.toFixed(2) || 'N/A'} ₺</td>
+                <td className={styles.price}>
+                  {med.costPrice ? (
+                    <PriceDisplay amount={med.costPrice} />
+                  ) : (
+                    'N/A'
+                  )}
+                </td>
                 <td>{med.expirationDate}</td>
                 <td>
-                  <span className={`${styles.statusBadge} ${styles[med.status]}`}>
-                    {med.status === 'active' ? 'Aktif Teklif' : 
-                     med.status === 'paused' ? 'Duraklatıldı' : 
-                     med.status === 'out_of_stock' ? 'Stok Dışı' : 
-                     'Envanterde'}
-                  </span>
+                  <StatusBadge status={med.status} type="inventory" />
                 </td>
-                
+
                 {/* İşlemler (Teklif Ver / Düzenle) */}
                 <td className={styles.actionCell}>
                   {med.status === 'active' || med.status === 'paused' ? (
-                    // Zaten teklifteyse DÜZENLE
-                    <Link href={`/tekliflerim/${med.id}`} className={styles.iconButton} title="Teklifi Düzenle">
+                    <Link
+                      href={`/tekliflerim/${med.id}`}
+                      className={styles.iconButton}
+                      title="Teklifi Düzenle"
+                    >
                       <EditIcon />
                     </Link>
                   ) : (
-                    // Teklifte değilse YENİ TEKLİF VER
-                    <Link 
+                    <Link
                       href={{
                         pathname: '/tekliflerim/yeni',
-                        query: { 
+                        query: {
                           isim: med.productName,
                           barkod: med.barcode,
                           stok: med.stock.split(' + ')[0] || '0',
                           mf: med.stock.split(' + ')[1] || '0',
                           maliyet: med.costPrice,
-                          skt: med.expirationDate
-                        }
-                      }} 
+                          skt: med.expirationDate,
+                        },
+                      }}
                       className={styles.iconButton}
                       title="Bu İlaçtan Teklif Ver"
                     >
@@ -116,26 +163,25 @@ const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredD
                   )}
                 </td>
 
-                {/* Alarm Butonu hücresi */}
+                {/* Alarm Butonu */}
                 <td className={styles.actionCell}>
-                  <button 
-                    className={styles.iconButton} 
+                  <button
+                    className={styles.iconButton}
                     onClick={() => setAlarmMedication(med)}
                     title="Stok Alarmı Kur"
                   >
                     <AlarmIcon />
                   </button>
                 </td>
-
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Modal penceresini burada render et */}
+      {/* Alarm Modal */}
       {alarmMedication && (
-        <SetAlarmModal
+        <AlarmModal
           medication={alarmMedication}
           onClose={() => setAlarmMedication(null)}
           onSave={handleSetAlarm}

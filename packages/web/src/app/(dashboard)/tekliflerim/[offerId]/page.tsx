@@ -11,8 +11,9 @@ import styles from '../tekliflerim.module.css';
 import OfferForm from '../OfferForm'; // Yenilenen ana form
 
 // VERİLER
-import { userMedicationsData, MedicationItem } from '@/data/dashboardData';
-import { useAuth } from '@/context/AuthContext';
+import { userMedicationsData, MedicationItem } from '@/lib/dashboardData';
+import { useAuth } from '@/store/AuthContext';
+import { offerService } from '@/services/offerService';
 
 const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
 
@@ -31,19 +32,7 @@ export default function DuzenleTeklifPage() {
 
       const fetchOffer = async () => {
           try {
-              const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-              const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}`, {
-                  headers: {
-                      'Authorization': `Bearer ${token}`,
-                      'Content-Type': 'application/json',
-                  },
-              });
-
-              if (!response.ok) {
-                  throw new Error('Teklif bulunamadı');
-              }
-
-              const data = await response.json();
+              const data: any = await offerService.getOfferById(offerId);
               
               // Map API response to MedicationItem format expected by OfferForm
               const medicationItem: MedicationItem = {
@@ -73,19 +62,7 @@ export default function DuzenleTeklifPage() {
       setIsSaving(true);
 
       try {
-          const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-          const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}`, {
-              method: 'PUT',
-              headers: {
-                  'Authorization': `Bearer ${token}`,
-                  'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(formData),
-          });
-
-          if (!response.ok) {
-              throw new Error('Güncelleme başarısız oldu');
-          }
+          await offerService.updateOffer(token, offerId, formData);
 
           console.log("Teklif başarıyla güncellendi.");
           router.push('/tekliflerim');

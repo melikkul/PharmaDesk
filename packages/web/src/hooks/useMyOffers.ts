@@ -1,23 +1,10 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
-
-// Backend DTO yapısına uygun interface
-export interface MyOffer {
-  id: number;
-  productName: string;
-  barcode?: string; // Barkod
-  stock: string; // "50 + 5" formatında
-  price: number;
-  status: string;
-  pharmacyName: string;
-  pharmacyUsername: string;
-  expirationDate?: string; // SKT - "MM/yyyy" formatında
-}
+import { useAuth } from '../store/AuthContext';
+import { offerService } from '../services/offerService';
+import { Offer } from '../types';
 
 export const useMyOffers = () => {
-  const [offers, setOffers] = useState<MyOffer[]>([]);
+  const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
@@ -29,22 +16,7 @@ export const useMyOffers = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/offers/my-offers`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      console.log('[useMyOffers] Response status:', response.status);
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[useMyOffers] API Error:', response.status, errorText);
-        throw new Error('Teklifler yüklenemedi');
-      }
-
-      const data = await response.json();
+      const data: any = await offerService.getMyOffers(token);
       console.log('[useMyOffers] Data received:', data);
       setOffers(data);
     } catch (err) {

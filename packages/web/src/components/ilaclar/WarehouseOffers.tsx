@@ -1,7 +1,7 @@
 // melikkul/pharmadesk/PharmaDesk-main/frontend/pharma-desk/src/components/ilaclar/WarehouseOffers.tsx
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import type { WarehouseOffer } from '../../data/dashboardData';
+import type { WarehouseOffer } from '../../lib/dashboardData';
 // === DÜZELTME BURADA ===
 // Hatalı yol: import styles from '../../app/ilaclar/[ilacAdi]/ilacDetay.module.css';
 import styles from '@/app/(dashboard)/ilaclar/[id]/ilacDetay.module.css'; // Yeni doğru yol

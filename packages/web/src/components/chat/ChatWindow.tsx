@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useMockChat } from "@/context/MockChatContext";
-import { useChatContext } from "@/context/ChatContext";
+import { useMockChat } from "@/store/MockChatContext";
+import { useChatContext } from "@/store/ChatContext";
 
 interface Message {
   id: string;

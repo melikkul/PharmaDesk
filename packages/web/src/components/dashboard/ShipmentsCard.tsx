@@ -2,7 +2,7 @@
 
 import React from 'react';
 import DashboardCard from '../DashboardCard';
-import type { ShipmentItem } from '../../data/dashboardData';
+import type { ShipmentItem } from '../../lib/dashboardData';
 import tableStyles from './Table.module.css';
 
 interface ShipmentsCardProps {

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { PharmacySettings } from '../data/dashboardData';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+import { useAuth } from '../store/AuthContext';
+import { userService } from '../services/userService';
+import { PharmacySettings } from '../types';
 
 export const useSettings = () => {
   const [settings, setSettings] = useState<PharmacySettings | null>(null);
@@ -17,18 +16,7 @@ export const useSettings = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/settings`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Ayarlar yüklenemedi');
-      }
-
-      const data = await response.json();
+      const data = await userService.getSettings(token);
       setSettings(data);
     } catch (err) {
       console.error('Settings fetch error:', err);
@@ -45,20 +33,7 @@ export const useSettings = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/settings`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(updatedSettings),
-      });
-
-      if (!response.ok) {
-        throw new Error('Ayarlar kaydedilemedi');
-      }
-
-      const data = await response.json();
+      const data = await userService.updateSettings(token, updatedSettings);
       setSettings(data);
       return true;
     } catch (err) {

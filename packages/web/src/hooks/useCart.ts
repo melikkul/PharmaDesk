@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { Cart, CartItem } from '../data/dashboardData';
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+import { useAuth } from '../store/AuthContext';
+import { cartService } from '../services/cartService';
+import { Cart } from '../types';
 
 export const useCart = () => {
   const [cart, setCart] = useState<Cart | null>(null);
@@ -18,18 +17,7 @@ export const useCart = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/carts`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch cart');
-      }
-
-      const data = await response.json();
+      const data = await cartService.getCart(token);
       setCart(data);
     } catch (err) {
       console.error('Cart fetch error:', err);
@@ -47,20 +35,7 @@ export const useCart = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/carts/items`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ offerId, quantity }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to add item');
-      }
-
+      await cartService.addToCart(token, offerId, quantity);
       await fetchCart(); // Refresh cart
       return true;
     } catch (err: any) {
@@ -80,19 +55,7 @@ export const useCart = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/carts/items/${cartItemId}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ quantity }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to update quantity');
-      }
-
+      await cartService.updateQuantity(token, cartItemId, quantity);
       await fetchCart(); // Refresh cart
       return true;
     } catch (err) {
@@ -112,17 +75,7 @@ export const useCart = () => {
     setError(null);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/carts/items/${cartItemId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to remove item');
-      }
-
+      await cartService.removeFromCart(token, cartItemId);
       await fetchCart(); // Refresh cart
       return true;
     } catch (err) {
@@ -141,7 +94,7 @@ export const useCart = () => {
     }
   }, [token]);
 
-  const cartItemCount = cart?.cartItems?.length || 0;
+  const cartItemCount = cart?.items?.length || 0;
 
   return {
     cart,
