@@ -10,16 +10,7 @@ namespace PharmaDesk.API.Extensions
 {
     public static class ServiceExtensions
     {
-        /// <summary>
-        /// Adds database contexts to the service collection
-        /// </summary>
-        public static IServiceCollection AddDatabaseContexts(this IServiceCollection services, string connectionString)
-        {
-            services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connectionString));
-            services.AddDbContext<IdentityDbContext>(opt => opt.UseNpgsql(connectionString));
-            
-            return services;
-        }
+
 
         /// <summary>
         /// Adds JWT Bearer authentication configuration
