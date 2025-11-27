@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react';
 import { useOrders } from '@/hooks/useOrders';
-import OrdersTable from './OrdersTable';
+import { OrdersList } from '@/components/features/orders';
 import styles from './siparisler.module.css';
 
 export default function SiparislerPage() {
@@ -51,7 +51,7 @@ export default function SiparislerPage() {
             {activeTab === 'incoming' ? 'Henüz gelen sipariş bulunmuyor.' : 'Henüz giden sipariş bulunmuyor.'}
           </div>
         ) : (
-          <OrdersTable orders={currentOrders} type={activeTab} />
+          <OrdersList orders={currentOrders} type={activeTab} />
         )}
       </div>
     </div>

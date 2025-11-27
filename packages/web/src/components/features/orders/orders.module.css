@@ -1,0 +1,44 @@
+/* src/components/features/orders/orders.module.css */
+
+.tableWrapper {
+  width: 100%;
+  overflow-x: auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: var(--card-shadow);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.table th,
+.table td {
+  padding: 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.table th {
+  background-color: #f4f7fc;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.table tbody tr:hover {
+  background-color: #fdfdfd;
+}
+
+.orderNumber {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.amount {
+  font-weight: 500;
+  color: var(--positive-color);
+}

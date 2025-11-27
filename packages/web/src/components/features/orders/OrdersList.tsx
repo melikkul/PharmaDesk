@@ -1,18 +1,19 @@
-// src/app/(dashboard)/siparisler/OrdersTable.tsx
+// src/components/features/orders/OrdersList.tsx
 'use client';
 
 import React from 'react';
 import Link from 'next/link';
 import { Order } from '@/types';
 import { PriceDisplay, StatusBadge, DateDisplay } from '@/components/common';
-import styles from './siparisler.module.css';
+import { Button } from '@/components/ui';
+import styles from './orders.module.css';
 
-interface OrdersTableProps {
+interface OrdersListProps {
   orders: Order[];
   type: 'incoming' | 'outgoing';
 }
 
-export default function OrdersTable({ orders, type }: OrdersTableProps) {
+const OrdersList: React.FC<OrdersListProps> = ({ orders, type }) => {
   return (
     <div className={styles.tableWrapper}>
       <table className={styles.table}>
@@ -49,8 +50,10 @@ export default function OrdersTable({ orders, type }: OrdersTableProps) {
                 <StatusBadge status={order.paymentStatus} type="payment" />
               </td>
               <td>
-                <Link href={`/siparisler/${order.id}`} className={styles.detailButton}>
-                  Detay
+                <Link href={`/siparisler/${order.id}`}>
+                  <Button variant="secondary" size="small">
+                    Detay
+                  </Button>
                 </Link>
               </td>
             </tr>
@@ -59,4 +62,6 @@ export default function OrdersTable({ orders, type }: OrdersTableProps) {
       </table>
     </div>
   );
-}
+};
+
+export default OrdersList;

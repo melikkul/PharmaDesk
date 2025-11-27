@@ -1,12 +1,14 @@
-// packages/web/src/app/(dashboard)/envanterim/FullInventoryTable.tsx
+// src/components/features/inventory/InventoryList.tsx
 'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { MedicationItem } from '@/lib/dashboardData';
-import { PriceDisplay, StatusBadge } from '@/components/common';
-import { Modal } from '@/components/ui';
-import styles from './envanterim.module.css';
+import { PriceDisplay, StatusBadge, DateDisplay } from '@/components/common';
+import InventoryAlarmModal from './InventoryAlarmModal';
+import styles from './inventory.module.css';
+
+// Icons
 const AlarmIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
@@ -28,66 +30,11 @@ const OfferIcon = () => (
   </svg>
 );
 
-// ===== ALARM MODAL COMPONENT =====
-interface AlarmModalProps {
-  medication: MedicationItem;
-  onClose: () => void;
-  onSave: (medicationId: number, minStock: number) => void;
-}
-
-const AlarmModal: React.FC<AlarmModalProps> = ({ medication, onClose, onSave }) => {
-  const [minStock, setMinStock] = useState<number>(10);
-
-  const handleSave = () => {
-    onSave(medication.id, minStock);
-  };
-
-  return (
-    <Modal
-      isOpen={true}
-      onClose={onClose}
-      title={`Stok Alarmı Kur - ${medication.productName}`}
-      size="small"
-      actions={
-        <>
-          <button onClick={onClose} className={styles.btnSecondary}>
-            İptal
-          </button>
-          <button onClick={handleSave} className={styles.btnPrimary}>
-            Kaydet
-          </button>
-        </>
-      }
-    >
-      <div className={styles.modalBody}>
-        <p className={styles.modalDesc}>
-          Bu ilaç için minimum stok seviyesi belirleyin. Stok bu seviyenin altına düştüğünde bildirim alacaksınız.
-        </p>
-        <div className={styles.formGroup}>
-          <label htmlFor="minStock">Minimum Stok Adedi:</label>
-          <input
-            id="minStock"
-            type="number"
-            min="1"
-            value={minStock}
-            onChange={(e) => setMinStock(Number(e.target.value))}
-            className={styles.input}
-          />
-        </div>
-        <div className={styles.currentStockInfo}>
-          <strong>Mevcut Stok:</strong> {medication.stock}
-        </div>
-      </div>
-    </Modal>
-  );
-};
-
-// ===== MAIN COMPONENT =====
-interface FullInventoryTableProps {
+export interface InventoryListProps {
   data: MedicationItem[];
 }
 
-const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredData }) => {
+const InventoryList: React.FC<InventoryListProps> = ({ data }) => {
   const [alarmMedication, setAlarmMedication] = useState<MedicationItem | null>(null);
 
   const handleSetAlarm = (medicationId: number, minStock: number) => {
@@ -115,19 +62,36 @@ const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredD
             </tr>
           </thead>
           <tbody>
-            {filteredData.map((med) => (
+            {data.map((med) => (
               <tr key={med.id}>
+                {/* İlaç Adı */}
                 <td className={styles.productName}>{med.productName}</td>
+                
+                {/* Barkod */}
                 <td>{med.barcode || 'N/A'}</td>
+                
+                {/* Stok */}
                 <td>{med.stock}</td>
-                <td className={styles.price}>
+                
+                {/* Maliyet - PriceDisplay kullanıyoruz */}
+                <td>
                   {med.costPrice ? (
                     <PriceDisplay amount={med.costPrice} />
                   ) : (
                     'N/A'
                   )}
                 </td>
-                <td>{med.expirationDate}</td>
+                
+                {/* SKT - DateDisplay kullanıyoruz */}
+                <td>
+                  {med.expirationDate ? (
+                    <DateDisplay date={med.expirationDate} format="date" />
+                  ) : (
+                    'N/A'
+                  )}
+                </td>
+                
+                {/* Durum - StatusBadge kullanıyoruz */}
                 <td>
                   <StatusBadge status={med.status} type="inventory" />
                 </td>
@@ -181,7 +145,7 @@ const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredD
 
       {/* Alarm Modal */}
       {alarmMedication && (
-        <AlarmModal
+        <InventoryAlarmModal
           medication={alarmMedication}
           onClose={() => setAlarmMedication(null)}
           onSave={handleSetAlarm}
@@ -191,4 +155,4 @@ const FullInventoryTable: React.FC<FullInventoryTableProps> = ({ data: filteredD
   );
 };
 
-export default FullInventoryTable;
+export default InventoryList;

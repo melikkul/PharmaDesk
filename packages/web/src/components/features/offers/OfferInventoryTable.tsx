@@ -7,7 +7,7 @@ import { MedicationItem, OfferStatus } from '@/lib/dashboardData';
 import DashboardCard from '@/components/DashboardCard';
 import { PriceDisplay, StatusBadge, DateDisplay } from '@/components/common';
 import tableStyles from '@/components/dashboard/Table.module.css';
-import pageStyles from './tekliflerim.module.css';
+import pageStyles from '@/app/(dashboard)/tekliflerim/tekliflerim.module.css';
 import filterStyles from './InventoryFilter.module.css'; 
 
 // İkonlar

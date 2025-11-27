@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from './transferlerim.module.css';
 
-import TransfersTable from './TransfersTable';
+import { TransfersList } from '@/components/features/transfers';
 
 // ✅ Backend'den transferleri çek
 import { useShipments } from '@/hooks/useShipments';
@@ -37,7 +37,7 @@ export default function TransferlerimPage() {
   const formattedShipments = shipments.map(shipment => ({
     id: shipment.id,
     orderNumber: shipment.orderNumber || '-',
-    productName: shipment.productName || 'Bilinmiyor', // Backend already has it
+    productName: shipment.productName || 'Bilinmiyor',
     quantity: shipment.quantity || 0,
     trackingNumber: shipment.trackingNumber,
     date: shipment.date || '',
@@ -57,7 +57,7 @@ export default function TransferlerimPage() {
       {formattedShipments.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '50px' }}>Henüz transfer bulunmuyor.</div>
       ) : (
-        <TransfersTable data={formattedShipments} />
+        <TransfersList data={formattedShipments} />
       )}
     </div>
   );

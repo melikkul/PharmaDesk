@@ -8,11 +8,11 @@ import Link from 'next/link';
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from './tekliflerim.module.css';
 
-import OffersTable from './InventoryTable';
+import { OfferInventoryTable } from '@/components/features/offers';
 
 // ✅ Backend'den teklifleri çek
 import { useMyOffers } from '@/hooks/useMyOffers';
-import { useAuth } from '@/store/AuthContext'; // Import useAuth
+import { useAuth } from '@/store/AuthContext';
 import { OfferStatus } from '@/lib/dashboardData';
 import { offerService } from '@/services/offerService';
 
@@ -20,7 +20,7 @@ const AddIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none
 
 export default function TekliflerimPage() {
   const router = useRouter();
-  const { token } = useAuth(); // Get token from context
+  const { token } = useAuth();
   
   // ✅ Backend'den teklifleri çek  
   const { offers, loading, error, refreshOffers } = useMyOffers();
@@ -32,12 +32,10 @@ export default function TekliflerimPage() {
       }
 
       try {
-          // Delete each offer
           for (const id of ids) {
               await offerService.deleteOffer(token, id);
           }
 
-          // Refresh offers list
           await refreshOffers();
           console.log(`${ids.length} teklif silindi.`);
       } catch (err) {
@@ -52,12 +50,10 @@ export default function TekliflerimPage() {
       }
 
       try {
-          // Update status for each offer
           for (const id of ids) {
               await offerService.updateOfferStatus(token, id, status.toLowerCase());
           }
 
-          // Refresh offers list
           await refreshOffers();
           console.log(`${ids.length} teklifin durumu güncellendi.`);
       } catch (err) {
@@ -84,15 +80,15 @@ export default function TekliflerimPage() {
   // Convert API data (backend OfferDto) to expected format
   const formattedOffers = offers.map(offer => ({
     id: offer.id,
-    productName: offer.productName || 'Bilinmiyor', // Backend OfferDto already has productName
-    barcode: offer.barcode || '', // Use actual barcode from backend
+    productName: offer.productName || 'Bilinmiyor',
+    barcode: offer.barcode || '',
     currentStock: 0,
     bonusStock: 0,
     costPrice: offer.price,
-    stock: offer.stock, // "50 + 5" formatında zaten
+    stock: offer.stock,
     price: offer.price,
     dateAdded: new Date().toISOString(),
-    expirationDate: offer.expirationDate || '', // Use actual SKT from backend
+    expirationDate: offer.expirationDate || '',
     status: offer.status as any,
     alarmSet: false,
   }));
@@ -112,7 +108,7 @@ export default function TekliflerimPage() {
         {formattedOffers.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '50px' }}>Henüz teklif bulunmuyor.</div>
         ) : (
-          <OffersTable
+          <OfferInventoryTable
               data={formattedOffers}
               onDeleteItems={handleDeleteItems}
               onUpdateStatus={handleUpdateStatus}

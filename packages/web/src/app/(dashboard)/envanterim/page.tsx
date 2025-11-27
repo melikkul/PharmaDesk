@@ -2,8 +2,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import FullInventoryTable from './FullInventoryTable';
 import { useInventory } from '@/hooks/useInventory';
+import { InventoryList } from '@/components/features/inventory';
+import { Button } from '@/components/ui';
 import styles from './envanterim.module.css';
 import SetBulkAlarmModal from './SetBulkAlarmModal';
 
@@ -45,7 +46,7 @@ export default function EnvanterimPage() {
     );
   }
 
-  // Convert API data to match the expected format for FullInventoryTable
+  // Convert API data to match the expected format for InventoryList
   const inventoryData = inventory.map(item => ({
     id: item.id,
     productName: item.medication?.name || 'Bilinmeyen İlaç',
@@ -66,16 +67,16 @@ export default function EnvanterimPage() {
       <div className={styles.pageHeader}>
         <h1 className={styles.pageTitle}>Envanterim</h1>
         
-        <button 
-          className={styles.secondaryButton} 
+        <Button 
+          variant="secondary"
           onClick={() => setIsBulkAlarmModalOpen(true)}
         >
           <AlarmsIcon />
           <span>Toplu Alarm Ayarla</span>
-        </button>
+        </Button>
       </div>
 
-      <FullInventoryTable data={inventoryData} />
+      <InventoryList data={inventoryData} />
 
       {isBulkAlarmModalOpen && (
         <SetBulkAlarmModal
