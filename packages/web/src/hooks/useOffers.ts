@@ -1,81 +1,173 @@
-import { useState, useEffect } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { offerService } from '../services/offerService';
 import { Offer } from '../types';
+import { useAuth } from '../store/AuthContext';
 
+/**
+ * Hook for fetching all offers
+ * 
+ * Features:
+ * - Automatic caching with 1-minute stale time
+ * - Background revalidation
+ * - Manual refetch support
+ * 
+ * @returns {offers, loading, error, refetch}
+ */
 export const useOffers = () => {
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchOffers = async () => {
-    try {
-      setLoading(true);
+  const query = useQuery({
+    queryKey: ['offers'],
+    queryFn: async () => {
       const random = Math.random();
-      const data: any = await offerService.getOffers(random);
+      const data = await offerService.getOffers(random);
       console.log('[useOffers] Fetched offers data:', data);
-      setOffers(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Bir hata oluştu');
-    } finally {
-      setLoading(false);
-    }
+      return data;
+    },
+  });
+
+  return {
+    offers: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+    refetch: query.refetch,
   };
-
-  useEffect(() => {
-    fetchOffers();
-  }, []);
-
-  return { offers, loading, error, refetch: fetchOffers };
 };
 
+/**
+ * Hook for fetching a single offer by ID
+ * 
+ * Query is automatically disabled when id is undefined
+ * 
+ * @param id - Offer ID
+ * @returns {offer, loading, error}
+ */
 export const useOffer = (id: string | number) => {
-  const [offer, setOffer] = useState<Offer | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ['offers', id],
+    queryFn: async () => {
+      const data = await offerService.getOfferById(id.toString());
+      return data;
+    },
+    enabled: !!id, // Only run query when id exists
+  });
 
-  useEffect(() => {
-    if (!id) return;
-    
-    const fetchOffer = async () => {
-      try {
-        setLoading(true);
-        const data: any = await offerService.getOfferById(id.toString());
-        setOffer(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOffer();
-  }, [id]);
-
-  return { offer, loading, error };
+  return {
+    offer: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+  };
 };
 
+/**
+ * Hook for fetching offers by medication ID
+ * 
+ * @param medicationId - Medication ID
+ * @returns {offers, loading, error}
+ */
 export const useMedicationOffers = (medicationId: string | number) => {
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery({
+    queryKey: ['offers', 'medication', medicationId],
+    queryFn: async () => {
+      const data = await offerService.getOffersByMedication(medicationId.toString());
+      return data;
+    },
+    enabled: !!medicationId, // Only run query when medicationId exists
+  });
 
-  useEffect(() => {
-    if (!medicationId) return;
+  return {
+    offers: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+  };
+};
 
-    const fetchOffers = async () => {
-      try {
-        setLoading(true);
-        const data: any = await offerService.getOffersByMedication(medicationId.toString());
-        setOffers(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Bir hata oluştu');
-      } finally {
-        setLoading(false);
-      }
-    };
+/**
+ * Hook for creating a new offer
+ * 
+ * Automatically invalidates the offers list on success
+ * 
+ * @returns {mutate, isPending, error}
+ */
+export const useCreateOffer = () => {
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
 
-    fetchOffers();
-  }, [medicationId]);
+  const mutation = useMutation({
+    mutationFn: async (offerData: any) => {
+      if (!token) throw new Error('No token found');
+      await offerService.createOffer(token, offerData);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch offers list
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    },
+  });
 
-  return { offers, loading, error };
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+    error: mutation.error?.message ?? null,
+  };
+};
+
+/**
+ * Hook for updating an offer's status
+ * 
+ * Automatically invalidates the specific offer and offers list on success
+ * 
+ * @returns {mutate, isPending, error}
+ */
+export const useUpdateOfferStatus = () => {
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
+
+  const mutation = useMutation({
+    mutationFn: async ({ id, status }: { id: number; status: string }) => {
+      if (!token) throw new Error('No token found');
+      await offerService.updateOfferStatus(token, id, status);
+    },
+    onSuccess: (_, variables) => {
+      // Invalidate the specific offer
+      queryClient.invalidateQueries({ queryKey: ['offers', variables.id] });
+      // Invalidate the offers list
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    },
+  });
+
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+    error: mutation.error?.message ?? null,
+  };
+};
+
+/**
+ * Hook for deleting an offer
+ * 
+ * Automatically invalidates the offers list on success
+ * 
+ * @returns {mutate, isPending, error}
+ */
+export const useDeleteOffer = () => {
+  const queryClient = useQueryClient();
+  const { token } = useAuth();
+
+  const mutation = useMutation({
+    mutationFn: async (id: number) => {
+      if (!token) throw new Error('No token found');
+      await offerService.deleteOffer(token, id);
+    },
+    onSuccess: () => {
+      // Invalidate and refetch offers list
+      queryClient.invalidateQueries({ queryKey: ['offers'] });
+    },
+  });
+
+  return {
+    mutate: mutation.mutate,
+    mutateAsync: mutation.mutateAsync,
+    isPending: mutation.isPending,
+    error: mutation.error?.message ?? null,
+  };
 };

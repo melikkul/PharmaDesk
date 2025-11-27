@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../store/AuthContext';
 import { dashboardService } from '../services/dashboardService';
 import { DashboardStats } from '../types';
@@ -11,45 +11,49 @@ export interface DashboardData {
   shipments: any[];
 }
 
+/**
+ * Hook for fetching dashboard statistics
+ * 
+ * Features:
+ * - Automatic caching with 1-minute stale time
+ * - Query is disabled when no token is available
+ * - Maintains existing data transformation logic
+ * - Auto-refetches when token changes
+ * 
+ * @returns {data, loading, error}
+ */
 export const useDashboard = () => {
-  const [data, setData] = useState<DashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
 
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
+  const query = useQuery({
+    queryKey: ['dashboard', 'stats', token],
+    queryFn: async () => {
+      if (!token) throw new Error('No authentication token');
+
+      const result: any = await dashboardService.getStats(token);
+      console.log('Dashboard API Result:', result);
+
+      // Manual mapping to ensure correct casing
+      if (result.recentOffers) {
+        result.recentOffers = result.recentOffers.map((offer: any) => ({
+          ...offer,
+          productName: offer.productName || offer.ProductName || 'İsimsiz Ürün',
+          stock: offer.stock || offer.Stock,
+          price: offer.price || offer.Price,
+          status: (offer.status || offer.Status || '').toLowerCase(),
+        }));
       }
 
-      try {
-        const result: any = await dashboardService.getStats(token);
-        console.log('Dashboard API Result:', result);
+      return result;
+    },
+    enabled: !!token, // Only run query when token exists
+    staleTime: 30 * 1000, // Dashboard data is more dynamic, 30 second stale time
+    refetchOnWindowFocus: true, // Refetch when user returns to the tab
+  });
 
-        // Manual mapping to ensure correct casing
-        if (result.recentOffers) {
-            result.recentOffers = result.recentOffers.map((offer: any) => ({
-                ...offer,
-                productName: offer.productName || offer.ProductName || 'İsimsiz Ürün',
-                stock: offer.stock || offer.Stock,
-                price: offer.price || offer.Price,
-                status: (offer.status || offer.Status || '').toLowerCase(),
-            }));
-        }
-
-        setData(result);
-      } catch (err) {
-        console.error(err);
-        setError('Veriler yüklenirken bir hata oluştu.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, [token]);
-
-  return { data, loading, error };
+  return {
+    data: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+  };
 };

@@ -1,36 +1,35 @@
-import { useState, useEffect } from 'react';
-import { useAuth } from '../store/AuthContext';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { offerService } from '../services/offerService';
-import { Offer } from '../types';
+import { useAuth } from '../store/AuthContext';
 
+/**
+ * Hook for fetching current user's offers
+ * 
+ * Features:
+ * - Automatic caching with 1-minute stale time
+ * - Token-aware (auto-refetch when token changes)
+ * - Background revalidation
+ * - Manual refetch support
+ * 
+ * @returns {offers, loading, error, refreshOffers}
+ */
 export const useMyOffers = () => {
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
 
-  const fetchOffers = async () => {
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+  const query = useQuery({
+    queryKey: ['offers', 'my-offers', token],
+    queryFn: async () => {
+      if (!token) throw new Error('No authentication token');
+      return await offerService.getMyOffers(token);
+    },
+    enabled: !!token, // Only run when token exists
+    staleTime: 30 * 1000, // 30 seconds for dynamic user data
+  });
 
-    try {
-      const data: any = await offerService.getMyOffers(token);
-      console.log('[useMyOffers] Data received:', data);
-      setOffers(data);
-    } catch (err) {
-      console.error('Offers error:', err);
-      setError('Teklifler yüklenirken hata oluştu');
-    } finally {
-      setLoading(false);
-    }
+  return {
+    offers: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+    refreshOffers: query.refetch,
   };
-
-  useEffect(() => {
-    fetchOffers();
-  }, [token]);
-
-  return { offers, loading, error, refreshOffers: fetchOffers };
 };
-

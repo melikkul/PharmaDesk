@@ -1,9 +1,11 @@
 
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+
 import { LoginResponse } from '../types';
 
 export const authService = {
   login: async (email: string, password: string): Promise<LoginResponse> => {
-    const res = await fetch(`/api/auth/login`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
@@ -27,7 +29,7 @@ export const authService = {
   },
 
   forgotPassword: async (email: string): Promise<void> => {
-    const res = await fetch(`/api/auth/forgot-password`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
@@ -40,7 +42,7 @@ export const authService = {
   },
 
   resetPassword: async (token: string, password: string): Promise<void> => {
-    const res = await fetch(`/api/auth/reset-password`, {
+    const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ token, password }),

@@ -1,35 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { inventoryService } from '../services/inventoryService';
 import { useAuth } from '../store/AuthContext';
-import { medicationService } from '../services/medicationService';
 
-import { InventoryItem } from '../types';
-
+/**
+ * Hook for fetching user's inventory
+ * 
+ * Features:
+ * - Token-aware queries
+ * - Automatic caching with 30s stale time
+ * - Background revalidation
+ * 
+ * @returns {inventory, loading, error}
+ */
 export const useInventory = () => {
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
 
-  useEffect(() => {
-    const fetchInventory = async () => {
-      if (!token) {
-        setLoading(false);
-        return;
-      }
+  const query = useQuery({
+    queryKey: ['inventory', 'me', token],
+    queryFn: async () => {
+      if (!token) throw new Error('No authentication token');
+      return await inventoryService.getMyInventory(token);
+    },
+    enabled: !!token,
+    staleTime: 30 * 1000, // 30 seconds for inventory data
+  });
 
-      try {
-        const data: any = await medicationService.getMyInventory(token);
-        setInventory(data);
-      } catch (err) {
-        console.error('Inventory error:', err);
-        setError('Envanter yüklenirken hata oluştu');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchInventory();
-  }, [token]);
-
-  return { inventory, loading, error };
+  return {
+    inventory: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error?.message ?? null,
+  };
 };
