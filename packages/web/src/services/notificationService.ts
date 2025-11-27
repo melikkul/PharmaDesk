@@ -1,4 +1,3 @@
-
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
 
 import { Notification } from '../types';
@@ -13,15 +12,13 @@ export const notificationService = {
       });
 
       if (!response.ok) {
-        // Return empty array instead of throwing error
-        console.warn('Unable to fetch notifications:', response.status);
+        // Silently return empty array - non-critical feature
         return [];
       }
 
       return response.json();
     } catch (error) {
       // Network error or other issues - return empty array gracefully
-      console.warn('Error fetching notifications:', error);
       return [];
     }
   },
@@ -35,8 +32,7 @@ export const notificationService = {
       });
 
       if (!response.ok) {
-        // Return 0 instead of throwing error to avoid console errors
-        console.warn('Unable to fetch unread count:', response.status);
+        // Silently return 0 - non-critical feature
         return 0;
       }
 
@@ -44,7 +40,6 @@ export const notificationService = {
       return data.count || 0;
     } catch (error) {
       // Network error or other issues - return 0 gracefully
-      console.warn('Error fetching unread count:', error);
       return 0;
     }
   },

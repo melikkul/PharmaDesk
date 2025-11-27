@@ -31,7 +31,9 @@ export function useNotifications(token: string | null) {
       const count = await notificationService.getUnreadCount(token);
       setUnreadCount(count);
     } catch (err) {
-      console.error('Failed to fetch unread count:', err);
+      // Silently fail - notification service already logs warnings
+      // No need to clutter console with errors
+      setUnreadCount(0);
     }
   };
 
@@ -43,7 +45,7 @@ export function useNotifications(token: string | null) {
       await fetchNotifications();
       await fetchUnreadCount();
     } catch (err) {
-      console.error('Failed to mark as read:', err);
+      // Silently fail - non-critical operation
     }
   };
 
@@ -55,7 +57,7 @@ export function useNotifications(token: string | null) {
       await fetchNotifications();
       await fetchUnreadCount();
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      // Silently fail - non-critical operation
     }
   };
 

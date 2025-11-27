@@ -72,10 +72,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidAudience = "PharmaDeskClient",
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
+        
+        // SignalR WebSocket authentication: Read JWT from QueryString
+        opt.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                
+                // If the request is for SignalR hub and token is in query string
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddSignalR();
 
 // --- Secure CORS Policy ---
 var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Split(',');
@@ -87,7 +106,8 @@ var allowedOrigins = Environment.GetEnvironmentVariable("ALLOWED_ORIGINS")?.Spli
             p.SetIsOriginAllowed(origin => true) // Allow any origin for now to fix Docker/Network issues
              .AllowAnyHeader()
              .AllowAnyMethod()
-             .AllowCredentials();
+             .AllowCredentials()
+             .WithExposedHeaders("*"); // Expose all headers for SignalR negotiate
         });
     });
 
@@ -296,5 +316,6 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<PharmaDesk.API.Hubs.NotificationHub>("/hubs/notifications");
 
 app.Run();

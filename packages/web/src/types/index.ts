@@ -1,11 +1,13 @@
 
 // User & Auth
+export type UserRole = 'Admin' | 'Pharmacy' | 'User';
+
 export interface User {
   id: number;
   email: string;
   fullName: string;
   pharmacyId: number;
-  role: string;
+  role: UserRole;
   isFirstLogin: boolean;
 }
 
