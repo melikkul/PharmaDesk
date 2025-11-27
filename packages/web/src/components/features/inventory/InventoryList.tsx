@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { MedicationItem } from '@/lib/dashboardData';
 import { PriceDisplay, StatusBadge, DateDisplay } from '@/components/common';
 import InventoryAlarmModal from './InventoryAlarmModal';
+import InventoryCard from './InventoryCard';
 import styles from './inventory.module.css';
 
 // Icons
@@ -47,6 +48,18 @@ const InventoryList: React.FC<InventoryListProps> = ({ data }) => {
 
   return (
     <>
+      {/* Mobile & Tablet: Card View */}
+      <div className={styles.mobileCardView}>
+        {data.map((med) => (
+          <InventoryCard 
+            key={med.id} 
+            medication={med} 
+            onSetAlarm={setAlarmMedication} 
+          />
+        ))}
+      </div>
+
+      {/* Desktop: Table View */}
       <div className={styles.tableWrapper}>
         <table className={styles.table}>
           <thead>

@@ -84,6 +84,17 @@ export default function DashboardLayout({
   const panelValues = useDashboardPanels();
   const { user, logout, isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
+  
+  // Sidebar state for mobile
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(prev => !prev);
+  };
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false);
+  };
 
   // Authentication check - redirect to homepage if not authenticated
   useEffect(() => {
@@ -120,7 +131,7 @@ export default function DashboardLayout({
               <ChatProvider>
                 <Toaster position="top-right" richColors />
                 <div className="dashboard-container">
-                  <Sidebar />
+                  <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
                   
                   <Header
                     userData={headerUserData}
@@ -128,6 +139,7 @@ export default function DashboardLayout({
                     onNotificationClick={panelValues.toggleNotificationsPanel}
                     onCartClick={panelValues.toggleCartPanel}
                     onLogout={logout}
+                    onMenuClick={toggleSidebar}
                   />
 
                   <main className="main-content">

@@ -5,24 +5,89 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 40px;
+    padding: 0 16px; /* Mobile: Reduced padding */
+    height: 64px; /* Mobile: Fixed height */
     border-bottom: 1px solid #EAEFF7;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 900;
+}
+
+/* Desktop: Larger padding and height */
+@media (min-width: 1024px) {
+    .header {
+        padding: 0 40px;
+        height: 80px;
+        left: 256px; /* Account for fixed sidebar */
+    }
+}
+
+/* Hamburger Button - Mobile Only */
+.hamburgerButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    min-height: 44px; /* Touch target */
+    min-width: 44px;
+    transition: background-color 0.2s;
+    color: var(--text-primary);
+}
+
+.hamburgerButton:hover {
+    background-color: #F4F7FC;
+}
+
+/* Hide hamburger on desktop */
+@media (min-width: 1024px) {
+    .hamburger Button {
+        display: none;
+    }
 }
 
 .searchBar {
     position: relative;
-    width: 400px;
+    flex: 1; /* Mobile: Take available space */
+    max-width: 100%; /* Mobile: Full width */
+    display: none; /* Mobile: Hidden by default */
+}
+
+/* Show search bar on tablet+ */
+@media (min-width: 640px) {
+    .searchBar {
+        display: block;
+        max-width: 300px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .searchBar {
+        max-width: 400px;
+    }
 }
 
 .searchBar input {
     width: 100%;
-    padding: 12px 20px;
+    padding: 10px 16px; /* Mobile: Smaller padding */
     border: 1px solid #EAEFF7;
     border-radius: 25px;
     background-color: #F4F7FC;
     font-size: 14px;
     outline: none;
     transition: border-color 0.2s, box-shadow 0.2s;
+    min-height: 40px; /* Touch target */
+}
+
+@media (min-width: 1024px) {
+    .searchBar input {
+        padding: 12px 20px;
+    }
 }
 
 .searchBar input:focus {
@@ -33,24 +98,60 @@
 .headerActions {
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 8px; /* Mobile: Smaller gap */
+}
+
+@media (min-width: 640px) {
+    .headerActions {
+        gap: 12px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .headerActions {
+        gap: 20px;
+    }
 }
 
 .pharmacyName {
     font-weight: 600;
+    font-size: 13px; /* Mobile: Smaller */
+    display: none; /* Mobile: Hidden */
+}
+
+@media (min-width: 768px) {
+    .pharmacyName {
+        display: block;
+        font-size: 14px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .pharmacyName {
+        font-size: 15px;
+    }
 }
 
 .iconButton {
     background: none;
     border: none;
     cursor: pointer;
-    padding: 8px; /* Padding artırıldı */
-    border-radius: 50%; /* Yuvarlak yapıldı */
+    padding: 8px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
-    transition: background-color 0.2s ease; /* Geçiş eklendi */
+    transition: background-color 0.2s ease;
+    min-width: 40px; /* Mobile: Touch target */
+    min-height: 40px;
+}
+
+@media (min-width: 1024px) {
+    .iconButton {
+        min-width: auto;
+        min-height: auto;
+    }
 }
 
 /* EKLENDİ: Panel açıkken butonun aktif stili */
@@ -103,35 +204,70 @@
 }
 
 .balanceInfo {
-    display: flex;
+    display: none; /* Mobile: Hidden */
     flex-direction: column;
     text-align: right;
 }
 
+/* Show balance on tablet+ */
+@media (min-width: 640px) {
+    .balanceInfo {
+        display: flex;
+    }
+}
+
 .balanceInfo span {
-    font-size: 12px;
+    font-size: 11px; /* Smaller on tablet */
     color: #8A97A8;
 }
 
+@media (min-width: 1024px) {
+    .balanceInfo span {
+        font-size: 12px;
+    }
+}
+
 .balanceInfo strong {
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
 }
 
-/* GÜNCELLENDİ: Harfi ortalamak için flex stilleri ve arka plan/yazı stilleri eklendi */
+@media (min-width: 1024px) {
+    .balanceInfo strong {
+        font-size: 16px;
+    }
+}
+
 .avatarPlaceholder {
-    width: 48px;
-    height: 48px;
-    background-color: var(--sidebar-bg); /* Arka plan rengi değiştirildi */
+    width: 36px; /* Mobile: Smaller */
+    height: 36px;
+    background-color: var(--sidebar-bg);
     border-radius: 50%;
-    display: flex; /* Eklendi */
-    align-items: center; /* Eklendi */
-    justify-content: center; /* Eklendi */
-    color: white; /* Eklendi */
-    font-size: 20px; /* Eklendi */
-    font-weight: 600; /* Eklendi */
-    background-size: cover; /* Logo varsa kaplaması için */
-    background-position: center; /* Logo varsa ortalaması için */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 16px; /* Mobile: Smaller */
+    font-weight: 600;
+    background-size: cover;
+    background-position: center;
+    flex-shrink: 0;
+}
+
+@media (min-width: 640px) {
+    .avatarPlaceholder {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .avatarPlaceholder {
+        width: 48px;
+        height: 48px;
+        font-size: 20px;
+    }
 }
 
 /* === NOTIFICATION ANIMATIONS === */

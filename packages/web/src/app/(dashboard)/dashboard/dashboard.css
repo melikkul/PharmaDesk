@@ -12,33 +12,67 @@
     --negative-color: #E74C3C;
     --unread-dot-color: #3498DB;
     --font-family: 'Montserrat', sans-serif;
+    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-/* --- ANA YAPI (GRID LAYOUT) --- */
+/* --- ANA YAPI (RESPONSIVE LAYOUT) --- */
 .dashboard-container {
-    display: grid;
-    grid-template-columns: 260px 1fr;
-    grid-template-rows: 80px 1fr;
-    grid-template-areas:
-        "sidebar header"
-        "sidebar main";
-    height: 100vh;
+    min-height: 100vh;
     background-color: var(--main-bg);
     font-family: var(--font-family);
     color: var(--text-primary);
+    /* Mobile: Simple flex layout */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Desktop: No grid needed, sidebar and header are fixed */
+@media (min-width: 1024px) {
+    .dashboard-container {
+        /* Keep simple flex for desktop too */
+    }
 }
 
 /* --- ANA İÇERİK ALANI --- */
 .main-content {
-    grid-area: main;
-    padding: 40px;
+    flex: 1;
+    padding: 16px; /* Mobile: Smaller padding */
+    margin-top: 64px; /* Mobile: Header height */
     overflow-y: auto;
 }
 
+@media (min-width: 640px) {
+    .main-content {
+        padding: 24px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .main-content {
+        padding: 32px 40px;
+        margin-top: 80px; /* Desktop: Larger header */
+        margin-left: 256px; /* Desktop: Sidebar width */
+    }
+}
+
+/* Content Grid - Responsive */
 .content-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 30px;
+    grid-template-columns: 1fr; /* Mobile: Single column */
+    gap: 20px;
+}
+
+@media (min-width: 768px) {
+    .content-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 24px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .content-grid {
+        gap: 30px;
+    }
 }
 
 /* --- SLIDE PANEL (BİLDİRİM/MESAJ) SİSTEMİ --- */
@@ -68,7 +102,7 @@
     top: 0;
     right: -420px;
     width: 400px;
-    max-width: 90%;
+    max-width: 90%; /* Mobile: Responsive width */
     height: 100%;
     background-color: var(--card-bg);
     box-shadow: -5px 0 25px rgba(0,0,0,0.1);
@@ -77,6 +111,15 @@
     display: flex;
     flex-direction: column;
 }
+
+/* Mobile: Smaller width */
+@media (max-width: 640px) {
+    .slide-panel {
+        width: 320px;
+        max-width: 85%;
+    }
+}
+
 .slide-panel.show {
     right: 0;
 }
@@ -85,36 +128,76 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 20px 25px;
+    padding: 16px 20px; /* Mobile: Smaller padding */
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
 }
+
+@media (min-width: 640px) {
+    .panel-header {
+        padding: 20px 25px;
+    }
+}
+
 .panel-header h3 {
     margin: 0;
-    font-size: 18px;
+    font-size: 16px; /* Mobile: Smaller */
 }
+
+@media (min-width: 640px) {
+    .panel-header h3 {
+        font-size: 18px;
+    }
+}
+
 .panel-actions {
     display: flex;
     align-items: center;
-    gap: 15px;
+    gap: 12px; /* Mobile: Smaller gap */
 }
+
+@media (min-width: 640px) {
+    .panel-actions {
+        gap: 15px;
+    }
+}
+
 .panel-actions a {
-    font-size: 13px;
+    font-size: 12px; /* Mobile: Smaller */
     color: var(--text-secondary);
     text-decoration: none;
     transition: color 0.2s;
 }
+
+@media (min-width: 640px) {
+    .panel-actions a {
+        font-size: 13px;
+    }
+}
+
 .panel-actions a:hover {
     color: var(--text-primary);
 }
+
 .panel-close-btn {
     background: none;
     border: none;
-    font-size: 28px;
+    font-size: 24px; /* Mobile: Smaller */
     line-height: 1;
     color: var(--text-secondary);
     cursor: pointer;
     padding: 0;
+    min-width: 40px;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (min-width: 640px) {
+    .panel-close-btn {
+        font-size: 28px;
+    }
 }
 
 .panel-body {
@@ -124,8 +207,8 @@
 }
 
 .item-icon-wrapper {
-    width: 42px;
-    height: 42px;
+    width: 38px; /* Mobile: Smaller */
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -135,8 +218,23 @@
     color: var(--icon-color, var(--text-primary));
 }
 
+@media (min-width: 640px) {
+    .item-icon-wrapper {
+        width: 42px;
+        height: 42px;
+    }
+}
+
 .panel-empty-state {
     text-align: center;
-    padding: 50px 20px;
+    padding: 40px 20px; /* Mobile: Less padding */
     color: var(--text-secondary);
+    font-size: 14px;
+}
+
+@media (min-width: 640px) {
+    .panel-empty-state {
+        padding: 50px 20px;
+        font-size: 15px;
+    }
 }

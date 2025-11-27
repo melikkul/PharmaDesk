@@ -27,7 +27,7 @@ export default function EnvanterimPage() {
   }
 
   // Convert API data to match the expected format for InventoryList
-  const inventoryData = inventory.map(item => ({
+  const inventoryData = inventory.map((item: any) => ({
     id: item.id,
     productName: item.medication?.name || 'Bilinmeyen İlaç',
     barcode: item.medication?.barcode || '-',

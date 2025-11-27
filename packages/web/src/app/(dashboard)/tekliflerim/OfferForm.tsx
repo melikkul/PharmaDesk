@@ -5,6 +5,9 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import IMask from 'imask';
 import { useIMask } from 'react-imask';
 import { useSearchParams } from 'next/navigation';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { 
   MedicationItem, 
   fullInventoryData,
@@ -14,39 +17,54 @@ import SettingsCard from '@/components/settings/SettingsCard';
 import formStyles from './OfferForm.module.css';
 import { medicationService } from '@/services/medicationService';
 
-// Tipler
+// === TYPES ===
 type OfferType = 'standard' | 'campaign' | 'tender';
 
 interface OfferFormProps {
-  medication?: MedicationItem; // Düzenleme modu için
+  medication?: MedicationItem;
   onSave: (formData: any) => void;
   isSaving?: boolean;
 }
 
-type FormData = {
-  productName: string;
-  barcode: string;
-  skt: string;
-  price: string;
-  stock: string;
-  bonus: string;
-  minSaleQuantity: string;
-  
-  // Campaign
-  campaignStartDate: string;
-  campaignEndDate: string;
-  campaignBonusMultiplier: string;
-  
-  // Tender
-  minimumOrderQuantity: string;
-  biddingDeadline: string;
-  acceptingCounterOffers: boolean;
-};
+// === ZOD VALIDATION SCHEMA ===
+const baseSchema = z.object({
+  productName: z.string()
+    .min(2, 'İlaç adı en az 2 karakter olmalıdır')
+    .nonempty('İlaç adı zorunludur'),
+  barcode: z.string().optional(),
+  skt: z.string()
+    .regex(/^\d{2}\s?\/\s?\d{4}$/, 'Geçerli bir tarih formatı giriniz (MM / YYYY)')
+    .nonempty('Son kullanma tarihi zorunludur'),
+  price: z.string()
+    .refine((val) => {
+      const num = parseFloat(val.replace(',', '.'));
+      return !isNaN(num) && num > 0;
+    }, {
+      message: 'Fiyat 0\'dan büyük olmalıdır',
+    }),
+  stock: z.string()
+    .refine((val) => {
+      const num = parseInt(val, 10);
+      return !isNaN(num) && num > 0;
+    }, {
+      message: 'Stok 0\'dan büyük olmalıdır',
+    }),
+  bonus: z.string().optional(),
+  minSaleQuantity: z.string().optional(),
+  // Optional fields for all types
+  campaignStartDate: z.string().optional(),
+  campaignEndDate: z.string().optional(),
+  campaignBonusMultiplier: z.string().optional(),
+  minimumOrderQuantity: z.string().optional(),
+  biddingDeadline: z.string().optional(),
+  acceptingCounterOffers: z.boolean().optional(),
+});
+
+type OfferFormData = z.infer<typeof baseSchema>;
 
 const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) => {
   
-  // === 1. STATE YÖNETİMİ ===
-  
+  // === STATE MANAGEMENT ===
   const [offerType, setOfferType] = useState<OfferType>('standard');
   const isEditMode = !!medication;
   const searchParams = useSearchParams();
@@ -60,22 +78,24 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     expirationDate: searchParams.get('skt') || '',
   }), [searchParams]);
 
-  const [formData, setFormData] = useState<FormData>({
-    productName: medication?.productName || defaultValues?.productName || '',
-    barcode: medication?.barcode || defaultValues?.barcode || '',
-    skt: medication?.expirationDate || defaultValues?.expirationDate || '',
-    price: medication?.price ? String(medication.price).replace('.', ',') : (defaultValues?.price || ''),
-    stock: medication?.stock ? medication.stock.split(' + ')[0] : (defaultValues?.stock || ''),
-    bonus: medication?.stock ? medication.stock.split(' + ')[1] : (defaultValues?.bonus || ''),
-    minSaleQuantity: '1',
-    
-    campaignStartDate: '',
-    campaignEndDate: '',
-    campaignBonusMultiplier: '1',
-    
-    minimumOrderQuantity: '',
-    biddingDeadline: '',
-    acceptingCounterOffers: false,
+  // React Hook Form with Zod validation
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control, reset } = useForm<OfferFormData>({
+    resolver: zodResolver(baseSchema),
+    defaultValues: {
+      productName: medication?.productName || defaultValues?.productName || '',
+      barcode: medication?.barcode || defaultValues?.barcode || '',
+      skt: medication?.expirationDate || defaultValues?.expirationDate || '',
+      price: medication?.price ? String(medication.price).replace('.', ',') : (defaultValues?.price || ''),
+      stock: medication?.stock ? medication.stock.split(' + ')[0] : (defaultValues?.stock || ''),
+      bonus: medication?.stock ? medication.stock.split(' + ')[1] : (defaultValues?.bonus || '0'),
+      minSaleQuantity: '1',
+      campaignStartDate: '',
+      campaignEndDate: '',
+      campaignBonusMultiplier: '1',
+      minimumOrderQuantity: '',
+      biddingDeadline: '',
+      acceptingCounterOffers: false,
+    },
   });
 
   // Autocomplete State
@@ -88,6 +108,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
   const [isSearching, setIsSearching] = useState(false);
 
+  // IMask for SKT field
   const { ref: sktRef, setValue: setMaskedSktValue } = useIMask<HTMLInputElement>({
     mask: 'MM / YYYY',
     blocks: {
@@ -98,8 +119,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     overwrite: true,
   });
 
-  // === 2. EFFECT'LER ===
-
+  // === EFFECTS ===
   useEffect(() => {
     let initialItem: MedicationItem | null | undefined = null;
 
@@ -126,38 +146,21 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     }
   }, [isEditMode, medication, defaultValues, setMaskedSktValue]);
 
-  // === 3. EVENT HANDLER'LAR ===
-
-  const handleInputChange = useCallback((field: keyof FormData, value: string | number | boolean | null) => {
-    setFormData(prev => {
-      const newState = { ...prev, [field]: value };
-      if (['price', 'campaignBonusMultiplier'].includes(field)) {
-        let val = String(value).replace(/[^0-9,]/g, '');
-        const parts = val.split(',');
-        if (parts.length > 2) val = `${parts[0]},${parts[1]}`;
-        (newState as any)[field] = val;
-      }
-      if (['stock', 'bonus', 'minSaleQuantity', 'minimumOrderQuantity'].includes(field)) {
-        (newState as any)[field] = String(value).replace(/[^0-9]/g, '');
-      }
-      return newState;
-    });
-  }, []);
-
+  // === EVENT HANDLERS ===
   const handleProductSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setProductSearchTerm(value);
-      setFormData(prev => ({ ...prev, productName: '' }));
+      setValue('productName', '');
       
       // Clear previous selection
       if (offerType === 'standard') {
           setSelectedInventoryItem(null);
-          handleInputChange('barcode', '');
-          handleInputChange('skt', '');
+          setValue('barcode', '');
+          setValue('skt', '');
           setMaskedSktValue('');
-          handleInputChange('price', '0,00');
-          handleInputChange('stock', '0');
-          handleInputChange('bonus', '0');
+          setValue('price', '0,00');
+          setValue('stock', '0');
+          setValue('bonus', '0');
       }
 
       // Clear previous debounce timer
@@ -172,22 +175,13 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           return;
       }
 
-      // Set loading state immediately
       setIsSearching(true);
 
-      // Start new 2-second debounce timer
+      // Start new 1-second debounce timer
       const timer = setTimeout(async () => {
           try {
               const medications: any = await medicationService.searchMedications(value, 10);
-              
-              if (offerType === 'standard') {
-                  // For standard offers, also check inventory
-                  setSuggestions(medications);
-              } else {
-                  // For campaign/tender, just show medication names
-                  setSuggestions(medications);
-              }
-              
+              setSuggestions(medications);
               setIsAutocompleteOpen(medications.length > 0);
           } catch (error) {
               console.error('Medication search error:', error);
@@ -196,101 +190,69 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           } finally {
               setIsSearching(false);
           }
-      }, 1000); // 1-second debounce
+      }, 1000);
 
       setSearchDebounceTimer(timer);
   };
 
   const handleSelectSuggestion = (suggestion: any) => {
       if (offerType === 'standard') {
-          // API returns: {id, name, barcode, manufacturer, packageType}
           setProductSearchTerm(suggestion.name);
-          setSelectedInventoryItem(null); // We don't have full inventory data from search
+          setSelectedInventoryItem(null);
           
-          setFormData(prev => ({
-              ...prev,
-              productName: suggestion.name,
-              barcode: suggestion.barcode || '',
-              skt: '', // Will be filled manually
-              price: '0,00',
-              stock: '0',
-              bonus: '0',
-          }));
-          
+          setValue('productName', suggestion.name);
+          setValue('barcode', suggestion.barcode || '');
+          setValue('skt', '');
+          setValue('price', '0,00');
+          setValue('stock', '0');
+          setValue('bonus', '0');
       } else {
-          // For campaign/tender, just set the name
           setProductSearchTerm(suggestion.name);
-          setFormData(prev => ({ ...prev, productName: suggestion.name }));
+          setValue('productName', suggestion.name);
       }
       
       setIsAutocompleteOpen(false);
       setSuggestions([]);
   };
 
-  const handleSubmit = useCallback((e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = (data: any) => {
     if (isSaving) return;
 
-    // Validation
-    if (!formData.productName) {
-        alert("Lütfen bir ilaç seçin."); return;
-    }
-    
-    const price = parseFloat(formData.price.replace(',', '.')) || 0;
-    if (price <= 0) {
-        alert("Lütfen geçerli bir fiyat girin."); return;
-    }
-
-    const stock = parseInt(formData.stock, 10) || 0;
-    if (stock <= 0) {
-        alert("Lütfen geçerli bir stok adedi girin."); return;
-    }
-
-    // Get SKT from ref (for standard) or formData (for others)
+    // Get SKT from ref (for standard) or data (for others)
     const sktValue = offerType === 'standard' && sktRef.current 
         ? sktRef.current.value 
-        : formData.skt;
-
-    // Type specific validation
-    if (offerType === 'campaign') {
-        if (!formData.campaignStartDate || !formData.campaignEndDate) {
-            alert("Kampanya başlangıç ve bitiş tarihlerini giriniz."); return;
-        }
-    } else if (offerType === 'tender') {
-        if (!formData.minimumOrderQuantity || !formData.biddingDeadline) {
-            alert("İhale için minimum sipariş miktarı ve son teklif tarihini giriniz."); return;
-        }
-    }
+        : data.skt;
 
     const dataToSave = {
         offerType,
-        productName: formData.productName,
-        barcode: formData.barcode,
+        productName: data.productName,
+        barcode: data.barcode || '',
         expirationDate: sktValue.replace(/ /g, ''),
-        price,
-        stock,
-        bonus: parseInt(formData.bonus, 10) || 0,
-        minSaleQuantity: parseInt(formData.minSaleQuantity, 10) || 1,
+        price: typeof data.price === 'number' ? data.price : parseFloat(data.price.replace(',', '.')),
+        stock: typeof data.stock === 'number' ? data.stock : parseInt(data.stock, 10),
+        bonus: parseInt(data.bonus || '0', 10),
+        minSaleQuantity: parseInt(data.minSaleQuantity || '1', 10),
         
         // Campaign
-        campaignStartDate: formData.campaignStartDate || null,
-        campaignEndDate: formData.campaignEndDate || null,
-        campaignBonusMultiplier: parseFloat(formData.campaignBonusMultiplier.replace(',', '.')) || 1,
+        campaignStartDate: data.campaignStartDate || null,
+        campaignEndDate: data.campaignEndDate || null,
+        campaignBonusMultiplier: data.campaignBonusMultiplier 
+          ? parseFloat(data.campaignBonusMultiplier.replace(',', '.')) 
+          : 1,
         
         // Tender
-        minimumOrderQuantity: parseInt(formData.minimumOrderQuantity, 10) || null,
-        biddingDeadline: formData.biddingDeadline || null,
-        acceptingCounterOffers: formData.acceptingCounterOffers,
+        minimumOrderQuantity: data.minimumOrderQuantity || null,
+        biddingDeadline: data.biddingDeadline || null,
+        acceptingCounterOffers: data.acceptingCounterOffers || false,
         
         ...(isEditMode && { id: medication.id }),
     };
 
-    console.log('Form Data to Save:', dataToSave); // Debug log
+    console.log('Form Data to Save:', dataToSave);
     onSave(dataToSave);
-  }, [formData, offerType, isSaving, onSave, isEditMode, medication, sktRef]);
+  };
 
-  // === 4. RENDER FONKSİYONLARI ===
-
+  // === RENDER FUNCTIONS ===
   const renderAutocompleteList = () => {
       if (!isAutocompleteOpen) return null;
 
@@ -368,16 +330,24 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
           onBlur={() => setTimeout(() => setIsAutocompleteOpen(false), 500)}
           placeholder="İlaç ara..."
-          required
           disabled={isEditMode}
           autoComplete="off"
         />
+        {errors.productName && (
+          <span className={formStyles.errorMessage}>{errors.productName.message as string}</span>
+        )}
         {renderAutocompleteList()}
       </div>
 
       <div className={formStyles.formGroup}>
         <label htmlFor="barcode">Barkod</label>
-        <input type="text" id="barcode" value={formData.barcode} readOnly style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }} />
+        <input 
+          type="text" 
+          id="barcode" 
+          {...register('barcode')}
+          readOnly 
+          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }} 
+        />
       </div>
 
       <div className={formStyles.formGroup}>
@@ -386,34 +356,45 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           ref={sktRef} 
           type="text" 
           id="expirationDate" 
-          required 
           placeholder="Örn: 12 / 2025"
         />
+        {errors.skt && (
+          <span className={formStyles.errorMessage}>{errors.skt.message as string}</span>
+        )}
       </div>
 
       <div className={formStyles.formGroup}>
         <label htmlFor="price">Birim Fiyat (₺) *</label>
         <input
-          type="text" id="price" value={formData.price}
-          onChange={(e) => handleInputChange('price', e.target.value)}
-          required placeholder="0,00"
+          type="text" 
+          id="price" 
+          {...register('price')}
+          placeholder="0,00"
         />
+        {errors.price && (
+          <span className={formStyles.errorMessage}>{errors.price.message as string}</span>
+        )}
       </div>
 
       <div className={formStyles.formGroup}>
         <label htmlFor="stock">Stok Adedi *</label>
         <input
-          type="text" id="stock" value={formData.stock}
-          onChange={(e) => handleInputChange('stock', e.target.value)}
-          required placeholder="0"
+          type="text" 
+          id="stock" 
+          {...register('stock')}
+          placeholder="0"
         />
+        {errors.stock && (
+          <span className={formStyles.errorMessage}>{errors.stock.message as string}</span>
+        )}
       </div>
 
       <div className={formStyles.formGroup}>
         <label htmlFor="bonus">Mal Fazlası (MF)</label>
         <input
-          type="text" id="bonus" value={formData.bonus}
-          onChange={(e) => handleInputChange('bonus', e.target.value)}
+          type="text" 
+          id="bonus" 
+          {...register('bonus')}
           placeholder="0"
         />
       </div>
@@ -425,24 +406,31 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       <div className={formStyles.formGroup}>
         <label htmlFor="campaignStartDate">Kampanya Başlangıç *</label>
         <input
-          type="date" id="campaignStartDate" value={formData.campaignStartDate}
-          onChange={(e) => handleInputChange('campaignStartDate', e.target.value)}
-          required
+          type="date" 
+          id="campaignStartDate" 
+          {...register('campaignStartDate')}
         />
+        {errors.campaignStartDate && (
+          <span className={formStyles.errorMessage}>{errors.campaignStartDate.message as string}</span>
+        )}
       </div>
       <div className={formStyles.formGroup}>
         <label htmlFor="campaignEndDate">Kampanya Bitiş *</label>
         <input
-          type="date" id="campaignEndDate" value={formData.campaignEndDate}
-          onChange={(e) => handleInputChange('campaignEndDate', e.target.value)}
-          required
+          type="date" 
+          id="campaignEndDate" 
+          {...register('campaignEndDate')}
         />
+        {errors.campaignEndDate && (
+          <span className={formStyles.errorMessage}>{errors.campaignEndDate.message as string}</span>
+        )}
       </div>
       <div className={formStyles.formGroup}>
         <label htmlFor="campaignBonusMultiplier">MF Çarpanı</label>
         <input
-          type="text" id="campaignBonusMultiplier" value={formData.campaignBonusMultiplier}
-          onChange={(e) => handleInputChange('campaignBonusMultiplier', e.target.value)}
+          type="text" 
+          id="campaignBonusMultiplier" 
+          {...register('campaignBonusMultiplier')}
           placeholder="1.0"
         />
         <small className={formStyles.subtleText}>Örn: 2 yazarsanız, MF 2 katına çıkar.</small>
@@ -455,24 +443,33 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       <div className={formStyles.formGroup}>
         <label htmlFor="minimumOrderQuantity">Minimum Sipariş Miktarı *</label>
         <input
-          type="text" id="minimumOrderQuantity" value={formData.minimumOrderQuantity}
-          onChange={(e) => handleInputChange('minimumOrderQuantity', e.target.value)}
-          required placeholder="100"
+          type="text" 
+          id="minimumOrderQuantity" 
+          {...register('minimumOrderQuantity')}
+          placeholder="100"
         />
+        {errors.minimumOrderQuantity && (
+          <span className={formStyles.errorMessage}>{errors.minimumOrderQuantity.message as string}</span>
+        )}
       </div>
       <div className={formStyles.formGroup}>
         <label htmlFor="biddingDeadline">Son Teklif Tarihi *</label>
         <input
-          type="date" id="biddingDeadline" value={formData.biddingDeadline}
-          onChange={(e) => handleInputChange('biddingDeadline', e.target.value)}
-          required
+          type="date" 
+          id="biddingDeadline" 
+          {...register('biddingDeadline')}
         />
+        {errors.biddingDeadline && (
+          <span className={formStyles.errorMessage}>{errors.biddingDeadline.message as string}</span>
+        )}
       </div>
       <div className={`${formStyles.formGroup} ${formStyles.fullWidth}`}>
         <div className={formStyles.checkboxWrapper}>
-          <input type="checkbox" id="acceptingCounterOffers"
-            checked={formData.acceptingCounterOffers}
-            onChange={(e) => handleInputChange('acceptingCounterOffers', e.target.checked)} />
+          <input 
+            type="checkbox" 
+            id="acceptingCounterOffers"
+            {...register('acceptingCounterOffers')}
+          />
           <label htmlFor="acceptingCounterOffers">Karşı Teklifleri Kabul Et</label>
         </div>
       </div>
@@ -480,7 +477,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   );
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit(onSubmit)}>
       <SettingsCard
         title={isEditMode ? "Teklifi Düzenle" : "Yeni Teklif Oluştur"}
         description="Teklif türünü seçin ve detayları doldurun."

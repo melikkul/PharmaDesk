@@ -1,5 +1,133 @@
 /* src/components/features/inventory/inventory.module.css */
 
+/* Mobile Card View - shown on mobile/tablet */
+.mobileCardView {
+  display: block;
+  padding: 16px 0;
+}
+
+/* Desktop Table View - hidden on mobile */
+.tableWrapper {
+  display: none;
+}
+
+/* Show table on desktop, hide cards */
+@media (min-width: 1024px) {
+  .mobileCardView {
+    display: none;
+  }
+  
+  .tableWrapper {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: var(--card-shadow);
+  }
+}
+
+/* Individual Card Styles */
+.inventoryCard {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: box-shadow 0.2s;
+}
+
+.inventoryCard:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+  flex: 1;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.cardRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cardRow:last-child {
+  border-bottom: none;
+}
+
+.cardLabel {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.cardValue {
+  font-size: 14px;
+  color: var(--text-primary);
+  font-weight: 600;
+  text-align: right;
+}
+
+.cardActions {
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
+.cardButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  min-height: 44px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.cardButton:hover {
+  background: var(--sidebar-bg);
+  color: #fff;
+  border-color: var(--sidebar-bg);
+}
+
+.cardButton svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* Modal içerikleri */
 .modalBody {
   display: flex;
@@ -36,15 +164,6 @@
 
 .currentStockInfo strong {
   color: var(--text-primary);
-}
-
-/* Table wrapper */
-.tableWrapper {
-  width: 100%;
-  overflow-x: auto;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: var(--card-shadow);
 }
 
 /* Table styles */
@@ -85,7 +204,7 @@
   min-width: 80px;
 }
 
-/* Icon buttons */
+/* Icon buttons (for desktop table) */
 .iconButton {
   background: none;
   border: none;

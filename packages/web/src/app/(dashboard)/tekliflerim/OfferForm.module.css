@@ -3,16 +3,26 @@
 /* --- TAB STİLLERİ (Ayarlar Menüsü Gibi) --- */
 .tabContainer {
     display: flex;
-    flex-direction: row;
-    gap: 5px;
-    margin-bottom: 25px;
-    background-color: #F4F7FC; /* Arka plan rengi */
-    padding: 5px;
+    flex-direction: column; /* Mobile: Stack vertically */
+    gap: 8px;
+    margin-bottom: 20px;
+    background-color: #F4F7FC;
+    padding: 8px;
     border-radius: 10px;
 }
 
+/* Tablet+: Horizontal layout */
+@media (min-width: 640px) {
+    .tabContainer {
+        flex-direction: row;
+        gap: 5px;
+        margin-bottom: 25px;
+        padding: 5px;
+    }
+}
+
 .tabButton {
-    flex: 1; /* Butonlar eşit genişlesin */
+    flex: 1;
     padding: 12px 15px;
     border: none;
     background-color: transparent;
@@ -23,6 +33,13 @@
     border-radius: 8px;
     transition: background-color 0.2s, color 0.2s;
     text-align: center;
+    min-height: 44px; /* Mobile: Touch target */
+}
+
+@media (min-width: 1024px) {
+    .tabButton {
+        min-height: 40px;
+    }
 }
 
 .tabButton:hover:not(.active) {
@@ -41,8 +58,24 @@
 
 .formGrid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 25px; /* Gap artırıldı */
+    grid-template-columns: 1fr; /* Mobile: Single column */
+    gap: 16px;
+}
+
+/* Tablet: 2 columns */
+@media (min-width: 640px) {
+    .formGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+}
+
+/* Desktop: 3 columns */
+@media (min-width: 1024px) {
+    .formGrid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 25px;
+    }
 }
 
 .formGroup {
@@ -71,7 +104,17 @@
     font-size: 14px;
     font-family: var(--font-family);
     transition: border-color 0.2s, box-shadow 0.2s;
-    background-color: #fff; /* Select için eklendi */
+    background-color: #fff;
+    min-height: 44px; /* Mobile: Touch target minimum */
+}
+
+/* Desktop: Slightly smaller inputs */
+@media (min-width: 1024px) {
+    .formGroup input,
+    .formGroup textarea,
+    .formGroup select {
+        min-height: 40px;
+    }
 }
 
 .formGroup input:focus,
@@ -191,11 +234,27 @@
 .priceSummary {
     grid-column: 1 / -1;
     background-color: #F4F7FC;
-    padding: 20px;
+    padding: 16px;
     border-radius: 8px;
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+    grid-template-columns: 1fr; /* Mobile: Single column */
+    gap: 16px;
+}
+
+@media (min-width: 640px) {
+    .priceSummary {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 18px;
+        gap: 18px;
+    }
+}
+
+@media (min-width: 1024px) {
+    .priceSummary {
+        grid-template-columns: repeat(3, 1fr);
+        padding: 20px;
+        gap: 20px;
+    }
 }
 .priceItem {
     display: flex;
@@ -208,13 +267,26 @@
     color: var(--text-secondary);
 }
 .priceItem span {
-    font-size: 20px;
+    font-size: 18px; /* Mobile: Smaller */
     font-weight: 700;
     color: var(--text-primary);
 }
+
+@media (min-width: 640px) {
+    .priceItem span {
+        font-size: 20px;
+    }
+}
+
 .priceItem span.total {
     color: var(--active-link-bg);
-    font-size: 24px;
+    font-size: 22px; /* Mobile: Smaller */
+}
+
+@media (min-width: 640px) {
+    .priceItem span.total {
+        font-size: 24px;
+    }
 }
 .priceItem span.remaining {
     color: #F39C12;
@@ -222,13 +294,21 @@
 
 /* Buton Stilleri */
 .btn {
-    padding: 10px 20px;
+    padding: 12px 20px;
     border-radius: 8px;
     border: none;
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
     transition: opacity 0.2s;
+    min-height: 44px; /* Mobile: Touch target */
+}
+
+@media (min-width: 1024px) {
+    .btn {
+        padding: 10px 20px;
+        min-height: 40px;
+    }
 }
 .btn:hover:not(:disabled) {
     opacity: 0.85;
@@ -282,3 +362,13 @@
     margin-top: 2px;
 }
 /* --- Autocomplete Stilleri Sonu --- */
+
+/* --- Error Message Styles --- */
+.errorMessage {
+    color: #e74c3c;
+    font-size: 12px;
+    font-weight: 500;
+    margin-top: 4px;
+    display: block;
+}
+/* --- Error Message Styles End --- */
