@@ -4,10 +4,15 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
 import { Order, OrderItem } from '../types';
 
 export const orderService = {
-  getOrders: async (token: string, type?: 'buyer' | 'seller'): Promise<Order[]> => {
-    const url = type 
+  getOrders: async (token: string, type?: 'buyer' | 'seller', groupId?: number): Promise<Order[]> => {
+    let url = type 
       ? `${API_BASE_URL}/api/orders?type=${type}`
       : `${API_BASE_URL}/api/orders`;
+    
+    // Add groupId if provided
+    if (groupId) {
+      url += type ? `&groupId=${groupId}` : `?groupId=${groupId}`;
+    }
 
     const response = await fetch(url, {
       headers: {

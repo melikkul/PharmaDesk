@@ -62,6 +62,30 @@ namespace Backend.Controllers
             });
         }
 
+        [HttpGet("my-groups")]
+        public async Task<IActionResult> GetMyGroups()
+        {
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var uid))
+                return Unauthorized();
+
+            var user = await _identityDb.IdentityUsers.FindAsync(uid);
+            if (user == null) return NotFound();
+
+            // Fetch all groups this pharmacy belongs to
+            var groups = await _db.PharmacyGroups
+                .Where(pg => pg.PharmacyProfileId == user.PharmacyId && pg.IsActive)
+                .Include(pg => pg.Group)
+                .Select(pg => new
+                {
+                    id = pg.GroupId,
+                    name = pg.Group.Name
+                })
+                .ToListAsync();
+
+            return Ok(groups);
+        }
+
         [HttpPut("me")]
         public async Task<IActionResult> UpdateMe([FromBody] UpdateProfileRequest req)
         {
@@ -245,7 +269,8 @@ namespace Backend.Controllers
                     PharmacyName = pharmacy?.PharmacyName ?? "N/A",
                     City = pharmacy?.City ?? "N/A",
                     District = pharmacy?.District ?? "N/A",
-                    user.CreatedAt
+                    user.CreatedAt,
+                    PharmacyId = user.PharmacyId.ToString() // Serialize as string to avoid JS precision loss
                 });
             }
 

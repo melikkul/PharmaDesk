@@ -1,6 +1,7 @@
 using Backend.Data;
 using Backend.Models;
 using Backend.Services;
+using PharmaDesk.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -17,19 +18,69 @@ namespace PharmaDesk.Infrastructure.Persistence
         {
             try
             {
-                logger.LogInformation("Applying database migrations...");
+                logger.LogInformation("Creating database schema...");
                 
-                // Apply migrations
+                // Create database schema without migrations
                 var pharmacyDb = services.GetRequiredService<AppDbContext>();
-                await pharmacyDb.Database.MigrateAsync();
-                logger.LogInformation("AppDbContext migrations applied successfully.");
+                await pharmacyDb.Database.EnsureCreatedAsync();
+                logger.LogInformation("AppDbContext schema created successfully.");
 
                 var identityDb = services.GetRequiredService<IdentityDbContext>();
-                await identityDb.Database.MigrateAsync();
-                logger.LogInformation("IdentityDbContext migrations applied successfully.");
+                // Fix: EnsureCreated skips if DB exists. We must manually ensure IdentityUsers table exists.
+                var tableExists = false;
+                try 
+                {
+                    // Check if table exists
+                    await identityDb.Database.ExecuteSqlRawAsync("SELECT 1 FROM \"IdentityUsers\" LIMIT 1");
+                    tableExists = true;
+                }
+                catch 
+                {
+                    tableExists = false;
+                }
+
+                if (!tableExists)
+                {
+                    logger.LogInformation("IdentityUsers table missing. Creating manually...");
+                    await identityDb.Database.ExecuteSqlRawAsync(@"
+                        CREATE TABLE ""IdentityUsers"" (
+                            ""Id"" SERIAL PRIMARY KEY,
+                            ""GLN"" VARCHAR(50) NOT NULL,
+                            ""Email"" TEXT NOT NULL,
+                            ""PasswordHash"" TEXT NOT NULL,
+                            ""FirstName"" VARCHAR(50) NOT NULL,
+                            ""LastName"" VARCHAR(50) NOT NULL,
+                            ""PharmacyId"" BIGINT NOT NULL,
+                            ""IsFirstLogin"" BOOLEAN NOT NULL DEFAULT TRUE,
+                            ""Role"" TEXT,
+                            ""LastLoginDate"" TIMESTAMP WITH TIME ZONE,
+                            ""Status"" INTEGER NOT NULL DEFAULT 0,
+                            ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                            ""ResetToken"" TEXT,
+                            ""ResetTokenExpires"" TIMESTAMP WITH TIME ZONE
+                        );
+                        CREATE UNIQUE INDEX ""IX_IdentityUsers_Email"" ON ""IdentityUsers"" (""Email"");
+                    ");
+                    logger.LogInformation("IdentityUsers table created manually.");
+                }
+                else
+                {
+                    logger.LogInformation("IdentityUsers table already exists.");
+                }
                 
+               
                 // Seed data
                 var configuration = services.GetRequiredService<IConfiguration>();
+                
+                try
+                {
+                    await SeedLocationsAsync(pharmacyDb, logger);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not seed locations - skipping");
+                }
+                
                 await SeedAdminAccountAsync(pharmacyDb, configuration, logger);
                 await SeedMedicationsAsync(pharmacyDb, logger);
                 await SeedInventoryAsync(pharmacyDb, logger);
@@ -180,6 +231,26 @@ namespace PharmaDesk.Infrastructure.Persistence
             else
             {
                 logger.LogInformation("Inventory already seeded, skipping");
+            }
+        }
+
+        /// <summary>
+        /// Seeds cities and districts from il_ilce.csv file
+        /// </summary>
+        private static async Task SeedLocationsAsync(AppDbContext context, ILogger logger)
+        {
+            logger.LogInformation("Seeding locations (cities and districts)...");
+            
+            var cityCount = await context.Cities.CountAsync();
+            if (cityCount == 0)
+            {
+                var csvPath = "/app/il_ilce.csv";
+                var seededCount = await LocationSeederService.SeedFromCsvAsync(context, csvPath, logger);
+                logger.LogInformation($"Seeded {seededCount} districts from CSV");
+            }
+            else
+            {
+                logger.LogInformation($"Locations already seeded ({cityCount} cities), skipping CSV import");
             }
         }
     }

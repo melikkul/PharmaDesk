@@ -73,8 +73,8 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     productName: searchParams.get('isim') || '',
     barcode: searchParams.get('barkod') || '',
     stock: searchParams.get('stok') || '',
-    bonus: searchParams.get('mf') || '0',
-    price: (searchParams.get('maliyet') || '0').replace('.', ','), 
+    bonus: searchParams.get('mf') || '',
+    price: (searchParams.get('maliyet') || '').replace('.', ','), 
     expirationDate: searchParams.get('skt') || '',
   }), [searchParams]);
 
@@ -87,11 +87,11 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       skt: medication?.expirationDate || defaultValues?.expirationDate || '',
       price: medication?.price ? String(medication.price).replace('.', ',') : (defaultValues?.price || ''),
       stock: medication?.stock ? medication.stock.split(' + ')[0] : (defaultValues?.stock || ''),
-      bonus: medication?.stock ? medication.stock.split(' + ')[1] : (defaultValues?.bonus || '0'),
-      minSaleQuantity: '1',
+      bonus: medication?.stock ? medication.stock.split(' + ')[1] : (defaultValues?.bonus || ''),
+      minSaleQuantity: '',
       campaignStartDate: '',
       campaignEndDate: '',
-      campaignBonusMultiplier: '1',
+      campaignBonusMultiplier: '',
       minimumOrderQuantity: '',
       biddingDeadline: '',
       acceptingCounterOffers: false,
@@ -158,9 +158,9 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           setValue('barcode', '');
           setValue('skt', '');
           setMaskedSktValue('');
-          setValue('price', '0,00');
-          setValue('stock', '0');
-          setValue('bonus', '0');
+          setValue('price', '');
+          setValue('stock', '');
+          setValue('bonus', '');
       }
 
       // Clear previous debounce timer
@@ -203,9 +203,9 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           setValue('productName', suggestion.name);
           setValue('barcode', suggestion.barcode || '');
           setValue('skt', '');
-          setValue('price', '0,00');
-          setValue('stock', '0');
-          setValue('bonus', '0');
+          setValue('price', '');
+          setValue('stock', '');
+          setValue('bonus', '');
       } else {
           setProductSearchTerm(suggestion.name);
           setValue('productName', suggestion.name);

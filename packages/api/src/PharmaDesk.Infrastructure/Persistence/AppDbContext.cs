@@ -10,6 +10,9 @@ namespace Backend.Data
         public DbSet<PharmacyProfile> PharmacyProfiles { get; set; }
         public DbSet<PharmacySettings> PharmacySettings { get; set; }
         public DbSet<Group> Groups { get; set; }
+        public DbSet<City> Cities { get; set; }
+        public DbSet<District> Districts { get; set; }
+        public DbSet<PharmacyGroup> PharmacyGroups { get; set; }
         public DbSet<Medication> Medications { get; set; }
         public DbSet<InventoryItem> InventoryItems { get; set; }
         public DbSet<Admin> Admins { get; set; }
@@ -107,6 +110,42 @@ namespace Backend.Data
                 .IsUnique();
 
             // Admin seed data removed - no automatic admin accounts
+            
+            // --- GEO-BASED GROUP MANAGEMENT ---
+            // PharmacyGroup composite key
+            modelBuilder.Entity<PharmacyGroup>()
+                .HasKey(pg => new { pg.PharmacyProfileId, pg.GroupId });
+            
+            // PharmacyGroup -> PharmacyProfile relationship
+            modelBuilder.Entity<PharmacyGroup>()
+                .HasOne(pg => pg.PharmacyProfile)
+                .WithMany(p => p.PharmacyGroups)
+                .HasForeignKey(pg => pg.PharmacyProfileId);
+            
+            // PharmacyGroup -> Group relationship
+            modelBuilder.Entity<PharmacyGroup>()
+                .HasOne(pg => pg.Group)
+                .WithMany(g => g.PharmacyGroups)
+                .HasForeignKey(pg => pg.GroupId);
+            
+            // District -> City relationship
+            modelBuilder.Entity<District>()
+                .HasOne(d => d.City)
+                .WithMany(c => c.Districts)
+                .HasForeignKey(d => d.CityId)
+                .OnDelete(DeleteBehavior.Cascade);
+            
+            // Group -> City relationship
+            modelBuilder.Entity<Group>()
+                .HasOne(g => g.City)
+                .WithMany(c => c.Groups)
+                .HasForeignKey(g => g.CityId)
+                .OnDelete(DeleteBehavior.Restrict); // Prevent deleting cities with groups
+            
+            // City name unique constraint
+            modelBuilder.Entity<City>()
+                .HasIndex(c => c.Name)
+                .IsUnique();
         }
     }
 }

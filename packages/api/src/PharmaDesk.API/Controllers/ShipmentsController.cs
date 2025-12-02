@@ -20,12 +20,13 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // GET /api/shipments - Sevkiyatları listele
+        // GET /api/shipments?type=inbound|outbound&groupId=123 - Sevkiyatları listele
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ShipmentDto>>> GetShipments(
             [FromQuery] string? type = null, // "inbound" or "outbound"
             [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50)
+            [FromQuery] int pageSize = 50,
+            [FromQuery] int? groupId = null)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (pharmacyId == null)
@@ -50,6 +51,16 @@ namespace Backend.Controllers
             {
                 // Show both inbound and outbound
                 query = query.Where(s => s.SenderPharmacyId == pharmacyId.Value || s.ReceiverPharmacyId == pharmacyId.Value);
+            }
+
+            // Filter by group if groupId is provided
+            if (groupId.HasValue)
+            {
+                query = query.Where(s =>
+                    _context.PharmacyGroups.Any(pg =>
+                        pg.GroupId == groupId.Value &&
+                        pg.IsActive &&
+                        (pg.PharmacyProfileId == s.SenderPharmacyId || pg.PharmacyProfileId == s.ReceiverPharmacyId)));
             }
 
             var shipments = await query
@@ -244,7 +255,7 @@ namespace Backend.Controllers
             {
                 Date = e.EventDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
                 Status = e.Status,
-                Location = e.Location
+                Location = e.Location ?? ""
             }).ToList();
         }
 

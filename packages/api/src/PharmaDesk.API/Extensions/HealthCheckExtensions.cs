@@ -23,15 +23,7 @@ namespace PharmaDesk.API.Extensions
                     name: "postgres-db",
                     failureStatus: HealthStatus.Unhealthy,
                     tags: new[] { "db", "postgresql" },
-                    timeout: TimeSpan.FromSeconds(5))
-                .AddDbContextCheck<AppDbContext>(
-                    name: "appdb-context",
-                    failureStatus: HealthStatus.Unhealthy,
-                    tags: new[] { "db", "context" })
-                .AddDbContextCheck<IdentityDbContext>(
-                    name: "identity-context",
-                    failureStatus: HealthStatus.Unhealthy,
-                    tags: new[] { "db", "context" });
+                    timeout: TimeSpan.FromSeconds(5));
 
             return services;
         }

@@ -11,7 +11,7 @@ namespace Backend.Dtos
         public string City { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;
         public string Address { get; set; } = string.Empty;
-        public string Group { get; set; } = string.Empty;
+        public int? GroupId { get; set; } // Nullable - user may or may not select a group
         public string PharmacyName { get; set; } = string.Empty;
     }
 

@@ -76,6 +76,24 @@ namespace Backend.Services
             _appDb.PharmacyProfiles.Add(profile);
             await _appDb.SaveChangesAsync(); // Save to get Id
 
+            // If user selected a group, add them to it
+            if (req.GroupId.HasValue)
+            {
+                var groupExists = await _appDb.Groups.AnyAsync(g => g.Id == req.GroupId.Value);
+                if (groupExists)
+                {
+                    var pharmacyGroup = new PharmacyGroup
+                    {
+                        PharmacyProfileId = profile.Id,
+                        GroupId = req.GroupId.Value,
+                        JoinedAt = DateTime.UtcNow,
+                        IsActive = true
+                    };
+                    _appDb.PharmacyGroups.Add(pharmacyGroup);
+                    await _appDb.SaveChangesAsync();
+                }
+            }
+
             // 2. Create IdentityUser linked to PharmacyProfile
             var user = new IdentityUser
             {
@@ -200,8 +218,8 @@ namespace Backend.Services
                 PharmacyName = profile.PharmacyName,
                 GLN = profile.GLN,
                 PublicId = profile.PublicId,
-                City = profile.City,
-                District = profile.District,
+                City = profile.City ?? "",
+                District = profile.District ?? "",
                 PharmacyId = user.PharmacyId.ToString() // Convert to string for JSON serialization
             };
 

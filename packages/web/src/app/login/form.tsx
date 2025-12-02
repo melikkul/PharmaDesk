@@ -62,7 +62,7 @@ export default function Form() {
       // Force full page reload as requested
       window.location.href = "/dashboard";
     } catch (error: any) {
-      console.error("Login error:", error);
+      // console.error("Login error:", error);
       setErrorMessage(error.message || "Giriş yapılamadı.");
     }
   };

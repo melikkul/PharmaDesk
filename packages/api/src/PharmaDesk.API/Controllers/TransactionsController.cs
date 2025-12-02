@@ -20,12 +20,13 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // GET /api/transactions - İşlem geçmişini getir
+        // GET /api/transactions?groupId=123 - İşlem geçmişini getir
         [HttpGet]
         public async Task<ActionResult<IEnumerable<TransactionDto>>> GetTransactions(
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 50,
-            [FromQuery] string? type = null)
+            [FromQuery] string? type = null,
+            [FromQuery] int? groupId = null)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (pharmacyId == null)
@@ -40,6 +41,17 @@ namespace Backend.Controllers
             if (!string.IsNullOrEmpty(type) && Enum.TryParse<TransactionType>(type, true, out var transactionType))
             {
                 query = query.Where(t => t.Type == transactionType);
+            }
+
+            // Filter by group if groupId is provided
+            if (groupId.HasValue)
+            {
+                query = query.Where(t =>
+                    t.CounterpartyPharmacyId == null || // Include non-pharmacy transactions (deposits, etc.)
+                    _context.PharmacyGroups.Any(pg =>
+                        pg.GroupId == groupId.Value &&
+                        pg.IsActive &&
+                        pg.PharmacyProfileId == t.CounterpartyPharmacyId));
             }
 
             var transactions = await query

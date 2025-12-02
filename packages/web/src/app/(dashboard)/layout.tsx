@@ -29,6 +29,7 @@ import { useAuth } from '@/store/AuthContext';
 import { MockChatProvider } from '@/store/MockChatContext';
 import { ChatProvider } from '@/store/ChatContext';
 import { SignalRProvider } from '@/store/SignalRContext';
+import { GroupProvider } from '@/store/GroupContext';
 import { Toaster } from 'sonner';
 
 
@@ -123,73 +124,74 @@ export default function DashboardLayout({
     publicId: user?.publicId, // YENİ: PublicId'yi geçir
   };
 
-  // 2. ADIM: Değerleri (panelValues) Context Provider ile sarmala
   return (
         <DashboardContext.Provider value={panelValues}>
           <SignalRProvider>
-            <MockChatProvider>
-              <ChatProvider>
-                <Toaster position="top-right" richColors />
-                <div className="dashboard-container">
-                  <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
-                  
-                  <Header
-                    userData={headerUserData}
-                    onMessageClick={panelValues.toggleMessagesPanel}
-                    onNotificationClick={panelValues.toggleNotificationsPanel}
-                    onCartClick={panelValues.toggleCartPanel}
-                    onLogout={logout}
-                    onMenuClick={toggleSidebar}
-                  />
-
-                  <main className="main-content">
-                    {children} {/* children (sayfalar) artık context'e erişebilir */}
-                  </main>
-
-                  <SlidePanel
-                    title="Bildirimler"
-                    show={panelValues.showNotificationsPanel}
-                    onClose={panelValues.toggleNotificationsPanel}
-                    onMarkAllRead={panelValues.markAllNotificationsAsRead}
-                  >
-                    {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
-                    <NotificationList 
-                      items={panelValues.notifications} 
-                      onClick={panelValues.handleNotificationClick} 
+            <GroupProvider>
+              <MockChatProvider>
+                <ChatProvider>
+                  <Toaster position="top-right" richColors />
+                  <div className="dashboard-container">
+                    <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
+                    
+                    <Header
+                      userData={headerUserData}
+                      onMessageClick={panelValues.toggleMessagesPanel}
+                      onNotificationClick={panelValues.toggleNotificationsPanel}
+                      onCartClick={panelValues.toggleCartPanel}
+                      onLogout={logout}
+                      onMenuClick={toggleSidebar}
                     />
-                  </SlidePanel>
 
-                  <SlidePanel
-                    title="Mesajlar"
-                    show={panelValues.showMessagesPanel}
-                    onClose={panelValues.toggleMessagesPanel}
-                  >
-                    <ChatPanel 
-                      onSelectUser={panelValues.openFloatingChat}
+                    <main className="main-content">
+                      {children} {/* children (sayfalar) artık context'e erişebilir */}
+                    </main>
+
+                    <SlidePanel
+                      title="Bildirimler"
+                      show={panelValues.showNotificationsPanel}
+                      onClose={panelValues.toggleNotificationsPanel}
+                      onMarkAllRead={panelValues.markAllNotificationsAsRead}
+                    >
+                      {/* ### OPTİMİZASYON: Liste render'ı memoize edilmiş bileşene devredildi ### */}
+                      <NotificationList 
+                        items={panelValues.notifications} 
+                        onClick={panelValues.handleNotificationClick} 
+                      />
+                    </SlidePanel>
+
+                    <SlidePanel
+                      title="Mesajlar"
+                      show={panelValues.showMessagesPanel}
+                      onClose={panelValues.toggleMessagesPanel}
+                    >
+                      <ChatPanel 
+                        onSelectUser={panelValues.openFloatingChat}
+                      />
+                    </SlidePanel>
+
+                    <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />
+
+                    <NotificationModal
+                      notification={panelValues.selectedNotification}
+                      onClose={panelValues.closeNotificationModal}
                     />
-                  </SlidePanel>
 
-                  <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />
-
-                  <NotificationModal
-                    notification={panelValues.selectedNotification}
-                    onClose={panelValues.closeNotificationModal}
-                  />
-
-                  {/* Floating Chat Windows */}
-                  {panelValues.openChats.map((chatUserId, index) => (
-                    <FloatingChatWindow
-                      key={chatUserId}
-                      otherUserId={chatUserId}
-                      isMinimized={panelValues.minimizedChats.includes(chatUserId)}
-                      onMinimize={() => panelValues.toggleMinimizeChat(chatUserId)}
-                      onClose={() => panelValues.closeChat(chatUserId)}
-                      position={{ bottom: 0, right: 20 + (index * 370) }}
-                    />
-                  ))}
-                </div>
-              </ChatProvider>
-            </MockChatProvider>
+                    {/* Floating Chat Windows */}
+                    {panelValues.openChats.map((chatUserId, index) => (
+                      <FloatingChatWindow
+                        key={chatUserId}
+                        otherUserId={chatUserId}
+                        isMinimized={panelValues.minimizedChats.includes(chatUserId)}
+                        onMinimize={() => panelValues.toggleMinimizeChat(chatUserId)}
+                        onClose={() => panelValues.closeChat(chatUserId)}
+                        position={{ bottom: 0, right: 20 + (index * 370) }}
+                      />
+                    ))}
+                  </div>
+                </ChatProvider>
+              </MockChatProvider>
+            </GroupProvider>
           </SignalRProvider>
         </DashboardContext.Provider>
   );

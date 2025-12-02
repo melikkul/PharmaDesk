@@ -31,9 +31,8 @@ namespace Backend.Models
         [StringLength(100)]
         public string? TaxOffice { get; set; } // Vergi Dairesi
         
-        // Foreign Key for Group
-        public int? GroupId { get; set; }
-        public Group? Group { get; set; }
+        // Many-to-many relationship with Groups (a pharmacy can belong to multiple groups)
+        public ICollection<PharmacyGroup> PharmacyGroups { get; set; } = new List<PharmacyGroup>();
 
         public string? ServicePackage { get; set; }
         public string? ProfileImagePath { get; set; }

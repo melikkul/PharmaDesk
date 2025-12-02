@@ -71,7 +71,22 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
           return 60000;
         },
       })
-      .configureLogging(signalR.LogLevel.Error) // Only log critical errors, silence warnings and info
+      .configureLogging({
+        log: (logLevel: signalR.LogLevel, message: string, ...args: any[]) => {
+          // Suppress the specific race-condition error
+          if (logLevel === signalR.LogLevel.Error && message.includes("Failed to start the HttpConnection before stop() was called")) {
+            return;
+          }
+          // Forward other logs to console
+          if (logLevel === signalR.LogLevel.Error) {
+            console.error(`[SignalR] ${message}`, ...args);
+          } else if (logLevel === signalR.LogLevel.Warning) {
+            console.warn(`[SignalR] ${message}`, ...args);
+          } else if (logLevel === signalR.LogLevel.Information) {
+            // console.log(`[SignalR] ${message}`, ...args); // Uncomment for debug
+          }
+        }
+      })
       .build();
 
     currentConnection = newConnection;

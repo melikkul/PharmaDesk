@@ -1,4 +1,5 @@
 using Backend.Data;
+using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -110,5 +111,80 @@ namespace Backend.Controllers
 
             return Ok(users);
         }
+        [HttpPost("assign-group")]
+        public async Task<IActionResult> AssignGroup([FromBody] AssignGroupRequest req)
+        {
+            try
+            {
+                // Log the incoming request
+                Console.WriteLine($"[AssignGroup] Received request: PharmacyId={req.PharmacyId}, GroupId={req.GroupId}");
+                
+                // Parse pharmacyId from string to long (avoids JavaScript precision loss)
+                if (!long.TryParse(req.PharmacyId, out long pharmacyId))
+                {
+                    return BadRequest(new { error = "Invalid pharmacy ID format" });
+                }
+                
+                // 1. Validate Pharmacy
+                var pharmacy = await _appDb.PharmacyProfiles.FindAsync(pharmacyId);
+                Console.WriteLine($"[AssignGroup] Pharmacy lookup result: {(pharmacy == null ? "NULL" : $"Found: {pharmacy.PharmacyName}")}");
+                
+                if (pharmacy == null)
+                {
+                    return NotFound(new { error = "Pharmacy not found" });
+                }
+
+                // 2. Validate Group
+                var group = await _appDb.Groups.Include(g => g.City).FirstOrDefaultAsync(g => g.Id == req.GroupId);
+                if (group == null)
+                {
+                    return NotFound(new { error = "Group not found" });
+                }
+
+                // 3. Validate Same City Constraint
+                // Note: Pharmacy.City is a string name, Group.City is an entity with Name.
+                // We should compare names carefully (case insensitive, trim)
+                var pharmacyCity = pharmacy.City?.Trim().ToLowerInvariant();
+                var groupCity = group.City.Name.Trim().ToLowerInvariant();
+
+                if (pharmacyCity != groupCity)
+                {
+                    return BadRequest(new { error = $"City mismatch. Pharmacy is in '{pharmacy.City}', Group is in '{group.City.Name}'. They must be in the same city." });
+                }
+
+                // 4. Check if already a member
+                var exists = await _appDb.PharmacyGroups
+                    .AnyAsync(pg => pg.PharmacyProfileId == pharmacyId && pg.GroupId == req.GroupId);
+
+                if (exists)
+                {
+                    return BadRequest(new { error = "Pharmacy is already a member of this group." });
+                }
+
+                // 5. Add to Group
+                var pharmacyGroup = new PharmacyGroup
+                {
+                    PharmacyProfileId = pharmacyId,
+                    GroupId = req.GroupId,
+                    JoinedAt = DateTime.UtcNow,
+                    IsActive = true
+                };
+
+                _appDb.PharmacyGroups.Add(pharmacyGroup);
+                await _appDb.SaveChangesAsync();
+
+                return Ok(new { message = "Pharmacy assigned to group successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Failed to assign group: " + ex.Message });
+            }
+        }
+    }
+
+    public class AssignGroupRequest
+    {
+        public string PharmacyId { get; set; } = string.Empty; // Changed to string to avoid JS precision loss
+        public int GroupId { get; set; }
     }
 }

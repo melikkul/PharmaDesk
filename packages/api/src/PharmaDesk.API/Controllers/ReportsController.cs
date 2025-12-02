@@ -60,7 +60,7 @@ namespace Backend.Controllers
             if (pharmacyId == null)
                 return Unauthorized(new { message = "Pharmacy not found" });
 
-            object reportData = null;
+            object? reportData = null;
 
             // Generate report based on type
             switch (request.ReportType)

@@ -8,6 +8,7 @@ import { MessageIcon, NotificationIcon, CartIcon } from './ui/Icons';
 import { useCart } from '../store/CartContext'; 
 import { useNotifications } from '../hooks/useNotifications';
 import { useAuth } from '../store/AuthContext';
+import GroupSwitcher from './GroupSwitcher';
 
 interface HeaderPharmacyData {
   pharmacyName: string;
@@ -60,16 +61,14 @@ const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className={styles.header}>
-      {/* Hamburger Menu - Mobile Only */}
-      <button className={styles.hamburgerButton} onClick={onMenuClick} aria-label="Toggle Menu">
-        <HamburgerIcon />
-      </button>
-
       <div className={styles.searchBar}>
         <input type="text" placeholder="İlaç Adı / Sipariş Numarası / İlaç Barkod" />
       </div>
       <div className={styles.headerActions}>
         <span className={styles.pharmacyName}>{userData.pharmacyName}</span>
+        
+        {/* Group Switcher - shown only when user has multiple groups */}
+        <GroupSwitcher />
         
         <button className={`${styles.iconButton} ${unreadCartItemCount > 0 ? styles.hasBadge : ''}`} onClick={onCartClick} data-badge={unreadCartItemCount > 0 ? unreadCartItemCount : undefined}>
           <CartIcon />

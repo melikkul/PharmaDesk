@@ -18,9 +18,11 @@ namespace Backend.Controllers
             _context = context;
         }
 
-        // GET /api/orders?type=buyer|seller - List orders
+        // GET /api/orders?type=buyer|seller&groupId=123 - List orders
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Order>>> GetOrders([FromQuery] string? type = null)
+        public async Task<ActionResult<IEnumerable<Order>>> GetOrders(
+            [FromQuery] string? type = null,
+            [FromQuery] int? groupId = null)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (pharmacyId == null)
@@ -45,6 +47,16 @@ namespace Backend.Controllers
             {
                 // Both buyer and seller
                 query = query.Where(o => o.BuyerPharmacyId == pharmacyId.Value || o.SellerPharmacyId == pharmacyId.Value);
+            }
+
+            // Filter by group if groupId is provided
+            if (groupId.HasValue)
+            {
+                query = query.Where(o => 
+                    _context.PharmacyGroups.Any(pg => 
+                        pg.GroupId == groupId.Value && 
+                        pg.IsActive &&
+                        (pg.PharmacyProfileId == o.BuyerPharmacyId || pg.PharmacyProfileId == o.SellerPharmacyId)));
             }
 
             var orders = await query

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Backend.Models
 {
-    public class Group
+    public class District
     {
         [Key]
         public int Id { get; set; }
@@ -10,13 +10,7 @@ namespace Backend.Models
         [Required, StringLength(100)]
         public string Name { get; set; } = string.Empty;
 
-        public string? Description { get; set; }
-
-        // Geo-based grouping: Each group belongs to a city
         public int CityId { get; set; }
         public City City { get; set; } = null!;
-
-        // Many-to-many relationship with PharmacyProfiles
-        public ICollection<PharmacyGroup> PharmacyGroups { get; set; } = new List<PharmacyGroup>();
     }
 }
