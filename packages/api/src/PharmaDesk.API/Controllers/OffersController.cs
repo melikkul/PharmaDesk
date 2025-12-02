@@ -65,8 +65,15 @@ namespace Backend.Controllers
                     ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                     CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
                     CampaignBonusMultiplier = o.Type == OfferType.Campaign ? o.CampaignBonusMultiplier : null,
-                    MinimumOrderQuantity = o.Type == OfferType.Tender ? o.MinimumOrderQuantity : null,
-                    BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null
+                    BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null,
+                    
+                    // New fields
+                    DepotPrice = o.DepotPrice,
+                    MalFazlasi = o.MalFazlasi,
+                    DiscountPercentage = o.DiscountPercentage,
+                    NetPrice = o.NetPrice,
+                    MaxSaleQuantity = o.MaxSaleQuantity,
+                    OfferDescription = o.Description
                 })
                 .ToListAsync();
 
@@ -110,7 +117,6 @@ namespace Backend.Controllers
                     ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                     CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
                     CampaignBonusMultiplier = o.Type == OfferType.Campaign ? o.CampaignBonusMultiplier : null,
-                    MinimumOrderQuantity = o.Type == OfferType.Tender ? o.MinimumOrderQuantity : null,
                     BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null
                 })
                 .ToListAsync();
@@ -147,7 +153,6 @@ namespace Backend.Controllers
                 ImageUrl = null,
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
                 CampaignBonusMultiplier = offer.Type == OfferType.Campaign ? offer.CampaignBonusMultiplier : null,
-                MinimumOrderQuantity = offer.Type == OfferType.Tender ? offer.MinimumOrderQuantity : null,
                 BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
             };
 
@@ -185,7 +190,6 @@ namespace Backend.Controllers
                 ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                 CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
                 CampaignBonusMultiplier = o.Type == OfferType.Campaign ? o.CampaignBonusMultiplier : null,
-                MinimumOrderQuantity = o.Type == OfferType.Tender ? o.MinimumOrderQuantity : null,
                 BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null
             }).ToList();
 
@@ -308,16 +312,56 @@ namespace Backend.Controllers
                 }
             }
 
+            // Calculate NetPrice
+            decimal netPrice = request.Price; // Default to Price if no calculation possible
+
+            if (!string.IsNullOrEmpty(request.MalFazlasi))
+            {
+                // Parse MF "X+Y"
+                var parts = request.MalFazlasi.Split('+');
+                if (parts.Length == 2 && 
+                    int.TryParse(parts[0], out int paidQty) && 
+                    int.TryParse(parts[1], out int freeQty))
+                {
+                    // Formula: (DepotPrice * PaidQty) / (PaidQty + FreeQty)
+                    // But usually DepotPrice is the base. If user entered DepotPrice, use it.
+                    // If not, use Price as base?
+                    // Requirement: "Formula if MF (X+Y) exists: NetPrice = (DepotPrice * X) / (X + Y)"
+                    
+                    decimal basePrice = request.DepotPrice > 0 ? request.DepotPrice : request.Price;
+                    
+                    if (paidQty + freeQty > 0)
+                    {
+                        netPrice = (basePrice * paidQty) / (paidQty + freeQty);
+                    }
+                }
+            }
+            else if (request.DiscountPercentage > 0)
+            {
+                // Formula: DepotPrice * (1 - (DiscountPercentage/100))
+                decimal basePrice = request.DepotPrice > 0 ? request.DepotPrice : request.Price;
+                netPrice = basePrice * (1 - (request.DiscountPercentage / 100));
+            }
+
             var offer = new Offer
             {
                 PharmacyProfileId = pharmacyId.Value,
                 MedicationId = medication.Id,
                 Type = offerType,
-                Price = request.Price,
+                Price = request.Price, // This is the "OfferPrice" (Unit Price)
                 Stock = request.Stock,
                 BonusQuantity = request.BonusQuantity,
                 Status = OfferStatus.Active,
                 ExpirationDate = expirationDate,
+                
+                // New Fields
+                DepotPrice = request.DepotPrice,
+                MalFazlasi = request.MalFazlasi,
+                DiscountPercentage = request.DiscountPercentage,
+                NetPrice = netPrice,
+                MaxSaleQuantity = request.MaxSaleQuantity,
+                Description = request.Description,
+
                 // Campaign-specific
                 CampaignStartDate = request.CampaignStartDate,
                 CampaignEndDate = request.CampaignEndDate,
@@ -354,7 +398,6 @@ namespace Backend.Controllers
                 ImageUrl = null,
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
                 CampaignBonusMultiplier = offer.Type == OfferType.Campaign ? offer.CampaignBonusMultiplier : null,
-                MinimumOrderQuantity = offer.Type == OfferType.Tender ? offer.MinimumOrderQuantity : null,
                 BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
             };
 
@@ -408,6 +451,34 @@ namespace Backend.Controllers
             offer.BonusQuantity = request.BonusQuantity;
             offer.MinSaleQuantity = request.MinSaleQuantity;
 
+            // Update new fields
+            offer.DepotPrice = request.DepotPrice.GetValueOrDefault();
+            offer.MalFazlasi = request.MalFazlasi;
+            offer.DiscountPercentage = request.DiscountPercentage.GetValueOrDefault();
+            offer.MaxSaleQuantity = request.MaxSaleQuantity;
+            offer.Description = request.Description;
+
+            // Recalculate NetPrice
+            decimal netPrice = request.Price;
+            if (!string.IsNullOrEmpty(request.MalFazlasi))
+            {
+                var parts = request.MalFazlasi.Split('+');
+                if (parts.Length == 2 && 
+                    int.TryParse(parts[0], out int paidQty) && 
+                    int.TryParse(parts[1], out int freeQty))
+                {
+                    decimal basePrice = request.DepotPrice.GetValueOrDefault() > 0 ? request.DepotPrice.GetValueOrDefault() : request.Price;
+                    if (paidQty + freeQty > 0)
+                        netPrice = (basePrice * paidQty) / (paidQty + freeQty);
+                }
+            }
+            else if (request.DiscountPercentage.GetValueOrDefault() > 0)
+            {
+                decimal basePrice = request.DepotPrice.GetValueOrDefault() > 0 ? request.DepotPrice.GetValueOrDefault() : request.Price;
+                netPrice = basePrice * (1 - (request.DiscountPercentage.GetValueOrDefault() / 100));
+            }
+            offer.NetPrice = netPrice;
+
             // Update type-specific fields based on offer type
             if (offer.Type == OfferType.Campaign)
             {
@@ -448,7 +519,6 @@ namespace Backend.Controllers
                 ImageUrl = null,
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
                 CampaignBonusMultiplier = offer.Type == OfferType.Campaign ? offer.CampaignBonusMultiplier : null,
-                MinimumOrderQuantity = offer.Type == OfferType.Tender ? offer.MinimumOrderQuantity : null,
                 BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
             };
 

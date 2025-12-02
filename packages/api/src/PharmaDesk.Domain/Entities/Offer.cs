@@ -41,6 +41,22 @@ namespace Backend.Models
 
         public int BonusQuantity { get; set; } = 0; // Verilecek MF
 
+        // New Financial Fields
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DepotPrice { get; set; } // Depo Fiyatı
+
+        public string? MalFazlasi { get; set; } // Format: "X+Y" (e.g., "10+2")
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DiscountPercentage { get; set; } // İskonto Oranı
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal NetPrice { get; set; } // Net Birim Maliyet
+
+        public int? MaxSaleQuantity { get; set; } // Maksimum Satış Adedi
+
+        public string? Description { get; set; } // Açıklama
+
         [Required]
         public OfferStatus Status { get; set; } = OfferStatus.Active;
         

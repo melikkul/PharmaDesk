@@ -11,11 +11,17 @@ import { z } from 'zod';
 import { 
   MedicationItem, 
   fullInventoryData,
-  allDrugNames
 } from '@/lib/dashboardData';
 import SettingsCard from '@/components/settings/SettingsCard';
 import formStyles from './OfferForm.module.css';
 import { medicationService } from '@/services/medicationService';
+// Icon imports temporarily disabled due to workspace module resolution issues
+// import { 
+//   Calculator as CalculatorIcon, 
+//   AlertTriangle as ExclamationTriangleIcon, 
+//   DollarSign as CurrencyDollarIcon,
+//   Tag as TagIcon
+// } from 'lucide-react';
 
 // === TYPES ===
 type OfferType = 'standard' | 'campaign' | 'tender';
@@ -49,8 +55,20 @@ const baseSchema = z.object({
     }, {
       message: 'Stok 0\'dan büyük olmalıdır',
     }),
-  bonus: z.string().optional(),
+  
+  // New Fields
+  depotPrice: z.string().optional(),
+  malFazlasi: z.string()
+    .regex(/^(\d+\+\d+)?$/, 'Format "X+Y" olmalıdır (örn: 10+2)')
+    .optional(),
+  discountPercentage: z.string().optional(),
+  maxSaleQuantity: z.string().optional(),
+  description: z.string().optional(),
+
+  // Legacy/Other Fields
+  bonus: z.string().optional(), // Keeping for backward compat if needed, but MF replaces it visually
   minSaleQuantity: z.string().optional(),
+  
   // Optional fields for all types
   campaignStartDate: z.string().optional(),
   campaignEndDate: z.string().optional(),
@@ -88,6 +106,14 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       price: medication?.price ? String(medication.price).replace('.', ',') : (defaultValues?.price || ''),
       stock: medication?.stock ? medication.stock.split(' + ')[0] : (defaultValues?.stock || ''),
       bonus: medication?.stock ? medication.stock.split(' + ')[1] : (defaultValues?.bonus || ''),
+      
+      // New fields defaults
+      depotPrice: '',
+      malFazlasi: '',
+      discountPercentage: '',
+      maxSaleQuantity: '',
+      description: '',
+
       minSaleQuantity: '',
       campaignStartDate: '',
       campaignEndDate: '',
@@ -97,6 +123,18 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       acceptingCounterOffers: false,
     },
   });
+
+  // Watch fields for calculations
+  const watchedDepotPrice = watch('depotPrice');
+  const watchedMF = watch('malFazlasi');
+  const watchedDiscount = watch('discountPercentage');
+  const watchedPrice = watch('price');
+  const watchedSkt = watch('skt');
+
+  // Calculated States
+  const [netPrice, setNetPrice] = useState<number | null>(null);
+  const [effectiveDiscount, setEffectiveDiscount] = useState<number | null>(null);
+  const [isExpiryWarning, setIsExpiryWarning] = useState(false);
 
   // Autocomplete State
   const [productSearchTerm, setProductSearchTerm] = useState(
@@ -118,6 +156,62 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     lazy: true,
     overwrite: true,
   });
+
+  // === CALCULATIONS ===
+  useEffect(() => {
+    // Calculate Net Price
+    let calculatedNetPrice = 0;
+    const dPrice = parseFloat((watchedDepotPrice || '').replace(',', '.'));
+    const price = parseFloat((watchedPrice || '').replace(',', '.'));
+    const basePrice = dPrice > 0 ? dPrice : price;
+
+    if (basePrice > 0) {
+      if (watchedMF && watchedMF.includes('+')) {
+        const [paid, free] = watchedMF.split('+').map(Number);
+        if (paid > 0 && free >= 0) {
+          calculatedNetPrice = (basePrice * paid) / (paid + free);
+        }
+      } else if (watchedDiscount) {
+        const disc = parseFloat(watchedDiscount.replace(',', '.'));
+        if (!isNaN(disc)) {
+          calculatedNetPrice = basePrice * (1 - (disc / 100));
+        }
+      } else {
+        calculatedNetPrice = basePrice;
+      }
+    }
+
+    setNetPrice(calculatedNetPrice > 0 ? calculatedNetPrice : null);
+
+    // Calculate Effective Discount
+    if (basePrice > 0 && calculatedNetPrice > 0 && calculatedNetPrice < basePrice) {
+      const discount = ((basePrice - calculatedNetPrice) / basePrice) * 100;
+      setEffectiveDiscount(discount);
+    } else {
+      setEffectiveDiscount(null);
+    }
+
+  }, [watchedDepotPrice, watchedMF, watchedDiscount, watchedPrice]);
+
+  useEffect(() => {
+    // Check Expiry Warning (< 6 months)
+    if (watchedSkt && watchedSkt.length === 9) {
+      const [monthStr, yearStr] = watchedSkt.split(' / ');
+      const month = parseInt(monthStr, 10);
+      const year = parseInt(yearStr, 10);
+      
+      if (!isNaN(month) && !isNaN(year)) {
+        const expiryDate = new Date(year, month - 1);
+        const today = new Date();
+        const sixMonthsLater = new Date();
+        sixMonthsLater.setMonth(today.getMonth() + 6);
+
+        setIsExpiryWarning(expiryDate < sixMonthsLater);
+      }
+    } else {
+      setIsExpiryWarning(false);
+    }
+  }, [watchedSkt]);
 
   // === EFFECTS ===
   useEffect(() => {
@@ -161,12 +255,11 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           setValue('price', '');
           setValue('stock', '');
           setValue('bonus', '');
+          setValue('depotPrice', '');
+          setValue('malFazlasi', '');
       }
 
-      // Clear previous debounce timer
-      if (searchDebounceTimer) {
-          clearTimeout(searchDebounceTimer);
-      }
+      if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
 
       if (value.length < 2) {
           setIsAutocompleteOpen(false);
@@ -177,7 +270,6 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
 
       setIsSearching(true);
 
-      // Start new 1-second debounce timer
       const timer = setTimeout(async () => {
           try {
               const medications: any = await medicationService.searchMedications(value, 10);
@@ -218,7 +310,6 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const onSubmit = (data: any) => {
     if (isSaving) return;
 
-    // Get SKT from ref (for standard) or data (for others)
     const sktValue = offerType === 'standard' && sktRef.current 
         ? sktRef.current.value 
         : data.skt;
@@ -233,6 +324,13 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
         bonus: parseInt(data.bonus || '0', 10),
         minSaleQuantity: parseInt(data.minSaleQuantity || '1', 10),
         
+        // New Fields
+        depotPrice: data.depotPrice ? parseFloat(data.depotPrice.replace(',', '.')) : 0,
+        malFazlasi: data.malFazlasi,
+        discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage.replace(',', '.')) : 0,
+        maxSaleQuantity: data.maxSaleQuantity ? parseInt(data.maxSaleQuantity, 10) : null,
+        description: data.description,
+
         // Campaign
         campaignStartDate: data.campaignStartDate || null,
         campaignEndDate: data.campaignEndDate || null,
@@ -318,91 +416,178 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     </div>
   );
 
+  const renderCalculationBadge = () => {
+    if (!netPrice) return null;
+
+    return (
+      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 flex items-center justify-between text-emerald-800">
+        <div className="flex items-center gap-2">
+          {/* <CalculatorIcon className="w-5 h-5" /> */}
+          <span className="font-semibold">💰 Hesaplanan Net Maliyet:</span>
+          <span className="text-lg font-bold">{netPrice.toFixed(2)} ₺</span>
+        </div>
+        {effectiveDiscount && (
+          <div className="flex items-center gap-1 bg-emerald-100 px-2 py-1 rounded text-sm font-medium">
+            {/* <TagIcon className="w-4 h-4" /> */}
+            <span>🏷️ %{effectiveDiscount.toFixed(1)} Avantaj</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderCommonFields = () => (
     <>
-      <div className={`${formStyles.formGroup} ${formStyles.autocompleteWrapper}`}>
-        <label htmlFor="productName">İlaç Adı *</label>
-        <input
-          type="text"
-          id="productName"
-          value={productSearchTerm}
-          onChange={handleProductSearchChange}
-          onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
-          onBlur={() => setTimeout(() => setIsAutocompleteOpen(false), 500)}
-          placeholder="İlaç ara..."
-          disabled={isEditMode}
-          autoComplete="off"
-        />
-        {errors.productName && (
-          <span className={formStyles.errorMessage}>{errors.productName.message as string}</span>
-        )}
-        {renderAutocompleteList()}
+      {/* Row 1: Product Search & Barcode */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`${formStyles.formGroup} ${formStyles.autocompleteWrapper}`}>
+          <label htmlFor="productName">İlaç Adı *</label>
+          <input
+            type="text"
+            id="productName"
+            value={productSearchTerm}
+            onChange={handleProductSearchChange}
+            onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
+            onBlur={() => setTimeout(() => setIsAutocompleteOpen(false), 500)}
+            placeholder="İlaç ara..."
+            disabled={isEditMode}
+            autoComplete="off"
+            className="w-full"
+          />
+          {errors.productName && (
+            <span className={formStyles.errorMessage}>{errors.productName.message as string}</span>
+          )}
+          {renderAutocompleteList()}
+        </div>
+
+        <div className={formStyles.formGroup}>
+          <label htmlFor="barcode">Barkod</label>
+          <input 
+            type="text" 
+            id="barcode" 
+            {...register('barcode')}
+            readOnly 
+            style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }} 
+          />
+        </div>
+      </div>
+
+      {/* Row 2: Financials (Depot Price, MF, Discount, Price) */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
+        <div className={formStyles.formGroup}>
+          <label htmlFor="depotPrice">Depo Fiyatı (₺)</label>
+          <input
+            type="text" 
+            id="depotPrice" 
+            {...register('depotPrice')}
+            placeholder="0,00"
+          />
+        </div>
+
+        <div className={formStyles.formGroup}>
+          <label htmlFor="malFazlasi">Mal Fazlası (X+Y)</label>
+          <input
+            type="text" 
+            id="malFazlasi" 
+            {...register('malFazlasi')}
+            placeholder="10+2"
+          />
+          {errors.malFazlasi && (
+            <span className={formStyles.errorMessage}>{errors.malFazlasi.message as string}</span>
+          )}
+        </div>
+
+        <div className={formStyles.formGroup}>
+          <label htmlFor="discountPercentage">İskonto (%)</label>
+          <input
+            type="text" 
+            id="discountPercentage" 
+            {...register('discountPercentage')}
+            placeholder="0"
+          />
+        </div>
+
+        <div className={formStyles.formGroup}>
+          <label htmlFor="price">Satış Fiyatı (₺) *</label>
+          <input
+            type="text" 
+            id="price" 
+            {...register('price')}
+            placeholder="0,00"
+            className={errors.price ? 'border-red-500' : ''}
+          />
+          {errors.price && (
+            <span className={formStyles.errorMessage}>{errors.price.message as string}</span>
+          )}
+        </div>
+      </div>
+
+      {/* Calculation Badge */}
+      {renderCalculationBadge()}
+
+      {/* Row 3: Stock & Expiry */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className={formStyles.formGroup}>
+          <label htmlFor="stock">Stok Adedi *</label>
+          <input
+            type="text" 
+            id="stock" 
+            {...register('stock')}
+            placeholder="0"
+          />
+          {errors.stock && (
+            <span className={formStyles.errorMessage}>{errors.stock.message as string}</span>
+          )}
+        </div>
+
+        <div className={formStyles.formGroup}>
+          <label htmlFor="maxSaleQuantity">Maks. Satış (Opsiyonel)</label>
+          <input
+            type="text" 
+            id="maxSaleQuantity" 
+            {...register('maxSaleQuantity')}
+            placeholder="Sınırsız"
+          />
+        </div>
+
+        <div className={formStyles.formGroup}>
+          <label htmlFor="expirationDate" className="flex items-center gap-2">
+            Son Kullanma Tarihi *
+            {isExpiryWarning && (
+              <span className="text-amber-600 text-xs flex items-center gap-1">
+                {/* <ExclamationTriangleIcon className="w-3 h-3" /> */}
+                ⚠️ Yakın Tarih!
+              </span>
+            )}
+          </label>
+          <input 
+            ref={sktRef} 
+            type="text" 
+            id="expirationDate" 
+            placeholder="AA / YYYY"
+            className={isExpiryWarning ? 'border-amber-500 bg-amber-50' : ''}
+          />
+          {errors.skt && (
+            <span className={formStyles.errorMessage}>{errors.skt.message as string}</span>
+          )}
+        </div>
       </div>
 
       <div className={formStyles.formGroup}>
-        <label htmlFor="barcode">Barkod</label>
-        <input 
-          type="text" 
-          id="barcode" 
-          {...register('barcode')}
-          readOnly 
-          style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }} 
-        />
-      </div>
-
-      <div className={formStyles.formGroup}>
-        <label htmlFor="expirationDate">Son Kullanma Tarihi (AA / YYYY) *</label>
-        <input 
-          ref={sktRef} 
-          type="text" 
-          id="expirationDate" 
-          placeholder="Örn: 12 / 2025"
-        />
-        {errors.skt && (
-          <span className={formStyles.errorMessage}>{errors.skt.message as string}</span>
-        )}
-      </div>
-
-      <div className={formStyles.formGroup}>
-        <label htmlFor="price">Birim Fiyat (₺) *</label>
-        <input
-          type="text" 
-          id="price" 
-          {...register('price')}
-          placeholder="0,00"
-        />
-        {errors.price && (
-          <span className={formStyles.errorMessage}>{errors.price.message as string}</span>
-        )}
-      </div>
-
-      <div className={formStyles.formGroup}>
-        <label htmlFor="stock">Stok Adedi *</label>
-        <input
-          type="text" 
-          id="stock" 
-          {...register('stock')}
-          placeholder="0"
-        />
-        {errors.stock && (
-          <span className={formStyles.errorMessage}>{errors.stock.message as string}</span>
-        )}
-      </div>
-
-      <div className={formStyles.formGroup}>
-        <label htmlFor="bonus">Mal Fazlası (MF)</label>
-        <input
-          type="text" 
-          id="bonus" 
-          {...register('bonus')}
-          placeholder="0"
+        <label htmlFor="description">Açıklama (Opsiyonel)</label>
+        <textarea
+          id="description"
+          {...register('description')}
+          placeholder="Ürün hakkında ek bilgi (örn: Kutu hafif hasarlı)"
+          rows={2}
+          className="w-full border rounded p-2"
         />
       </div>
     </>
   );
 
   const renderCampaignFields = () => (
-    <>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4 border-t pt-4">
       <div className={formStyles.formGroup}>
         <label htmlFor="campaignStartDate">Kampanya Başlangıç *</label>
         <input
@@ -433,13 +618,12 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           {...register('campaignBonusMultiplier')}
           placeholder="1.0"
         />
-        <small className={formStyles.subtleText}>Örn: 2 yazarsanız, MF 2 katına çıkar.</small>
       </div>
-    </>
+    </div>
   );
 
   const renderTenderFields = () => (
-    <>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 border-t pt-4">
       <div className={formStyles.formGroup}>
         <label htmlFor="minimumOrderQuantity">Minimum Sipariş Miktarı *</label>
         <input
@@ -473,7 +657,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           <label htmlFor="acceptingCounterOffers">Karşı Teklifleri Kabul Et</label>
         </div>
       </div>
-    </>
+    </div>
   );
 
   return (
@@ -489,7 +673,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       >
         {!isEditMode && renderTabs()}
 
-        <div className={formStyles.formGrid}>
+        <div className="flex flex-col gap-4">
           {renderCommonFields()}
           {offerType === 'campaign' && renderCampaignFields()}
           {offerType === 'tender' && renderTenderFields()}

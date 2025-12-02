@@ -60,9 +60,19 @@ namespace Backend.Dtos
         public decimal? CampaignBonusMultiplier { get; set; }
         
         // Tender-specific fields
-        public int? MinimumOrderQuantity { get; set; }
         public string? BiddingDeadline { get; set; }
         public string? ExpirationDate { get; set; } // SKT
+
+        // New fields
+        public decimal DepotPrice { get; set; }
+        public string? MalFazlasi { get; set; }
+        public decimal DiscountPercentage { get; set; }
+        public decimal NetPrice { get; set; }
+        public int? MaxSaleQuantity { get; set; }
+        // Description is already present in OfferDto but mapped from Medication.Description. 
+        // We should probably use the Offer.Description if available, or fallback.
+        // For now, I'll add OfferDescription to avoid conflict or update mapping logic.
+        public string? OfferDescription { get; set; } 
     }
 
     public class CreateOfferRequest
@@ -95,6 +105,13 @@ namespace Backend.Dtos
         public int? MinimumOrderQuantity { get; set; }
         public DateTime? BiddingDeadline { get; set; }
         public bool AcceptingCounterOffers { get; set; } = false;
+
+        // New fields
+        public decimal DepotPrice { get; set; }
+        public string? MalFazlasi { get; set; }
+        public decimal DiscountPercentage { get; set; }
+        public int? MaxSaleQuantity { get; set; }
+        public string? Description { get; set; }
     }
 
     public class UpdateOfferRequest
@@ -119,6 +136,13 @@ namespace Backend.Dtos
         public int? MinimumOrderQuantity { get; set; }
         public DateTime? BiddingDeadline { get; set; }
         public bool? AcceptingCounterOffers { get; set; }
+
+        // New fields
+        public decimal? DepotPrice { get; set; }
+        public string? MalFazlasi { get; set; }
+        public decimal? DiscountPercentage { get; set; }
+        public int? MaxSaleQuantity { get; set; }
+        public string? Description { get; set; }
     }
 
     public class UpdateOfferStatusRequest
