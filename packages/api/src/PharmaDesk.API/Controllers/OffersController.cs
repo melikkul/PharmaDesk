@@ -64,12 +64,12 @@ namespace Backend.Controllers
                     ImageUrl = null, // Placeholder or add to DB later
                     ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                     CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
-                    CampaignBonusMultiplier = o.Type == OfferType.Campaign ? o.CampaignBonusMultiplier : null,
+                    CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
                     BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null,
                     
                     // New fields
                     DepotPrice = o.DepotPrice,
-                    MalFazlasi = o.MalFazlasi,
+                    MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
                     DiscountPercentage = o.DiscountPercentage,
                     NetPrice = o.NetPrice,
                     MaxSaleQuantity = o.MaxSaleQuantity,
@@ -116,8 +116,24 @@ namespace Backend.Controllers
                     ImageUrl = null,
                     ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                     CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
-                    CampaignBonusMultiplier = o.Type == OfferType.Campaign ? o.CampaignBonusMultiplier : null,
-                    BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null
+                    CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
+                    BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null,
+                    
+                    // Financial fields
+                    DepotPrice = o.DepotPrice,
+                    MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
+                    DiscountPercentage = o.DiscountPercentage,
+                    NetPrice = o.NetPrice,
+                    MaxSaleQuantity = o.MaxSaleQuantity,
+                    OfferDescription = o.Description,
+                    
+                    // Barem and stock tracking
+                    WarehouseBaremId = o.WarehouseBaremId,
+                    MaxPriceLimit = o.MaxPriceLimit,
+                    IsPrivate = o.IsPrivate,
+                    TargetPharmacyIds = o.TargetPharmacyIds,
+                    SoldQuantity = o.SoldQuantity,
+                    RemainingStock = o.Stock - o.SoldQuantity
                 })
                 .ToListAsync();
 
@@ -141,6 +157,7 @@ namespace Backend.Controllers
                 Id = offer.Id,
                 MedicationId = offer.MedicationId,
                 ProductName = offer.Medication.Name,
+                Barcode = offer.Medication.Barcode,
                 Type = offer.Type.ToString().ToLower(),
                 Stock = $"{offer.Stock} + {offer.BonusQuantity}",
                 Price = offer.Price,
@@ -151,9 +168,24 @@ namespace Backend.Controllers
                 Description = offer.Medication.Description,
                 Manufacturer = offer.Medication.Manufacturer,
                 ImageUrl = null,
+                ExpirationDate = offer.ExpirationDate.HasValue ? offer.ExpirationDate.Value.ToString("MM/yyyy") : null,
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
-                CampaignBonusMultiplier = offer.Type == OfferType.Campaign ? offer.CampaignBonusMultiplier : null,
-                BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
+                CampaignBonusMultiplier = offer.Type == OfferType.JointOrder ? offer.CampaignBonusMultiplier : null,
+                BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd"),
+                // Financial fields
+                DepotPrice = offer.DepotPrice,
+                MalFazlasi = offer.MalFazlasi ?? $"{offer.MinSaleQuantity}+{offer.BonusQuantity}",
+                DiscountPercentage = offer.DiscountPercentage,
+                NetPrice = offer.NetPrice,
+                MaxSaleQuantity = offer.MaxSaleQuantity,
+                OfferDescription = offer.Description,
+                // Barem and stock tracking
+                WarehouseBaremId = offer.WarehouseBaremId,
+                MaxPriceLimit = offer.MaxPriceLimit,
+                IsPrivate = offer.IsPrivate,
+                TargetPharmacyIds = offer.TargetPharmacyIds,
+                SoldQuantity = offer.SoldQuantity,
+                RemainingStock = offer.Stock - offer.SoldQuantity
             };
 
             return Ok(response);
@@ -189,8 +221,13 @@ namespace Backend.Controllers
                 ImageUrl = null,
                 ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                 CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
-                CampaignBonusMultiplier = o.Type == OfferType.Campaign ? o.CampaignBonusMultiplier : null,
-                BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null
+                CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
+                BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null,
+                
+                // Barem bilgisi
+                MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
+                SoldQuantity = o.SoldQuantity,
+                RemainingStock = o.Stock - o.SoldQuantity
             }).ToList();
 
             return Ok(dtos);
@@ -206,7 +243,15 @@ namespace Backend.Controllers
 
             // Parse offer type
             if (!Enum.TryParse<OfferType>(request.Type, true, out var offerType))
-                return BadRequest(new { message = "Invalid offer type" });
+                return BadRequest(new { message = "Invalid offer type. Use: stockSale, jointOrder, purchaseRequest" });
+
+            // Validation: If private, must have target pharmacies
+            if (request.IsPrivate && string.IsNullOrEmpty(request.TargetPharmacyIds))
+                return BadRequest(new { message = "Özel teklifler için hedef eczane seçilmelidir." });
+
+            // Validation: StockSale type price cannot exceed MaxPriceLimit (Barem price)
+            if (offerType == OfferType.StockSale && request.MaxPriceLimit > 0 && request.Price > request.MaxPriceLimit)
+                return BadRequest(new { message = $"Fiyat, seçilen barem fiyatından ({request.MaxPriceLimit:N2} TL) yüksek olamaz." });
 
             // Verify medication exists - support MedicationId, Barcode, or ProductName
             Medication? medication = null;
@@ -230,8 +275,8 @@ namespace Backend.Controllers
                 return NotFound(new { message = "Medication not found" });
 
 
-            // For standard offers, ensure inventory exists
-            if (offerType == OfferType.Standard)
+            // For StockSale offers, ensure inventory exists
+            if (offerType == OfferType.StockSale)
             {
                 var inventory = await _context.InventoryItems
                     .Where(i => i.PharmacyProfileId == pharmacyId.Value && i.MedicationId == medication.Id)
@@ -289,16 +334,14 @@ namespace Backend.Controllers
                 }
             }
 
-            // Type-specific validation
-            if (offerType == OfferType.Campaign)
+            // Type-specific validation (legacy support for JointOrder/PurchaseRequest)
+            if (offerType == OfferType.JointOrder)
             {
-                if (!request.CampaignEndDate.HasValue)
-                    return BadRequest(new { message = "Campaign offers require an end date" });
+                // JointOrder may have special validation logic if needed
             }
-            else if (offerType == OfferType.Tender)
+            else if (offerType == OfferType.PurchaseRequest)
             {
-                if (!request.BiddingDeadline.HasValue || !request.MinimumOrderQuantity.HasValue)
-                    return BadRequest(new { message = "Tender offers require bidding deadline and minimum order quantity" });
+                // PurchaseRequest may have special validation logic if needed
             }
 
             // Parse expiration date
@@ -351,6 +394,7 @@ namespace Backend.Controllers
                 Price = request.Price, // This is the "OfferPrice" (Unit Price)
                 Stock = request.Stock,
                 BonusQuantity = request.BonusQuantity,
+                MinSaleQuantity = request.MinSaleQuantity,
                 Status = OfferStatus.Active,
                 ExpirationDate = expirationDate,
                 
@@ -362,14 +406,20 @@ namespace Backend.Controllers
                 MaxSaleQuantity = request.MaxSaleQuantity,
                 Description = request.Description,
 
-                // Campaign-specific
+                // Private offer fields
+                IsPrivate = request.IsPrivate,
+                TargetPharmacyIds = request.TargetPharmacyIds,
+                WarehouseBaremId = request.WarehouseBaremId,
+                MaxPriceLimit = request.MaxPriceLimit,
+
+                // Legacy fields (kept for backwards compatibility)
                 CampaignStartDate = request.CampaignStartDate,
                 CampaignEndDate = request.CampaignEndDate,
                 CampaignBonusMultiplier = request.CampaignBonusMultiplier,
-                // Tender-specific
                 MinimumOrderQuantity = request.MinimumOrderQuantity,
                 BiddingDeadline = request.BiddingDeadline,
                 AcceptingCounterOffers = request.AcceptingCounterOffers,
+                TargetPharmacyId = request.TargetPharmacyId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -386,8 +436,9 @@ namespace Backend.Controllers
                 Id = offer.Id,
                 MedicationId = offer.MedicationId,
                 ProductName = offer.Medication.Name,
+                Barcode = offer.Medication.Barcode,
                 Type = offer.Type.ToString().ToLower(),
-                Stock = $"{offer.Stock} + {offer.BonusQuantity}",
+                Stock = offer.Stock.ToString(),
                 Price = offer.Price,
                 Status = offer.Status.ToString().ToLower(),
                 PharmacyId = offer.PharmacyProfile.Id.ToString(),
@@ -396,9 +447,17 @@ namespace Backend.Controllers
                 Description = offer.Medication.Description,
                 Manufacturer = offer.Medication.Manufacturer,
                 ImageUrl = null,
+                ExpirationDate = offer.ExpirationDate?.ToString("MM/yyyy"),
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
-                CampaignBonusMultiplier = offer.Type == OfferType.Campaign ? offer.CampaignBonusMultiplier : null,
-                BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
+                BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd"),
+                
+                // New fields
+                DepotPrice = offer.DepotPrice,
+                NetPrice = offer.NetPrice,
+                IsPrivate = offer.IsPrivate,
+                TargetPharmacyIds = offer.TargetPharmacyIds,
+                WarehouseBaremId = offer.WarehouseBaremId,
+                MaxPriceLimit = offer.MaxPriceLimit
             };
 
             return CreatedAtAction(nameof(GetAllOffers), new { id = offer.Id }, response);
@@ -480,7 +539,7 @@ namespace Backend.Controllers
             offer.NetPrice = netPrice;
 
             // Update type-specific fields based on offer type
-            if (offer.Type == OfferType.Campaign)
+            if (offer.Type == OfferType.JointOrder)
             {
                 if (request.CampaignEndDate.HasValue)
                     offer.CampaignEndDate = request.CampaignEndDate;
@@ -489,7 +548,7 @@ namespace Backend.Controllers
                 if (request.CampaignBonusMultiplier.HasValue)
                     offer.CampaignBonusMultiplier = request.CampaignBonusMultiplier.Value;
             }
-            else if (offer.Type == OfferType.Tender)
+            else if (offer.Type == OfferType.PurchaseRequest)
             {
                 if (request.MinimumOrderQuantity.HasValue)
                     offer.MinimumOrderQuantity = request.MinimumOrderQuantity;
@@ -498,6 +557,12 @@ namespace Backend.Controllers
                 if (request.AcceptingCounterOffers.HasValue)
                     offer.AcceptingCounterOffers = request.AcceptingCounterOffers.Value;
             }
+
+            // Update barem fields
+            if (request.WarehouseBaremId.HasValue)
+                offer.WarehouseBaremId = request.WarehouseBaremId;
+            if (request.MaxPriceLimit.HasValue)
+                offer.MaxPriceLimit = request.MaxPriceLimit.Value;
 
             offer.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
@@ -518,7 +583,7 @@ namespace Backend.Controllers
                 Manufacturer = offer.Medication.Manufacturer,
                 ImageUrl = null,
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
-                CampaignBonusMultiplier = offer.Type == OfferType.Campaign ? offer.CampaignBonusMultiplier : null,
+                CampaignBonusMultiplier = offer.Type == OfferType.JointOrder ? offer.CampaignBonusMultiplier : null,
                 BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
             };
 

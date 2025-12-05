@@ -2,13 +2,14 @@
 'use client';
 
 import React from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from './tekliflerim.module.css';
 
 import { OfferInventoryTable } from '@/components/features/offers';
+import Toast from '@/components/ui/Toast';
 
 // ✅ Backend'den teklifleri çek
 import { useMyOffers } from '@/hooks/useMyOffers';
@@ -20,7 +21,17 @@ const AddIcon = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none
 
 export default function TekliflerimPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { token } = useAuth();
+  const [showSuccessToast, setShowSuccessToast] = React.useState(false);
+
+  React.useEffect(() => {
+    if (searchParams.get('success') === 'true') {
+      setShowSuccessToast(true);
+      // Clean up URL
+      router.replace('/tekliflerim');
+    }
+  }, [searchParams, router]);
   
   // ✅ Backend'den teklifleri çek  
   const { offers, loading, error, refreshOffers } = useMyOffers();
@@ -37,13 +48,13 @@ export default function TekliflerimPage() {
           }
 
           await refreshOffers();
-          console.log(`${ids.length} teklif silindi.`);
       } catch (err) {
           console.error('Error deleting offers:', err);
       }
   };
 
   const handleUpdateStatus = async (ids: number[], status: OfferStatus) => {
+      console.log('[PAGE DEBUG] handleUpdateStatus called - ids:', ids, 'status:', status, 'token:', !!token);
       if (!token) {
           console.error('No token found');
           return;
@@ -51,11 +62,12 @@ export default function TekliflerimPage() {
 
       try {
           for (const id of ids) {
+              console.log('[PAGE DEBUG] Calling offerService.updateOfferStatus for id:', id);
               await offerService.updateOfferStatus(token, id, status.toLowerCase());
           }
 
           await refreshOffers();
-          console.log(`${ids.length} teklifin durumu güncellendi.`);
+          console.log('[PAGE DEBUG] Status update completed successfully');
       } catch (err) {
           console.error('Error updating offer status:', err);
       }
@@ -91,27 +103,64 @@ export default function TekliflerimPage() {
     expirationDate: offer.expirationDate || '',
     status: offer.status as any,
     alarmSet: false,
+    // New fields
+    type: offer.type || 'stockSale',
+    isPrivate: (offer as any).isPrivate || false,
+    malFazlasi: (offer as any).malFazlasi || '0+0',
   }));
 
   return (
-    <div className={styles.pageContainer}>
-      <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Tekliflerim</h1>
+    <div className="p-6 max-w-[1600px] mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Tekliflerim</h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Eczaneniz tarafından oluşturulan tüm satış tekliflerini buradan yönetebilirsiniz.
+          </p>
+        </div>
         
-        <Link href="/tekliflerim/yeni" className={styles.primaryButton}>
-          <AddIcon />
-          <span>Teklif Ekle</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link 
+            href="/tekliflerim/yeni" 
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm hover:shadow focus:ring-4 focus:ring-blue-100"
+          >
+            <AddIcon />
+            <span>Yeni Teklif Oluştur</span>
+          </Link>
+        </div>
       </div>
 
-      <div>
+      {showSuccessToast && (
+        <div className="mb-6 animate-in slide-in-from-top-2">
+          <Toast 
+            message="Teklif başarıyla oluşturuldu!" 
+            onClose={() => setShowSuccessToast(false)} 
+          />
+        </div>
+      )}
+
+      <div className="animate-in fade-in duration-500">
         {formattedOffers.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '50px' }}>Henüz teklif bulunmuyor.</div>
+          <div className="bg-white rounded-xl border border-gray-200 p-12 text-center">
+            <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AddIcon />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Henüz Teklifiniz Yok</h3>
+            <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+              Stok fazlası ürünlerinizi satmak için hemen ilk teklifinizi oluşturun.
+            </p>
+            <Link 
+              href="/tekliflerim/yeni" 
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Teklif Oluştur
+            </Link>
+          </div>
         ) : (
           <OfferInventoryTable
               data={formattedOffers}
-              onDeleteItems={handleDeleteItems}
-              onUpdateStatus={handleUpdateStatus}
+              token={token || ''}
+              refreshOffers={refreshOffers}
           />
         )}
       </div>

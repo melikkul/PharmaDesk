@@ -22,23 +22,13 @@ interface TooltipData {
 const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
 
-  // ViewBox için koordinat sistemi boyutları
-  const viewBoxWidth = 550;
-  const viewBoxHeight = 200;
-  
-  // --- DEĞİŞİKLİK BURADA: Sol ve Sağ margin değerleri azaltıldı ---
-  const margin = { top: 20, right: 10, bottom: 30, left: 30 }; 
-  // --- ---
+  const viewBoxWidth = 500;
+  const viewBoxHeight = 180;
+  const margin = { top: 20, right: 20, bottom: 35, left: 50 };
 
-  // ### OPTİMİZASYON: useMemo ###
-  // Tüm temel grafik hesaplamaları (boyutlar, ölçekler, yardımcı fonksiyonlar)
-  // 'data' prop'u değişmediği sürece yeniden hesaplanmayacak.
   const chartGeometry = useMemo(() => {
-    if (!data || data.length < 2) {
-      return null;
-    }
+    if (!data || data.length < 2) return null;
 
-    // İç çizim alanı boyutları
     const width = viewBoxWidth - margin.left - margin.right;
     const height = viewBoxHeight - margin.top - margin.bottom;
 
@@ -47,60 +37,45 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
     const minPriceRaw = Math.min(...prices);
     const rawPriceRange = maxPriceRaw - minPriceRaw;
 
-    const minPrice = minPriceRaw - (rawPriceRange * 0.15 || minPriceRaw * 0.05);
-    const maxPrice = maxPriceRaw + (rawPriceRange * 0.10 || maxPriceRaw * 0.05);
-    // Fiyat aralığı 0'a çok yakınsa (tüm veriler aynıysa) 1 olarak ayarla
+    const padding = rawPriceRange * 0.15 || maxPriceRaw * 0.05;
+    const minPrice = minPriceRaw - padding;
+    const maxPrice = maxPriceRaw + padding;
     const priceRange = maxPrice - minPrice <= 0.01 ? 1 : maxPrice - minPrice;
 
-    // Y koordinatını fiyata göre hesaplayan yardımcı fonksiyon
     const getYPosition = (price: number) => {
       return height - ((price - minPrice) / priceRange) * height;
     };
-    
-    // Veri noktasına göre (x, y) koordinatlarını bulan yardımcı fonksiyon
+
     const getPoint = (d: PriceData, i: number) => {
       const x = (i / (data.length - 1)) * width;
       const y = getYPosition(d.price);
       return { x, y };
     };
 
-    return {
-      width,
-      height,
-      minPrice,
-      maxPrice,
-      priceRange,
-      minPriceRaw,
-      maxPriceRaw,
-      getYPosition,
-      getPoint,
-    };
+    return { width, height, minPrice, maxPrice, priceRange, minPriceRaw, maxPriceRaw, getYPosition, getPoint };
   }, [data, margin.left, margin.right, margin.top, margin.bottom]);
 
-  // ### OPTİMİZASYON: useMemo ###
-  // 'points' (çizgi yolu) dizesi, sadece data veya geometri değiştiğinde hesaplanır.
-  const points = useMemo(() => {
+  const linePath = useMemo(() => {
     if (!chartGeometry || !data) return '';
     const { getPoint } = chartGeometry;
     return data.map((d, i) => {
       const { x, y } = getPoint(d, i);
-      return `${x},${y}`;
+      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
     }).join(' ');
   }, [data, chartGeometry]);
 
-  // ### OPTİMİZASYON: useMemo ###
-  // Y ekseni etiketlerinin konumları
-  const yAxisTicks = useMemo(() => {
-    if (!chartGeometry) return null;
-    const { getYPosition, maxPriceRaw, minPriceRaw } = chartGeometry;
-    return {
-      maxPriceRawY: getYPosition(maxPriceRaw),
-      minPriceRawY: getYPosition(minPriceRaw),
-    };
-  }, [chartGeometry]);
+  const areaPath = useMemo(() => {
+    if (!chartGeometry || !data) return '';
+    const { getPoint, height } = chartGeometry;
+    const points = data.map((d, i) => {
+      const { x, y } = getPoint(d, i);
+      return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+    }).join(' ');
+    const lastPoint = getPoint(data[data.length - 1], data.length - 1);
+    const firstPoint = getPoint(data[0], 0);
+    return `${points} L${lastPoint.x},${height} L${firstPoint.x},${height} Z`;
+  }, [data, chartGeometry]);
 
-  // ### OPTİMİZASYON: useCallback ###
-  // Mouse hareket olayı, geometri değişmediği sürece yeniden oluşturulmaz.
   const handleMouseMove = useCallback((event: React.MouseEvent<SVGRectElement>) => {
     if (!chartGeometry || !data) return;
     const { width, getPoint } = chartGeometry;
@@ -108,108 +83,158 @@ const PriceChart: React.FC<PriceChartProps> = ({ data }) => {
     const svgRect = event.currentTarget.ownerSVGElement?.getBoundingClientRect();
     if (!svgRect) return;
 
-    // SVG içindeki fare koordinatlarını hesapla
     const pt = event.currentTarget.ownerSVGElement!.createSVGPoint();
     pt.x = event.clientX;
     pt.y = event.clientY;
     const svgPoint = pt.matrixTransform(event.currentTarget.ownerSVGElement!.getScreenCTM()!.inverse());
-
-    // Koordinatları viewBox koordinat sistemine dönüştür
     const xInViewBox = svgPoint.x - margin.left;
 
-    // En yakın veri noktasını bul
     const segmentWidth = width / (data.length - 1);
     const index = Math.min(data.length - 1, Math.max(0, Math.round(xInViewBox / segmentWidth)));
 
     const pointData = data[index];
     const { x: pointX, y: pointY } = getPoint(pointData, index);
     setTooltip({
-      // Tooltip pozisyonunu viewBox koordinatlarına göre ayarla
       x: pointX + margin.left,
       y: pointY + margin.top,
-      index: index,
+      index,
       ...pointData,
     });
   }, [chartGeometry, data, margin.left, margin.top]);
 
-  // ### OPTİMİZASYON: useCallback ###
-  // Mouse çıkış olayı, bağımlılığı olmadığından asla yeniden oluşturulmaz.
   const handleMouseLeave = useCallback(() => {
     setTooltip(null);
   }, []);
 
-  // Tooltip'in konumu (sağ/sol)
   const tooltipXOffset = useMemo(() => {
-     if (tooltip && data && tooltip.index > data.length / 2) {
-        return -95;
-     }
-     return 15;
+    if (tooltip && data && tooltip.index > data.length / 2) return -100;
+    return 15;
   }, [tooltip, data]);
 
+  // Fiyat değişimi hesapla
+  const priceChange = useMemo(() => {
+    if (!data || data.length < 2) return { value: 0, percent: 0, direction: 'stable' };
+    const first = data[0].price;
+    const last = data[data.length - 1].price;
+    const diff = last - first;
+    const percent = ((diff / first) * 100).toFixed(1);
+    return {
+      value: diff,
+      percent,
+      direction: diff > 0 ? 'up' : diff < 0 ? 'down' : 'stable'
+    };
+  }, [data]);
 
-  if (!chartGeometry || !yAxisTicks || !data) {
+  if (!chartGeometry || !data) {
     return <div className={styles.chartContainer}>Yeterli veri yok.</div>;
   }
-  
-  const { width, height, getPoint } = chartGeometry;
-  const { maxPriceRawY, minPriceRawY } = yAxisTicks;
+
+  const { width, height, getPoint, maxPriceRaw, minPriceRaw } = chartGeometry;
 
   return (
     <div className={styles.chartContainer}>
-      {/* SVG ELEMENTİ */}
+      {/* Chart Header */}
+      <div className={styles.chartHeader}>
+        <div className={styles.chartTitle}>
+          📈 Fiyat Grafiği
+          <span className={styles.chartBadge}>Son 7 Gün</span>
+        </div>
+        <div className={styles.currentPriceBadge}>
+          {data[data.length - 1].price.toFixed(2)} ₺
+          <span className={`${styles.priceChange} ${
+            priceChange.direction === 'up' ? styles.priceUp : 
+            priceChange.direction === 'down' ? styles.priceDown : 
+            styles.priceStable
+          }`}>
+            {priceChange.direction === 'up' ? '↑' : priceChange.direction === 'down' ? '↓' : '→'}
+            {Math.abs(Number(priceChange.percent))}%
+          </span>
+        </div>
+      </div>
+
       <svg
         viewBox={`0 0 ${viewBoxWidth} ${viewBoxHeight}`}
         preserveAspectRatio="xMidYMid meet"
-        width="100%" /* SVG'nin konteyneri doldurmasını sağlar */
-        height={viewBoxHeight} /* Yüksekliği sabit tutabilir veya "auto" yapabilirsiniz */
+        width="100%"
+        style={{ overflow: 'visible' }}
       >
-        {/* Çizim alanı grubu, margin kadar içeri kaydırılır */}
-        <g transform={`translate(${margin.left}, ${margin.top})`}>
-          {/* Izgara Çizgileri */}
-          <line className={styles.gridLine} x1="0" y1={maxPriceRawY} x2={width} y2={maxPriceRawY} />
-          <line className={styles.gridLine} x1="0" y1={minPriceRawY} x2={width} y2={minPriceRawY} />
-          
-          {/* Eksen Çizgileri */}
-          <line className={styles.axis} x1="0" y1={height} x2={width} y2={height} /> 
-          
-          {/* Y Ekseni Etiketleri (margin.left kadar solda) */}
-          <text className={styles.axisLabel} x="-10" y={maxPriceRawY} dy="-0.32em">{chartGeometry.maxPriceRaw.toFixed(2)}</text>
-          <text className={styles.axisLabel} x="-10" y={minPriceRawY} dy="0.32em">{chartGeometry.minPriceRaw.toFixed(2)}</text>
-          <text className={styles.axisLabel} x="-10" y={height} dy="0.32em">0.00</text> 
+        {/* Gradient Definitions */}
+        <defs>
+          <linearGradient id="lineGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#10b981" />
+            <stop offset="100%" stopColor="#059669" />
+          </linearGradient>
+          <linearGradient id="areaGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#10b981" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="#10b981" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
 
-          {/* X Ekseni Etiketleri (çizim alanının altında) */}
+        <g transform={`translate(${margin.left}, ${margin.top})`}>
+          {/* Grid Lines - Dashed */}
+          <line className={styles.gridLine} x1="0" y1={chartGeometry.getYPosition(maxPriceRaw)} x2={width} y2={chartGeometry.getYPosition(maxPriceRaw)} />
+          <line className={styles.gridLine} x1="0" y1={chartGeometry.getYPosition(minPriceRaw)} x2={width} y2={chartGeometry.getYPosition(minPriceRaw)} />
+          <line className={styles.gridLine} x1="0" y1={height / 2} x2={width} y2={height / 2} />
+
+          {/* Y Axis Labels */}
+          <text className={styles.axisLabel} x="-8" y={chartGeometry.getYPosition(maxPriceRaw)} dy="0.35em">
+            {maxPriceRaw.toFixed(2)} ₺
+          </text>
+          <text className={styles.axisLabel} x="-8" y={chartGeometry.getYPosition(minPriceRaw)} dy="0.35em">
+            {minPriceRaw.toFixed(2)} ₺
+          </text>
+
+          {/* X Axis Labels */}
           {data.map((d, i) => (
             <text
               key={i}
               className={styles.axisLabelX}
               x={getPoint(d, i).x}
-              y={height + 20} /* margin.bottom'a göre ayarlanır */
+              y={height + 20}
             >
               {d.day}
             </text>
           ))}
 
-          {/* Fiyat Çizgisi */}
-          <polyline className={styles.line} points={points} />
+          {/* Area Fill */}
+          <path className={styles.area} d={areaPath} />
 
-          {/* Mouse olaylarını yakalamak için görünmez dikdörtgen */}
+          {/* Line */}
+          <path className={styles.line} d={linePath} />
+
+          {/* Data Points */}
+          {data.map((d, i) => {
+            const { x, y } = getPoint(d, i);
+            return (
+              <circle
+                key={i}
+                className={styles.dataPoint}
+                cx={x}
+                cy={y}
+                r={4}
+              />
+            );
+          })}
+
+          {/* Hover Area */}
           <rect
             fill="transparent"
-            width={width} /* Sadece çizim alanı genişliğinde */
-            height={height} /* Sadece çizim alanı yüksekliğinde */
+            width={width}
+            height={height}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseLeave}
+            style={{ cursor: 'crosshair' }}
           />
         </g>
 
         {/* Tooltip */}
         {tooltip && (
           <g transform={`translate(${tooltip.x}, ${tooltip.y})`}>
-            <circle className={styles.tooltipCircle} r="5" />
-            <g transform={`translate(${tooltipXOffset}, -15)`}>
-              <rect className={styles.tooltipBox} y="-18" width="80" height="25" rx="5"/>
-              <text className={styles.tooltipText} y="0">
-                {`${tooltip.day}: ${tooltip.price.toFixed(2)}₺`}
+            <circle className={styles.tooltipCircle} r="7" />
+            <g transform={`translate(${tooltipXOffset}, -20)`}>
+              <rect className={styles.tooltipBox} x="-5" y="-22" width="90" height="32" rx="8" />
+              <text className={styles.tooltipText} y="-2">
+                {`${tooltip.day}: ${tooltip.price.toFixed(2)} ₺`}
               </text>
             </g>
           </g>

@@ -14,9 +14,9 @@ namespace Backend.Models
 
     public enum OfferType
     {
-        Standard,   // Regular inventory sale
-        Campaign,   // Time-limited promotional offer
-        Tender      // Bulk order with bidding capability
+        StockSale,       // Stok Satışı
+        JointOrder,      // Ortak Sipariş
+        PurchaseRequest  // Alım Talebi
     }
 
     public class Offer
@@ -29,7 +29,20 @@ namespace Backend.Models
         public int? InventoryItemId { get; set; } // Hangi stoktan düşülecek
 
         [Required]
-        public OfferType Type { get; set; } = OfferType.Standard; // Offer type
+        public OfferType Type { get; set; } = OfferType.StockSale; // Offer type
+        
+        // Eczaneye özel teklif için hedef eczane ID'leri (virgülle ayrılmış)
+        public string? TargetPharmacyIds { get; set; }
+        
+        // Bu teklif özel mi?
+        public bool IsPrivate { get; set; } = false;
+        
+        // Seçilen barem referansı
+        public int? WarehouseBaremId { get; set; }
+        
+        // Fiyat validasyonu için maksimum limit (Barem fiyatı)
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal MaxPriceLimit { get; set; } = 0;
 
         [Column(TypeName = "decimal(18,2)")]
         public decimal Price { get; set; } // Satış fiyatı
@@ -55,6 +68,8 @@ namespace Backend.Models
 
         public int? MaxSaleQuantity { get; set; } // Maksimum Satış Adedi
 
+        public int SoldQuantity { get; set; } = 0; // Satılan/Sipariş geçilen adet (default 0)
+
         public string? Description { get; set; } // Açıklama
 
         [Required]
@@ -73,6 +88,7 @@ namespace Backend.Models
         public int? MinimumOrderQuantity { get; set; } // Minimum order for tender
         public DateTime? BiddingDeadline { get; set; } // Deadline for bidding
         public bool AcceptingCounterOffers { get; set; } = false; // Whether accepting counter offers
+        public string? TargetPharmacyId { get; set; } // For Pharmacy Specific Offers
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

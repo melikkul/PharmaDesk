@@ -57,7 +57,44 @@
     overflow: hidden;
 }
 
-.cardWrapper .offerBar {
+/* Barem Badge - resmin sağ üst köşesinde */
+.baremBadge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: linear-gradient(135deg, #27AE60 0%, #2ECC71 100%);
+    color: white;
+    padding: 6px 10px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    box-shadow: 0 2px 8px rgba(39, 174, 96, 0.4);
+    z-index: 2;
+}
+
+.baremMin {
+    opacity: 0.9;
+}
+
+.baremPlus {
+    font-size: 11px;
+    opacity: 0.8;
+}
+
+.baremBonus {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+/* Stok Bölümü */
+.stockSection {
+    width: 100%;
+}
+
+.cardWrapper .stockBar {
     width: 100%;
     background-color: #EAEFF7;
     border-radius: 20px;
@@ -67,33 +104,37 @@
     border: 1px solid #DEE2E6;
 }
 
-.cardWrapper .offerFill {
-    background-color: #E74C3C;
+.cardWrapper .stockFill {
+    background: linear-gradient(90deg, #E74C3C 0%, #C0392B 100%);
     height: 100%;
     border-radius: 20px 0 0 20px;
     transition: width 0.5s ease;
+    min-width: 5px;
 }
 
-.cardWrapper .offerText {
+.cardWrapper .stockText {
     position: absolute;
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    /* YENİ: Yazı rengi beyaz yapıldı */
-    color: #FFFFFF;
+    color: #2C3E50;
     font-weight: 700;
-    font-size: 14px;
-    /* Okunabilirliği artırmak için gölge eklendi */
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: 13px;
+    white-space: nowrap;
+}
+
+/* Fiyat Satırı */
+.priceRow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
 }
 
 .cardWrapper .price {
-    font-size: 24px;
+    font-size: 22px;
     font-weight: 700;
     color: var(--text-primary);
-    margin-top: auto;
-    padding-top: 8px;
-    /* YENİ: Fiyat ortalandı */
     text-align: center;
 }
 
@@ -178,4 +219,16 @@
     font-size: 12px;
     color: var(--text-secondary);
     font-style: italic;
+}
+
+.extraSellersLink {
+    color: #7f8c8d;
+    font-size: 12px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.extraSellersLink:hover {
+    color: #3498DB;
+    text-decoration: underline;
 }

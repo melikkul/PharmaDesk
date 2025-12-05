@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo, useCallback } from 'react';
-import { useParams } from 'next/navigation';
+import React, { useState, useMemo, useCallback, Suspense } from 'react';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useMedicationOffers } from '@/hooks/useOffers';
 import { Offer } from '@/types';
 import { useCart } from '@/store/CartContext';
@@ -43,9 +43,10 @@ const QuantitySelector: React.FC<QuantitySelectorProps> = ({ quantity, onDecreme
 
 interface OfferItemComponentProps {
     offer: Offer;
+    showBarem?: boolean; // Filtresiz linkte barem göster
 }
 
-const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offer }) => {
+const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offer, showBarem = false }) => {
     const [offerQuantity, setOfferQuantity] = useState<number | string>(1);
     const [isAdding, setIsAdding] = useState(false);
     
@@ -79,25 +80,17 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
             setOfferQuantity('');
             return;
         }
-        const num = parseInt(value, 10);
-        if (!isNaN(num)) {
-            if (num > effectiveMaxStock) {
-                 setOfferQuantity(effectiveMaxStock);
-            } else if (num < 1) {
-                setOfferQuantity(1);
-            } else {
-                setOfferQuantity(num);
-            }
+        const numValue = parseInt(value, 10);
+        if (!isNaN(numValue) && numValue >= 1 && numValue <= effectiveMaxStock) {
+            setOfferQuantity(numValue);
         }
     }, [effectiveMaxStock]);
     
     const handleOfferBlur = useCallback(() => {
         setOfferQuantity(q => {
-            if (q === '' || Number(q) < 1) {
-                return 1;
-            } else if (Number(q) > effectiveMaxStock) {
-                return effectiveMaxStock;
-            }
+            const currentQuantity = Number(q) || 1;
+            if (currentQuantity < 1) return 1;
+            if (currentQuantity > effectiveMaxStock) return effectiveMaxStock;
             return q;
         });
     }, [effectiveMaxStock]);
@@ -133,6 +126,18 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
         }, 1000);
     }, [canBuy, isAdding, offerQuantity, effectiveMaxStock, addToCart, offer, currentStock, bonus]);
 
+    // Kalan stok hesapla: Stok - Satılan
+    const soldQuantity = (offer as any).soldQuantity || 0;
+    const remainingStock = currentStock - soldQuantity;
+    const canBuyRemaining = remainingStock > 0;
+
+    // Barem bilgisi - malFazlasi'ndan parse et
+    const malFazlasi = (offer as any).malFazlasi || '0+0';
+    const baremParts = malFazlasi.split('+').map((s: string) => parseInt(s.trim()) || 0);
+    const baremMin = baremParts[0] || 0;
+    const baremBonus = baremParts[1] || 0;
+    const hasBarem = baremBonus > 0;
+
     return (
         <div className={styles.offerItem}>
             <span className={styles.offerPrice}>{offer.price.toFixed(2).replace('.', ',')} ₺</span>
@@ -140,28 +145,54 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
                 <Link href={`/profile/${offer.pharmacyId}`} className={styles.sellerLink}>
                     {offer.pharmacyName}
                 </Link>
-                <span className={styles.sellerLocation}>Ankara, Çankaya</span>
+                {/* SKT tarihi */}
+                {offer.expirationDate && (
+                    <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '2px' }}>
+                        SKT: {offer.expirationDate}
+                    </span>
+                )}
+                {/* Barem bilgisi - sadece filtresiz linkte göster */}
+                {showBarem && hasBarem && (
+                    <span style={{
+                        backgroundColor: '#10b981',
+                        color: 'white',
+                        padding: '2px 8px',
+                        borderRadius: '10px',
+                        fontSize: '11px',
+                        fontWeight: '600',
+                        marginTop: '4px',
+                        display: 'inline-block'
+                    }}>
+                        {baremMin}+{baremBonus}
+                    </span>
+                )}
             </div>
+            {/* Kalan Stok: Stok - Satılan */}
             <div className={styles.offerStock}>
-                {currentStock} {bonus > 0 ? `+ ${bonus}` : ''}
+                {remainingStock} Adet
+                {soldQuantity > 0 && (
+                    <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block' }}>
+                        ({currentStock} - {soldQuantity})
+                    </span>
+                )}
             </div>
-            {canBuy && (
+            {canBuyRemaining && (
                 <QuantitySelector
                     quantity={offerQuantity}
                     onDecrement={handleOfferDecrement}
                     onIncrement={handleOfferIncrement}
                     onQuantityChange={handleOfferQuantityChange}
                     onBlur={handleOfferBlur}
-                    maxStock={effectiveMaxStock}
+                    maxStock={Math.min(remainingStock, MAX_ALLOWED_QUANTITY)}
                     className={styles.secondaryQuantitySelector}
                 />
             )}
             <button
                 className={styles.buyButtonSecondary}
-                disabled={!canBuy || isAdding}
+                disabled={!canBuyRemaining || isAdding}
                 onClick={handleOfferAddToCart}
             >
-                {isAdding ? 'Eklendi!' : (canBuy ? 'Sepete Ekle' : 'Stokta Yok')}
+                {isAdding ? 'Eklendi!' : (canBuyRemaining ? 'Sepete Ekle' : 'Stokta Yok')}
             </button>
         </div>
     );
@@ -169,14 +200,30 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
 
 OfferItemComponent.displayName = 'OfferItemComponent';
 
-export default function IlacDetayPage() {
+function IlacDetayPage() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const { id } = params as { id: string };
-    const { offers, loading, error } = useMedicationOffers(id);
+    const baremFilterRaw = searchParams.get('barem'); // URL'den barem parametresi
+    // URL decode - %2B -> +
+    const baremFilter = baremFilterRaw ? decodeURIComponent(baremFilterRaw) : null;
+    
+    const { offers: allOffers, loading, error } = useMedicationOffers(id);
     const { addToCart } = useCart();
 
     const [mainQuantity, setMainQuantity] = useState<number | string>(1);
     const [isMainAdding, setIsMainAdding] = useState(false);
+
+    // Barem'e göre filtrele - sadece seçilen barem tekliflerini göster
+    const offers = useMemo(() => {
+        if (!baremFilter || !allOffers.length) return allOffers;
+        
+        // Sadece seçilen bareme ait teklifleri göster
+        return allOffers.filter(o => {
+            const offerBarem = ((o as any).malFazlasi || '').trim();
+            return offerBarem === baremFilter;
+        });
+    }, [allOffers, baremFilter]);
 
     // Use the first offer (cheapest) as the main display
     const mainOffer = useMemo(() => offers.length > 0 ? offers[0] : null, [offers]);
@@ -266,8 +313,42 @@ export default function IlacDetayPage() {
                 </div>
 
                 <div className={styles.productInfoContainer}>
-                    <h1>{mainOffer.productName}</h1>
+                    {/* Başlık ve Barem yan yana */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                        <h1 style={{ margin: 0 }}>{mainOffer.productName}</h1>
+                        {/* Barem Bilgisi - sadece filtreli linkte göster */}
+                        {baremFilter && (() => {
+                            const parts = baremFilter.split('+').map((s: string) => parseInt(s.trim()) || 0);
+                            const baremMin = parts[0] || 0;
+                            const baremBonus = parts[1] || 0;
+                            if (baremBonus > 0) {
+                                return (
+                                    <span style={{
+                                        backgroundColor: '#10b981',
+                                        color: 'white',
+                                        padding: '8px 16px',
+                                        borderRadius: '25px',
+                                        fontSize: '16px',
+                                        fontWeight: '700',
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '6px',
+                                        boxShadow: '0 2px 8px rgba(16, 185, 129, 0.3)'
+                                    }}>
+                                        Barem: {baremMin} + {baremBonus}
+                                    </span>
+                                );
+                            }
+                            return null;
+                        })()}
+                    </div>
                     <p className={styles.manufacturer}>Üretici: {mainOffer.manufacturer}</p>
+                    {/* En ucuz teklifin SKT tarihi */}
+                    {mainOffer.expirationDate && (
+                        <p style={{ margin: '4px 0 0 0', fontSize: '14px', color: '#64748b' }}>
+                            Son Kullanma Tarihi: <strong>{mainOffer.expirationDate}</strong>
+                        </p>
+                    )}
 
                     <div className={styles.mainInfoRow}>
                         <span className={styles.mainPriceDisplay}>{mainOffer.price.toFixed(2).replace('.', ',')} ₺</span>
@@ -321,10 +402,24 @@ export default function IlacDetayPage() {
                         <OfferItemComponent
                             key={offer.id}
                             offer={offer}
+                            showBarem={!baremFilter}
                         />
                     ))}
                 </div>
             </div>
         </div>
+    );
+}
+
+// useSearchParams için Suspense boundary
+function IlacDetayPageContent() {
+    return <IlacDetayPage />;
+}
+
+export default function IlacDetayPageWrapper() {
+    return (
+        <Suspense fallback={<div style={{ padding: '50px', textAlign: 'center' }}>Yükleniyor...</div>}>
+            <IlacDetayPage />
+        </Suspense>
     );
 }

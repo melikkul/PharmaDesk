@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = ''; // Use relative URL for Next.js proxy
 
 import { LoginResponse } from '../types';
 

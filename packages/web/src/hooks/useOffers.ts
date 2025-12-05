@@ -22,6 +22,8 @@ export const useOffers = () => {
       console.log('[useOffers] Fetched offers data:', data);
       return data;
     },
+    refetchInterval: 5000, // 5 saniyede bir otomatik güncelle
+    staleTime: 3000, // 3 saniye sonra stale
   });
 
   return {
@@ -41,13 +43,16 @@ export const useOffers = () => {
  * @returns {offer, loading, error}
  */
 export const useOffer = (id: string | number) => {
+  const { token } = useAuth();
+  
   const query = useQuery({
     queryKey: ['offers', id],
     queryFn: async () => {
-      const data = await offerService.getOfferById(id.toString());
+      if (!token) throw new Error('No token found');
+      const data = await offerService.getOfferById(token, id.toString());
       return data;
     },
-    enabled: !!id, // Only run query when id exists
+    enabled: !!id && !!token, // Only run query when id and token exist
   });
 
   return {
@@ -71,10 +76,15 @@ export const useMedicationOffers = (medicationId: string | number) => {
       return data;
     },
     enabled: !!medicationId, // Only run query when medicationId exists
+    refetchInterval: 5000, // 5 saniyede bir otomatik güncelle
+    staleTime: 3000, // 3 saniye sonra stale
   });
 
+  // Sort offers by price (cheapest first)
+  const sortedOffers = [...(query.data ?? [])].sort((a, b) => a.price - b.price);
+
   return {
-    offers: query.data ?? [],
+    offers: sortedOffers,
     loading: query.isLoading,
     error: query.error?.message ?? null,
   };

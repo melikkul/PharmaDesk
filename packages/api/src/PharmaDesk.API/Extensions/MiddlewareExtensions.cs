@@ -56,11 +56,14 @@ namespace PharmaDesk.API.Extensions
         {
             app.Use(async (context, next) =>
             {
-                context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
-                context.Response.Headers.Append("X-Frame-Options", "DENY");
-                context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
-                context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
-                context.Response.Headers.Append("Content-Security-Policy", "default-src 'self';");
+                // Skip security headers for CORS preflight requests
+                if (context.Request.Method != "OPTIONS")
+                {
+                    context.Response.Headers.Append("X-Content-Type-Options", "nosniff");
+                    context.Response.Headers.Append("X-Frame-Options", "DENY");
+                    context.Response.Headers.Append("X-XSS-Protection", "1; mode=block");
+                    context.Response.Headers.Append("Referrer-Policy", "strict-origin-when-cross-origin");
+                }
                 await next();
             });
             
@@ -72,6 +75,9 @@ namespace PharmaDesk.API.Extensions
         /// </summary>
         public static IApplicationBuilder ConfigurePipeline(this WebApplication app)
         {
+            // CORS must be first to handle preflight OPTIONS requests
+            app.UseCors("frontend");
+
             // Swagger in development
             if (app.Environment.IsDevelopment())
             {
@@ -84,7 +90,6 @@ namespace PharmaDesk.API.Extensions
             app.MapHealthCheckEndpoints();
 
             // Authentication & Authorization
-            app.UseCors("frontend");
             app.UseAuthentication();
             app.UseAuthorization();
 

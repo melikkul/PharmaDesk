@@ -20,10 +20,10 @@ namespace PharmaDesk.Infrastructure.Persistence
             {
                 logger.LogInformation("Creating database schema...");
                 
-                // Create database schema without migrations
+                // Apply migrations
                 var pharmacyDb = services.GetRequiredService<AppDbContext>();
-                await pharmacyDb.Database.EnsureCreatedAsync();
-                logger.LogInformation("AppDbContext schema created successfully.");
+                await pharmacyDb.Database.MigrateAsync();
+                logger.LogInformation("AppDbContext migrations applied successfully.");
 
                 var identityDb = services.GetRequiredService<IdentityDbContext>();
                 // Fix: EnsureCreated skips if DB exists. We must manually ensure IdentityUsers table exists.

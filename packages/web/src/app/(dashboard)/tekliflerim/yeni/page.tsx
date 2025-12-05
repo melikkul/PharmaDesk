@@ -4,6 +4,7 @@
 import React, { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from '../tekliflerim.module.css'; // üst bar stilleri için
 
@@ -18,11 +19,10 @@ const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="non
 // Bu, OfferForm'un içindeki useSearchParams'in çalışmasını sağlar
 const NewOfferFormContent = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   // Real API integration
   const handleSave = async (data: any) => {
-    console.log("KAYDEDİLEN VERİ:", data);
-    
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (!token) {
@@ -45,23 +45,36 @@ const NewOfferFormContent = () => {
         price: data.price,
         stock: data.stock,
         bonusQuantity: data.bonus,
+        minSaleQuantity: data.minSaleQuantity,
         expirationDate: data.expirationDate, // MM/YYYY format
-        minOrderQuantity: data.minSaleQuantity,
+        
+        // New fields
+        depotPrice: data.depotPrice,
+        malFazlasi: data.malFazlasi,
+        discountPercentage: data.discountPercentage,
+        maxSaleQuantity: data.maxSaleQuantity,
+        description: data.description,
+
         // Campaign fields
         campaignStartDate: data.campaignStartDate,
         campaignEndDate: data.campaignEndDate,
+        campaignBonusMultiplier: data.campaignBonusMultiplier,
+        
         // Tender fields  
         minimumOrderQuantity: data.minimumOrderQuantity,
         biddingDeadline: data.biddingDeadline,
-        acceptingCounterOffers: data.acceptingCounterOffers
-      };
+        acceptingCounterOffers: data.acceptingCounterOffers,
 
-      console.log('Sending to backend:', payload);
+        // Pharmacy Specific
+        targetPharmacyId: data.targetPharmacyId
+      };
 
       await offerService.createOffer(token, payload);
       
-      alert(`Teklif başarıyla oluşturuldu!`);
-      router.push('/tekliflerim');
+      // ✅ Invalidate offers cache so the list refreshes immediately
+      await queryClient.invalidateQueries({ queryKey: ['offers'] });
+      
+      router.push('/tekliflerim?success=true');
       
     } catch (error: any) {
       console.error('Error creating offer:', error);

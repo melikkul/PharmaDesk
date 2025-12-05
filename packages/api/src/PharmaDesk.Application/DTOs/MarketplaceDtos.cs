@@ -42,7 +42,7 @@ namespace Backend.Dtos
         public int MedicationId { get; set; } // Added for linking back to medication
         public string ProductName { get; set; } = string.Empty;
         public string? Barcode { get; set; } // Medication barcode  
-        public string Type { get; set; } = string.Empty; // "standard", "campaign", "tender"
+        public string Type { get; set; } = string.Empty; // "stockSale", "jointOrder", "purchaseRequest"
         public string Stock { get; set; } = string.Empty; // "quantity + bonus" format
         public decimal Price { get; set; }
         public string Status { get; set; } = string.Empty;
@@ -69,10 +69,15 @@ namespace Backend.Dtos
         public decimal DiscountPercentage { get; set; }
         public decimal NetPrice { get; set; }
         public int? MaxSaleQuantity { get; set; }
-        // Description is already present in OfferDto but mapped from Medication.Description. 
-        // We should probably use the Offer.Description if available, or fallback.
-        // For now, I'll add OfferDescription to avoid conflict or update mapping logic.
-        public string? OfferDescription { get; set; } 
+        public string? OfferDescription { get; set; }
+        
+        // Private offer fields
+        public bool IsPrivate { get; set; }
+        public string? TargetPharmacyIds { get; set; }
+        public int? WarehouseBaremId { get; set; }
+        public decimal MaxPriceLimit { get; set; }
+        public int SoldQuantity { get; set; } // Satılan/Sipariş geçilen adet
+        public int RemainingStock { get; set; } // Kalan stok (Stock - SoldQuantity)
     }
 
     public class CreateOfferRequest
@@ -82,7 +87,7 @@ namespace Backend.Dtos
         public string? ProductName { get; set; }
         
         [Required]
-        public string Type { get; set; } = "standard"; // "standard", "campaign", "tender"
+        public string Type { get; set; } = "stockSale"; // "stockSale", "jointOrder", "purchaseRequest"
         
         [Required]
         [Range(0.01, double.MaxValue, ErrorMessage = "Price must be greater than 0")]
@@ -93,6 +98,7 @@ namespace Backend.Dtos
         public int Stock { get; set; }
         
         public int BonusQuantity { get; set; } = 0;
+        public int MinSaleQuantity { get; set; } = 1;
         
         public string? ExpirationDate { get; set; } // Format: "MM/YYYY" or "MM / YYYY"
         
@@ -105,6 +111,7 @@ namespace Backend.Dtos
         public int? MinimumOrderQuantity { get; set; }
         public DateTime? BiddingDeadline { get; set; }
         public bool AcceptingCounterOffers { get; set; } = false;
+        public string? TargetPharmacyId { get; set; } // For Pharmacy Specific Offers (legacy single)
 
         // New fields
         public decimal DepotPrice { get; set; }
@@ -112,6 +119,12 @@ namespace Backend.Dtos
         public decimal DiscountPercentage { get; set; }
         public int? MaxSaleQuantity { get; set; }
         public string? Description { get; set; }
+        
+        // Private offer fields
+        public bool IsPrivate { get; set; } = false;
+        public string? TargetPharmacyIds { get; set; } // Comma-separated IDs for multiple pharmacies
+        public int? WarehouseBaremId { get; set; }
+        public decimal MaxPriceLimit { get; set; } = 0; // Barem price limit for validation
     }
 
     public class UpdateOfferRequest
@@ -136,13 +149,17 @@ namespace Backend.Dtos
         public int? MinimumOrderQuantity { get; set; }
         public DateTime? BiddingDeadline { get; set; }
         public bool? AcceptingCounterOffers { get; set; }
-
+        public string? TargetPharmacyId { get; set; } // For Pharmacy Specific Offers
         // New fields
         public decimal? DepotPrice { get; set; }
         public string? MalFazlasi { get; set; }
         public decimal? DiscountPercentage { get; set; }
         public int? MaxSaleQuantity { get; set; }
         public string? Description { get; set; }
+        
+        // Barem fields for edit
+        public int? WarehouseBaremId { get; set; }
+        public decimal? MaxPriceLimit { get; set; }
     }
 
     public class UpdateOfferStatusRequest

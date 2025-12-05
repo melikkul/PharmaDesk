@@ -1,57 +1,177 @@
 /* src/components/ilaclar/PriceChart.module.css */
 .chartContainer {
-    width: 100%; /* Konteynerin sığınağı kadar genişlemesini sağlar */
-    /* max-width: 550px; Bu satır kaldırıldı veya yorumlandı */
-    margin-top: 10px;
+    width: 100%;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+    border-radius: 16px;
+    padding: 20px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+    border: 1px solid #e2e8f0;
+}
+
+.chartHeader {
     display: flex;
-    justify-content: center;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.chartTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chartBadge {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
 }
 
 .axis {
-    stroke: #f0f3f8;
-    stroke-width: 2;
-}
-
-.gridLine {
-    stroke: #f0f3f8;
+    stroke: #e2e8f0;
     stroke-width: 1;
 }
 
+.gridLine {
+    stroke: #f1f5f9;
+    stroke-width: 1;
+    stroke-dasharray: 4, 4;
+}
+
 .axisLabel {
-    font-size: 12px;
-    fill: var(--text-secondary);
+    font-size: 11px;
+    fill: #94a3b8;
     text-anchor: end;
+    font-weight: 500;
 }
 
 .axisLabelX {
-    font-size: 12px;
-    fill: var(--text-secondary);
+    font-size: 11px;
+    fill: #64748b;
     text-anchor: middle;
+    font-weight: 500;
+}
+
+/* Gradient Area Fill */
+.areaGradient stop:first-child {
+    stop-color: #10b981;
+    stop-opacity: 0.3;
+}
+.areaGradient stop:last-child {
+    stop-color: #10b981;
+    stop-opacity: 0.05;
 }
 
 .line {
     fill: none;
-    stroke: var(--active-link-bg);
-    stroke-width: 2.5;
+    stroke: url(#lineGradient);
+    stroke-width: 3;
     stroke-linecap: round;
     stroke-linejoin: round;
+    filter: drop-shadow(0 2px 4px rgba(16, 185, 129, 0.3));
+}
+
+.area {
+    fill: url(#areaGradient);
+}
+
+/* Data Points */
+.dataPoint {
+    fill: white;
+    stroke: #10b981;
+    stroke-width: 2;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.dataPoint:hover {
+    r: 6;
+    stroke-width: 3;
+    filter: drop-shadow(0 2px 8px rgba(16, 185, 129, 0.4));
 }
 
 .tooltipCircle {
-    fill: var(--active-link-bg);
+    fill: #10b981;
     stroke: white;
-    stroke-width: 2;
+    stroke-width: 3;
+    filter: drop-shadow(0 2px 6px rgba(16, 185, 129, 0.4));
 }
 
 .tooltipBox {
-    fill: var(--sidebar-bg);
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    fill: #1e293b;
+    rx: 8;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
 }
 
 .tooltipText {
-    font-size: 12px;
+    font-size: 13px;
     fill: white;
-    font-weight: 500;
+    font-weight: 600;
     text-anchor: middle;
-    transform: translateX(40px);
+    transform: translateX(45px);
+}
+
+/* Current Price Badge */
+.currentPriceBadge {
+    background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Price Change Indicator */
+.priceChange {
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+}
+
+.priceUp {
+    background-color: #fef2f2;
+    color: #dc2626;
+}
+
+.priceDown {
+    background-color: #f0fdf4;
+    color: #16a34a;
+}
+
+.priceStable {
+    background-color: #f8fafc;
+    color: #64748b;
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    gap: 16px;
+    margin-top: 12px;
+    justify-content: center;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.legendDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
 }

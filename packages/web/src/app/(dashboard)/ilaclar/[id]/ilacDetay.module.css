@@ -197,10 +197,22 @@
 .offerSellerInfo {
     display: flex;
     flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
 }
 .sellerLocation {
     font-size: 12px;
     color: var(--text-secondary);
+}
+.sellerLink {
+    color: var(--primary-color, #3b82f6);
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+}
+.sellerLink:hover {
+    text-decoration: underline;
+    color: var(--primary-hover, #2563eb);
 }
 .offerStock {
     font-weight: 600;
@@ -460,12 +472,10 @@
     cursor: not-allowed;
 }
 
-/* Fiyat grafiği için ekstra stil */
+/* Fiyat grafiği için ekstra stil - border kaldırıldı, grafik kendi stiline sahip */
 .priceChartWrapper {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 10px;
-    background-color: #fdfdfd;
+    /* Border kaldırıldı - grafik componenti kendi çerçevesine sahip */
+    padding: 0;
 }
 /* Ecza Deposu Teklifleri Listesi İçindeki Miktar Seçici Stili (Küçük olan) */
 .secondaryQuantitySelector {

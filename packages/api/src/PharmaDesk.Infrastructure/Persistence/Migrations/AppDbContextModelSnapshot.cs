@@ -398,8 +398,14 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                     b.Property<int?>("InventoryItemId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("IsPrivate")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("MalFazlasi")
                         .HasColumnType("text");
+
+                    b.Property<decimal>("MaxPriceLimit")
+                        .HasColumnType("decimal(18,2)");
 
                     b.Property<int?>("MaxSaleQuantity")
                         .HasColumnType("integer");
@@ -425,17 +431,29 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("PublishDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("SoldQuantity")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<int>("Stock")
                         .HasColumnType("integer");
 
+                    b.Property<string>("TargetPharmacyId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("TargetPharmacyIds")
+                        .HasColumnType("text");
+
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("WarehouseBaremId")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

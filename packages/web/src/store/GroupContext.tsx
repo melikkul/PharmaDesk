@@ -36,7 +36,9 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
   const fetchUserGroups = async () => {
     try {
       setIsLoading(true);
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      // Use relative URL to leverage Next.js rewrites (proxies to backend)
+      // This avoids CORS issues and ensures connectivity in Docker/Localhost environments
+      const apiUrl = ''; 
       
       if (!token) {
         setIsLoading(false);

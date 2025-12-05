@@ -13,7 +13,9 @@ export interface ShowroomMedication {
   price: number; // Sadece TEK bir ana fiyat var
   expirationDate: string;
   initialStock: number;
-  currentStock: number; // Sadece TEK bir ana stok var
+  currentStock: number; // Toplam stok
+  soldQuantity?: number; // Satılan/Sipariş geçilen adet (default 0)
+  remainingStock?: number; // Kalan stok (currentStock - soldQuantity)
   bonus: number;
   sellers: SellerInfo[]; // Satıcılar sadece isim bilgisi içeriyor
 }

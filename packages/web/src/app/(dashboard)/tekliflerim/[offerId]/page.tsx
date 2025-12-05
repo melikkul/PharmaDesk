@@ -4,6 +4,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
+import { useQueryClient } from '@tanstack/react-query';
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from '../tekliflerim.module.css';
 
@@ -21,6 +22,7 @@ export default function DuzenleTeklifPage() {
   const router = useRouter();
   const params = useParams();
   const { offerId } = params as { offerId: string };
+  const queryClient = useQueryClient();
 
   const [medicationToEdit, setMedicationToEdit] = useState<MedicationItem | null | undefined>(undefined); 
   const [isSaving, setIsSaving] = useState(false);
@@ -32,7 +34,7 @@ export default function DuzenleTeklifPage() {
 
       const fetchOffer = async () => {
           try {
-              const data: any = await offerService.getOfferById(offerId);
+              const data: any = await offerService.getOfferById(token, offerId);
               
               // Map API response to MedicationItem format expected by OfferForm
               const medicationItem: MedicationItem = {
@@ -40,10 +42,10 @@ export default function DuzenleTeklifPage() {
                   productName: data.productName,
                   stock: data.stock, // "100 + 10" format
                   price: data.price,
-                  expirationDate: '', // Backend doesn't return expiration date in OfferDto yet, assuming empty or handled in form
+                  expirationDate: data.expirationDate || '', // Use API response
                   status: data.status as any,
                   dateAdded: '', // Not needed for form
-                  barcode: '', // Not needed for form
+                  barcode: data.barcode || '', // Use barcode from API
               };
               
               setMedicationToEdit(medicationItem);
@@ -63,6 +65,9 @@ export default function DuzenleTeklifPage() {
 
       try {
           await offerService.updateOffer(token, offerId, formData);
+          
+          // Invalidate offers cache to ensure list shows fresh data
+          await queryClient.invalidateQueries({ queryKey: ['offers'] });
 
           console.log("Teklif başarıyla güncellendi.");
           router.push('/tekliflerim');
@@ -72,7 +77,31 @@ export default function DuzenleTeklifPage() {
       } finally {
           setIsSaving(false);
       }
-  }, [medicationToEdit, offerId, router, token]);
+  }, [medicationToEdit, offerId, router, token, queryClient]);
+
+  // State for barem data from API
+  const [offerBaremData, setOfferBaremData] = useState<{warehouseBaremId?: string; malFazlasi?: string}>({});
+
+  // Update fetchOffer to capture barem data
+  useEffect(() => {
+      if (!offerId || !token) return;
+
+      const fetchOfferData = async () => {
+          try {
+              const data: any = await offerService.getOfferById(token, offerId);
+              
+              // Store barem data for pre-selection
+              setOfferBaremData({
+                  warehouseBaremId: data.warehouseBaremId?.toString(),
+                  malFazlasi: data.malFazlasi
+              });
+          } catch (err) {
+              console.error('Error fetching barem data:', err);
+          }
+      };
+
+      fetchOfferData();
+  }, [offerId, token]);
 
   return (
     <div className={styles.pageContainer}>
@@ -91,6 +120,8 @@ export default function DuzenleTeklifPage() {
             medication={medicationToEdit} // Düzenleme modunu tetikler
             onSave={handleUpdateOffer}
             isSaving={isSaving}
+            initialBaremId={offerBaremData.warehouseBaremId}
+            initialMalFazlasi={offerBaremData.malFazlasi}
         />
       )}
     </div>

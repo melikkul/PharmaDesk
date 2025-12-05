@@ -48,15 +48,15 @@ namespace Backend.Controllers
 
             // Offer counts by type
             var standardOffers = await _context.Offers
-                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.Standard)
+                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.StockSale)
                 .CountAsync();
             
             var campaignOffers = await _context.Offers
-                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.Campaign)
+                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.JointOrder)
                 .CountAsync();
             
             var tenderOffers = await _context.Offers
-                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.Tender)
+                .Where(o => o.PharmacyProfileId == pharmacyId && o.Type == Models.OfferType.PurchaseRequest)
                 .CountAsync();
 
             // Calculate total sales from completed transactions

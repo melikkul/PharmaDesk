@@ -11,7 +11,9 @@ import { z } from 'zod';
 import { 
   MedicationItem, 
   fullInventoryData,
+  otherPharmaciesData,
 } from '@/lib/dashboardData';
+import { stockOfferTiers, StockOfferTier } from '@/lib/stockOfferMockData';
 import SettingsCard from '@/components/settings/SettingsCard';
 import formStyles from './OfferForm.module.css';
 import { medicationService } from '@/services/medicationService';
@@ -24,52 +26,30 @@ import { medicationService } from '@/services/medicationService';
 // } from 'lucide-react';
 
 // === TYPES ===
-type OfferType = 'standard' | 'campaign' | 'tender';
+type OfferType = 'stockSale' | 'jointOrder' | 'purchaseRequest';
 
 interface OfferFormProps {
   medication?: MedicationItem;
   onSave: (formData: any) => void;
   isSaving?: boolean;
+  initialBaremId?: string; // For pre-selecting barem in edit mode
+  initialMalFazlasi?: string; // For displaying previous barem selection
 }
 
 // === ZOD VALIDATION SCHEMA ===
 const baseSchema = z.object({
   productName: z.string()
-    .min(2, 'İlaç adı en az 2 karakter olmalıdır')
-    .nonempty('İlaç adı zorunludur'),
+    .min(2, 'İlaç adı en az 2 karakter olmalıdır'),
   barcode: z.string().optional(),
-  skt: z.string()
-    .regex(/^\d{2}\s?\/\s?\d{4}$/, 'Geçerli bir tarih formatı giriniz (MM / YYYY)')
-    .nonempty('Son kullanma tarihi zorunludur'),
-  price: z.string()
-    .refine((val) => {
-      const num = parseFloat(val.replace(',', '.'));
-      return !isNaN(num) && num > 0;
-    }, {
-      message: 'Fiyat 0\'dan büyük olmalıdır',
-    }),
-  stock: z.string()
-    .refine((val) => {
-      const num = parseInt(val, 10);
-      return !isNaN(num) && num > 0;
-    }, {
-      message: 'Stok 0\'dan büyük olmalıdır',
-    }),
+  skt: z.string().optional(), // IMask handles this field - validated in onSubmit
+  price: z.string().optional(), // Validated in onSubmit with barem price limit
+  stock: z.string().optional(), // Validated in onSubmit
   
-  // New Fields
-  depotPrice: z.string().optional(),
-  malFazlasi: z.string()
-    .regex(/^(\d+\+\d+)?$/, 'Format "X+Y" olmalıdır (örn: 10+2)')
-    .optional(),
-  discountPercentage: z.string().optional(),
-  maxSaleQuantity: z.string().optional(),
-  description: z.string().optional(),
-
-  // Legacy/Other Fields
-  bonus: z.string().optional(), // Keeping for backward compat if needed, but MF replaces it visually
+  // Barem alanları (otomatik doluyor)
   minSaleQuantity: z.string().optional(),
+  bonus: z.string().optional(),
   
-  // Optional fields for all types
+  // Diğer tip alanları
   campaignStartDate: z.string().optional(),
   campaignEndDate: z.string().optional(),
   campaignBonusMultiplier: z.string().optional(),
@@ -80,10 +60,10 @@ const baseSchema = z.object({
 
 type OfferFormData = z.infer<typeof baseSchema>;
 
-const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) => {
+const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, initialBaremId, initialMalFazlasi }) => {
   
   // === STATE MANAGEMENT ===
-  const [offerType, setOfferType] = useState<OfferType>('standard');
+  const [offerType, setOfferType] = useState<OfferType>('stockSale');
   const isEditMode = !!medication;
   const searchParams = useSearchParams();
   
@@ -97,7 +77,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   }), [searchParams]);
 
   // React Hook Form with Zod validation
-  const { register, handleSubmit, formState: { errors }, setValue, watch, control, reset } = useForm<OfferFormData>({
+  const { register, handleSubmit, formState: { errors }, setValue, watch, control, reset, getValues, clearErrors } = useForm<OfferFormData>({
     resolver: zodResolver(baseSchema),
     defaultValues: {
       productName: medication?.productName || defaultValues?.productName || '',
@@ -106,14 +86,6 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       price: medication?.price ? String(medication.price).replace('.', ',') : (defaultValues?.price || ''),
       stock: medication?.stock ? medication.stock.split(' + ')[0] : (defaultValues?.stock || ''),
       bonus: medication?.stock ? medication.stock.split(' + ')[1] : (defaultValues?.bonus || ''),
-      
-      // New fields defaults
-      depotPrice: '',
-      malFazlasi: '',
-      discountPercentage: '',
-      maxSaleQuantity: '',
-      description: '',
-
       minSaleQuantity: '',
       campaignStartDate: '',
       campaignEndDate: '',
@@ -124,27 +96,71 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     },
   });
 
-  // Watch fields for calculations
-  const watchedDepotPrice = watch('depotPrice');
-  const watchedMF = watch('malFazlasi');
-  const watchedDiscount = watch('discountPercentage');
+  // Watch fields
   const watchedPrice = watch('price');
   const watchedSkt = watch('skt');
 
   // Calculated States
   const [netPrice, setNetPrice] = useState<number | null>(null);
+  const [profitMargin, setProfitMargin] = useState<number | null>(null);
   const [effectiveDiscount, setEffectiveDiscount] = useState<number | null>(null);
   const [isExpiryWarning, setIsExpiryWarning] = useState(false);
-
+  const [selectedTier, setSelectedTier] = useState<StockOfferTier | null>(null);
+  const [baremError, setBaremError] = useState(false); // Only show error after submit attempt
+  const [isPharmacySpecific, setIsPharmacySpecific] = useState(false);
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>('');
+  
   // Autocomplete State
   const [productSearchTerm, setProductSearchTerm] = useState(
-    medication?.productName || defaultValues?.productName || ''
+    defaultValues?.productName || (medication ? medication.productName : '')
   );
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [isAutocompleteOpen, setIsAutocompleteOpen] = useState(false);
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<MedicationItem | null>(null);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Filter tiers based on selected product - more flexible matching
+  const availableTiers = useMemo(() => {
+    if (!productSearchTerm) return [];
+    // Extract first word for matching (e.g., "PAROL" from "PAROL 500 MG 20 TABLET")
+    const searchFirstWord = productSearchTerm.split(' ')[0].toLowerCase();
+    return stockOfferTiers.filter((t: StockOfferTier) => {
+      const tierFirstWord = t.medicationName.split(' ')[0].toLowerCase();
+      return tierFirstWord === searchFirstWord || 
+             t.medicationName.toLowerCase().includes(searchFirstWord) ||
+             searchFirstWord.includes(tierFirstWord);
+    });
+  }, [productSearchTerm]);
+
+  // Pre-select barem in edit mode based on initialBaremId or initialMalFazlasi
+  useEffect(() => {
+    if (isEditMode && availableTiers.length > 0 && !selectedTier) {
+      // Try to find tier by ID first
+      if (initialBaremId) {
+        const tier = availableTiers.find(t => t.id === initialBaremId);
+        if (tier) {
+          setSelectedTier(tier);
+          setValue('minSaleQuantity', tier.minQuantity.toString());
+          setValue('bonus', tier.mf);
+          return;
+        }
+      }
+      // Fallback: try to match by MalFazlasi format (e.g., "20+2")
+      if (initialMalFazlasi) {
+        const [minQty, mf] = initialMalFazlasi.split('+').map(s => s.trim());
+        const tier = availableTiers.find(t => 
+          t.minQuantity.toString() === minQty && 
+          (t.mf === mf || t.mf.includes(mf))
+        );
+        if (tier) {
+          setSelectedTier(tier);
+          setValue('minSaleQuantity', tier.minQuantity.toString());
+          setValue('bonus', tier.mf);
+        }
+      }
+    }
+  }, [isEditMode, availableTiers, initialBaremId, initialMalFazlasi, selectedTier, setValue]);
 
   // IMask for SKT field
   const { ref: sktRef, setValue: setMaskedSktValue } = useIMask<HTMLInputElement>({
@@ -155,43 +171,17 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     },
     lazy: true,
     overwrite: true,
+  }, {
+    onAccept: (value: string) => {
+      setValue('skt', value, { shouldValidate: true });
+    }
   });
 
-  // === CALCULATIONS ===
-  useEffect(() => {
-    // Calculate Net Price
-    let calculatedNetPrice = 0;
-    const dPrice = parseFloat((watchedDepotPrice || '').replace(',', '.'));
-    const price = parseFloat((watchedPrice || '').replace(',', '.'));
-    const basePrice = dPrice > 0 ? dPrice : price;
 
-    if (basePrice > 0) {
-      if (watchedMF && watchedMF.includes('+')) {
-        const [paid, free] = watchedMF.split('+').map(Number);
-        if (paid > 0 && free >= 0) {
-          calculatedNetPrice = (basePrice * paid) / (paid + free);
-        }
-      } else if (watchedDiscount) {
-        const disc = parseFloat(watchedDiscount.replace(',', '.'));
-        if (!isNaN(disc)) {
-          calculatedNetPrice = basePrice * (1 - (disc / 100));
-        }
-      } else {
-        calculatedNetPrice = basePrice;
-      }
-    }
 
-    setNetPrice(calculatedNetPrice > 0 ? calculatedNetPrice : null);
+  // Calculation states kept for barem selection display
+  // (netPrice, profitMargin, effectiveDiscount are no longer actively calculated)
 
-    // Calculate Effective Discount
-    if (basePrice > 0 && calculatedNetPrice > 0 && calculatedNetPrice < basePrice) {
-      const discount = ((basePrice - calculatedNetPrice) / basePrice) * 100;
-      setEffectiveDiscount(discount);
-    } else {
-      setEffectiveDiscount(null);
-    }
-
-  }, [watchedDepotPrice, watchedMF, watchedDiscount, watchedPrice]);
 
   useEffect(() => {
     // Check Expiry Warning (< 6 months)
@@ -224,7 +214,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
     }
 
     if (initialItem) {
-        setOfferType('standard');
+        setOfferType('stockSale');
         setProductSearchTerm(initialItem.productName);
         setSelectedInventoryItem(initialItem);
         
@@ -242,12 +232,11 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
 
   // === EVENT HANDLERS ===
   const handleProductSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const value = e.target.value;
+      const value = e.target.value.toUpperCase();
       setProductSearchTerm(value);
-      setValue('productName', '');
       
-      // Clear previous selection
-      if (offerType === 'standard') {
+      // Clear previous selection if typing new search
+      if (offerType === 'stockSale') {
           setSelectedInventoryItem(null);
           setValue('barcode', '');
           setValue('skt', '');
@@ -255,8 +244,6 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           setValue('price', '');
           setValue('stock', '');
           setValue('bonus', '');
-          setValue('depotPrice', '');
-          setValue('malFazlasi', '');
       }
 
       if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
@@ -288,19 +275,21 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   };
 
   const handleSelectSuggestion = (suggestion: any) => {
-      if (offerType === 'standard') {
-          setProductSearchTerm(suggestion.name);
-          setSelectedInventoryItem(null);
-          
-          setValue('productName', suggestion.name);
+      if (offerType === 'stockSale') {
+          // Set form values first
+          setValue('productName', suggestion.name, { shouldValidate: true });
           setValue('barcode', suggestion.barcode || '');
           setValue('skt', '');
           setValue('price', '');
           setValue('stock', '');
           setValue('bonus', '');
-      } else {
+          
+          // Update state after form values are set
           setProductSearchTerm(suggestion.name);
-          setValue('productName', suggestion.name);
+          setSelectedInventoryItem(null);
+      } else {
+          setValue('productName', suggestion.name, { shouldValidate: true });
+          setProductSearchTerm(suggestion.name);
       }
       
       setIsAutocompleteOpen(false);
@@ -310,26 +299,77 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const onSubmit = (data: any) => {
     if (isSaving) return;
 
-    const sktValue = offerType === 'standard' && sktRef.current 
+    // Get SKT value from IMask input
+    const sktValue = offerType === 'stockSale' && sktRef.current 
         ? sktRef.current.value 
         : data.skt;
+
+    // ✅ Manual validation for required fields
+    const priceStr = data.price || '';
+    const priceValue = parseFloat(priceStr.replace(',', '.'));
+    const stockValue = parseInt(data.stock || '0', 10);
+    
+    if (!priceStr || isNaN(priceValue) || priceValue <= 0) {
+      alert('Lütfen geçerli bir fiyat giriniz (0\'dan büyük olmalı).');
+      return;
+    }
+    
+    if (!data.stock || isNaN(stockValue) || stockValue <= 0) {
+      alert('Lütfen geçerli bir stok miktarı giriniz (0\'dan büyük olmalı).');
+      return;
+    }
+    
+    if (!sktValue || !/^\d{2}\s*\/\s*\d{4}$/.test(sktValue)) {
+      alert('Lütfen geçerli bir son kullanma tarihi giriniz (MM / YYYY formatında).');
+      return;
+    }
+
+    // Barem zorunlu kontrolü - eğer baremler mevcutsa biri seçilmeli
+    if (availableTiers.length > 0 && !selectedTier) {
+      setBaremError(true);
+      alert('Lütfen bir barem seçiniz. Barem seçimi zorunludur.');
+      return;
+    }
+    setBaremError(false); // Clear error if barem is selected
+
+    // Fiyat limit kontrolü - seçilen baremin birim fiyatından fazla olmamalı
+    if (selectedTier && priceValue > selectedTier.unitPrice) {
+      alert(`Birim fiyat, seçilen baremin maksimum fiyatından (${selectedTier.unitPrice.toFixed(2)} TL) fazla olamaz.`);
+      return;
+    }
+
+    // Get maxPriceLimit from selected tier if available
+    const tierPriceLimit = selectedTier ? selectedTier.unitPrice : 0;
+    
+    // Parse values
+    const stockVal = typeof data.stock === 'number' ? data.stock : parseInt(data.stock || '0', 10);
+    const bonusVal = parseInt(data.bonus || '0', 10);
+    const minSaleQty = selectedTier ? selectedTier.minQuantity : parseInt(data.minSaleQuantity || '0', 10);
+    
+    // Get MF from selected tier (format: "minQuantity+mf")
+    const mfValue = selectedTier 
+      ? `${selectedTier.minQuantity}+${selectedTier.mf.includes('+') ? selectedTier.mf.split('+')[1] : selectedTier.mf}` 
+      : (bonusVal > 0 ? `${minSaleQty || stockVal}+${bonusVal}` : null);
 
     const dataToSave = {
         offerType,
         productName: data.productName,
         barcode: data.barcode || '',
-        expirationDate: sktValue.replace(/ /g, ''),
-        price: typeof data.price === 'number' ? data.price : parseFloat(data.price.replace(',', '.')),
-        stock: typeof data.stock === 'number' ? data.stock : parseInt(data.stock, 10),
-        bonus: parseInt(data.bonus || '0', 10),
-        minSaleQuantity: parseInt(data.minSaleQuantity || '1', 10),
+        expirationDate: sktValue ? sktValue.replace(/ /g, '') : '',
+        price: typeof data.price === 'number' ? data.price : parseFloat(data.price?.replace(',', '.') || '0'),
+        stock: stockVal,
+        bonus: bonusVal,
+        minSaleQuantity: minSaleQty > 0 ? minSaleQty : stockVal,
+        bonusQuantity: bonusVal,
         
-        // New Fields
-        depotPrice: data.depotPrice ? parseFloat(data.depotPrice.replace(',', '.')) : 0,
-        malFazlasi: data.malFazlasi,
-        discountPercentage: data.discountPercentage ? parseFloat(data.discountPercentage.replace(',', '.')) : 0,
-        maxSaleQuantity: data.maxSaleQuantity ? parseInt(data.maxSaleQuantity, 10) : null,
-        description: data.description,
+        // Generate malFazlasi format from selected tier: "minQuantity+mf" (e.g., "20+2")
+        malFazlasi: mfValue,
+
+        // Private offer fields
+        isPrivate: isPharmacySpecific,
+        targetPharmacyIds: isPharmacySpecific && selectedPharmacyId ? selectedPharmacyId : null,
+        warehouseBaremId: selectedTier ? selectedTier.id : null,
+        maxPriceLimit: tierPriceLimit,
 
         // Campaign
         campaignStartDate: data.campaignStartDate || null,
@@ -338,11 +378,13 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
           ? parseFloat(data.campaignBonusMultiplier.replace(',', '.')) 
           : 1,
         
-        // Tender
+        // Tender fields
         minimumOrderQuantity: data.minimumOrderQuantity || null,
         biddingDeadline: data.biddingDeadline || null,
         acceptingCounterOffers: data.acceptingCounterOffers || false,
         
+        // Pharmacy Specific (legacy)
+        targetPharmacyId: isPharmacySpecific ? selectedPharmacyId : null,
         ...(isEditMode && { id: medication.id }),
     };
 
@@ -396,41 +438,75 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   const renderTabs = () => (
     <div className={formStyles.tabContainer}>
       <button type="button" 
-        className={`${formStyles.tabButton} ${offerType === 'standard' ? formStyles.active : ''}`}
-        onClick={() => setOfferType('standard')}
+        className={`${formStyles.tabButton} ${offerType === 'stockSale' ? formStyles.active : ''}`}
+        onClick={() => setOfferType('stockSale')}
         disabled={isEditMode} >
-        Standart Satış
+        Stok Satışı
       </button>
       <button type="button" 
-        className={`${formStyles.tabButton} ${offerType === 'campaign' ? formStyles.active : ''}`}
-        onClick={() => setOfferType('campaign')}
+        className={`${formStyles.tabButton} ${offerType === 'jointOrder' ? formStyles.active : ''}`}
+        onClick={() => setOfferType('jointOrder')}
         disabled={isEditMode} >
-        Kampanyalı Satış
+        Ortak Sipariş
       </button>
       <button type="button" 
-        className={`${formStyles.tabButton} ${offerType === 'tender' ? formStyles.active : ''}`}
-        onClick={() => setOfferType('tender')}
+        className={`${formStyles.tabButton} ${offerType === 'purchaseRequest' ? formStyles.active : ''}`}
+        onClick={() => setOfferType('purchaseRequest')}
         disabled={isEditMode} >
-        İhaleli Satış
+        Alım Talebi
       </button>
     </div>
   );
 
   const renderCalculationBadge = () => {
-    if (!netPrice) return null;
+    if (!netPrice && !selectedTier) return null;
 
     return (
-      <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 mb-4 flex items-center justify-between text-emerald-800">
-        <div className="flex items-center gap-2">
-          {/* <CalculatorIcon className="w-5 h-5" /> */}
-          <span className="font-semibold">💰 Hesaplanan Net Maliyet:</span>
-          <span className="text-lg font-bold">{netPrice.toFixed(2)} ₺</span>
-        </div>
-        {effectiveDiscount && (
-          <div className="flex items-center gap-1 bg-emerald-100 px-2 py-1 rounded text-sm font-medium">
-            {/* <TagIcon className="w-4 h-4" /> */}
-            <span>🏷️ %{effectiveDiscount.toFixed(1)} Avantaj</span>
+      <div className="bg-white border border-gray-200 rounded-xl p-4 mb-6 shadow-sm">
+        <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+          📊 Fiyat Analizi
+        </h4>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          
+          {/* 1. Barem Fiyatı (Base) */}
+          <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+            <span className="block text-xs text-gray-500 mb-1">Barem Birim Fiyatı</span>
+            <span className="block text-lg font-bold text-gray-700">
+              {selectedTier ? selectedTier.unitPrice.toFixed(2) : '-'} ₺
+            </span>
           </div>
+
+          {/* 2. Net Maliyet (Cost) */}
+          <div className="bg-blue-50 p-3 rounded-lg border border-blue-100">
+            <span className="block text-xs text-blue-600 mb-1">Net Maliyet (MF Dahil)</span>
+            <span className="block text-lg font-bold text-blue-700">
+              {netPrice ? netPrice.toFixed(2) : '-'} ₺
+            </span>
+          </div>
+
+          {/* 3. Satış Fiyatı (Sales Price) */}
+          <div className="bg-purple-50 p-3 rounded-lg border border-purple-100">
+            <span className="block text-xs text-purple-600 mb-1">Sizin Satış Fiyatınız</span>
+            <span className="block text-lg font-bold text-purple-700">
+              {watchedPrice ? watchedPrice : '-'} ₺
+            </span>
+          </div>
+
+          {/* 4. Kar Oranı (Margin) */}
+          <div className={`p-3 rounded-lg border ${profitMargin && profitMargin > 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-red-50 border-red-100'}`}>
+            <span className={`block text-xs mb-1 ${profitMargin && profitMargin > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+              Tahmini Kar Oranı
+            </span>
+            <span className={`block text-lg font-bold ${profitMargin && profitMargin > 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+              {profitMargin !== null ? `%${profitMargin.toFixed(2)}` : '-'}
+            </span>
+          </div>
+
+        </div>
+        {selectedTier && (
+           <div className="mt-3 text-xs text-gray-500 flex items-center gap-1">
+             ℹ️ Net maliyet, seçilen baremin MF koşulu ({selectedTier.minQuantity}+{selectedTier.mf.includes('+') ? selectedTier.mf.split('+')[1] : selectedTier.mf}) baz alınarak hesaplanmıştır.
+           </div>
         )}
       </div>
     );
@@ -442,17 +518,34 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className={`${formStyles.formGroup} ${formStyles.autocompleteWrapper}`}>
           <label htmlFor="productName">İlaç Adı *</label>
-          <input
-            type="text"
-            id="productName"
-            value={productSearchTerm}
-            onChange={handleProductSearchChange}
-            onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
-            onBlur={() => setTimeout(() => setIsAutocompleteOpen(false), 500)}
-            placeholder="İlaç ara..."
-            disabled={isEditMode}
-            autoComplete="off"
-            className="w-full"
+          <Controller
+            control={control}
+            name="productName"
+            render={({ field: { onChange, onBlur, value, ref } }) => (
+              <input
+                type="text"
+                id="productName"
+                ref={ref}
+                value={value || ''}
+                onChange={(e) => {
+                  const upper = e.target.value.toUpperCase();
+                  onChange(upper);
+                  handleProductSearchChange(e);
+                }}
+                onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
+                onBlur={() => {
+                  onBlur();
+                  if (suggestions.length > 0) {
+                    handleSelectSuggestion(suggestions[0]);
+                  }
+                  setTimeout(() => setIsAutocompleteOpen(false), 500);
+                }}
+                placeholder="İlaç ara..."
+                disabled={isEditMode}
+                autoComplete="off"
+                className="w-full"
+              />
+            )}
           />
           {errors.productName && (
             <span className={formStyles.errorMessage}>{errors.productName.message as string}</span>
@@ -472,82 +565,175 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
         </div>
       </div>
 
-      {/* Row 2: Financials (Depot Price, MF, Discount, Price) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
-        <div className={formStyles.formGroup}>
-          <label htmlFor="depotPrice">Depo Fiyatı (₺)</label>
-          <input
-            type="text" 
-            id="depotPrice" 
-            {...register('depotPrice')}
-            placeholder="0,00"
-          />
+      {/* Row 2: Tier Selection */}
+      <div className="grid grid-cols-1 gap-4 mt-2">
+        {/* TIER SELECTION UI */}
+        {availableTiers.length > 0 && (
+          <div className="mt-4 mb-4 col-span-3">
+            <label className={formStyles.label}>
+              Stoktan Teklif Baremleri * <span className="text-red-500 text-xs">(Barem seçimi zorunludur)</span>
+            </label>
+            <div className={`overflow-x-auto border rounded-lg ${baremError && !selectedTier ? 'border-red-500 border-2' : ''}`}>
+              <table className="w-full text-sm text-left">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-2">Min. Adet</th>
+                    <th className="px-4 py-2">MF</th>
+                    <th className="px-4 py-2">Birim Fiyat (Vergi Hariç)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {availableTiers.map((tier: StockOfferTier) => (
+                    <tr 
+                      key={tier.id} 
+                      onClick={() => {
+                        setSelectedTier(tier);
+                        setBaremError(false); // Clear error when tier selected
+                        setValue('minSaleQuantity', tier.minQuantity.toString());
+                        setValue('bonus', tier.mf); // Set bonus for MF display
+                        // Clear price error if any
+                        const currentPriceStr = getValues('price');
+                        const currentPrice = currentPriceStr ? parseFloat(currentPriceStr.replace(',', '.')) : 0;
+                        if (currentPrice > 0 && currentPrice <= tier.unitPrice) {
+                          clearErrors('price');
+                        }
+                      }}
+                      className={`cursor-pointer border-b hover:bg-blue-50 ${selectedTier?.id === tier.id ? 'bg-blue-100 border-blue-300' : 'bg-white'}`}
+                    >
+                      <td className="px-4 py-2 font-medium">{tier.minQuantity}</td>
+                      <td className="px-4 py-2">{tier.mf}</td>
+                      <td className="px-4 py-2 font-bold text-emerald-600">{tier.unitPrice.toFixed(2)} TL</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {baremError && !selectedTier && (
+              <p className="mt-2 text-xs text-red-500">⚠️ Lütfen yukarıdan bir barem seçiniz.</p>
+            )}
+            {selectedTier && (
+              <div className="mt-2 text-xs text-blue-600 flex justify-between items-center">
+                <span>Seçilen Barem: <strong>{selectedTier.minQuantity}+{selectedTier.mf}</strong> | Fiyat Limiti: <strong>{selectedTier.unitPrice.toFixed(2)} TL</strong></span>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setSelectedTier(null);
+                    setValue('minSaleQuantity', '0');
+                    setValue('bonus', '');
+                  }}
+                  className="text-red-500 hover:underline"
+                >
+                  Seçimi Temizle
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className={formStyles.row}>
+          <div className={formStyles.formGroup}>
+            <label className={formStyles.label}>Birim Fiyat (TL) *</label>
+            <input
+              {...register('price', { 
+                validate: (value) => {
+                  if (selectedTier && value) {
+                    const num = parseFloat(value.replace(',', '.'));
+                    if (!isNaN(num) && num > selectedTier.unitPrice) {
+                      return `Maksimum fiyat ${selectedTier.unitPrice.toFixed(2)} TL olabilir.`;
+                    }
+                  }
+                  return true;
+                }
+              })}
+              type="text"
+              placeholder="0,00"
+              className={`${formStyles.input} ${errors.price ? formStyles.inputError : ''}`}
+              style={
+                selectedTier && watch('price') && 
+                parseFloat((watch('price') || '0').replace(',', '.')) > selectedTier.unitPrice
+                  ? { borderColor: '#ef4444', borderWidth: '2px', backgroundColor: '#fef2f2' }
+                  : {}
+              }
+            />
+            {errors.price && (
+              <span className={formStyles.errorMessage}>{errors.price.message as string}</span>
+            )}
+            {/* Prominent inline warning when price exceeds barem limit */}
+            {selectedTier && watch('price') && 
+             parseFloat((watch('price') || '0').replace(',', '.')) > selectedTier.unitPrice && (
+              <div style={{
+                marginTop: '8px',
+                padding: '12px',
+                backgroundColor: '#fef2f2',
+                border: '2px solid #ef4444',
+                borderRadius: '8px',
+                color: '#dc2626',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px'
+              }}>
+                <span style={{ fontSize: '20px' }}>⚠️</span>
+                <span>
+                  Girdiğiniz fiyat ({watch('price')} TL), seçilen baremin maksimum fiyatından 
+                  <strong> ({selectedTier.unitPrice.toFixed(2)} TL)</strong> fazla! 
+                  Lütfen fiyatı düşürün.
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div className={formStyles.formGroup}>
+            <label className={formStyles.label}>Stok Miktarı *</label>
+            <input
+              {...register('stock')}
+              type="number"
+              placeholder="0"
+              className={`${formStyles.input} ${errors.stock ? formStyles.inputError : ''}`}
+            />
+            {errors.stock && (
+              <span className={formStyles.errorMessage}>{errors.stock.message as string}</span>
+            )}
+          </div>
         </div>
 
-        <div className={formStyles.formGroup}>
-          <label htmlFor="malFazlasi">Mal Fazlası (X+Y)</label>
-          <input
-            type="text" 
-            id="malFazlasi" 
-            {...register('malFazlasi')}
-            placeholder="10+2"
-          />
-          {errors.malFazlasi && (
-            <span className={formStyles.errorMessage}>{errors.malFazlasi.message as string}</span>
+        {/* PHARMACY SPECIFIC TOGGLE */}
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+          <div className="flex items-center mb-4">
+            <input
+              type="checkbox"
+              id="pharmacySpecific"
+              checked={isPharmacySpecific}
+              onChange={(e) => {
+                setIsPharmacySpecific(e.target.checked);
+                if (!e.target.checked) setSelectedPharmacyId('');
+              }}
+              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="pharmacySpecific" className="ml-2 text-sm font-medium text-gray-900">
+              Eczaneye Özel Teklif
+            </label>
+          </div>
+          
+          {isPharmacySpecific && (
+            <div className="animate-fade-in">
+              <label className={formStyles.label}>Hedef Eczane Seçin</label>
+              <select
+                value={selectedPharmacyId}
+                onChange={(e) => setSelectedPharmacyId(e.target.value)}
+                className={formStyles.select}
+              >
+                <option value="">Eczane Seçiniz...</option>
+                {otherPharmaciesData.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.pharmacyName} ({p.group})
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-xs text-gray-500">Bu teklifi sadece seçilen eczane görebilecektir.</p>
+            </div>
           )}
-        </div>
-
-        <div className={formStyles.formGroup}>
-          <label htmlFor="discountPercentage">İskonto (%)</label>
-          <input
-            type="text" 
-            id="discountPercentage" 
-            {...register('discountPercentage')}
-            placeholder="0"
-          />
-        </div>
-
-        <div className={formStyles.formGroup}>
-          <label htmlFor="price">Satış Fiyatı (₺) *</label>
-          <input
-            type="text" 
-            id="price" 
-            {...register('price')}
-            placeholder="0,00"
-            className={errors.price ? 'border-red-500' : ''}
-          />
-          {errors.price && (
-            <span className={formStyles.errorMessage}>{errors.price.message as string}</span>
-          )}
-        </div>
-      </div>
-
-      {/* Calculation Badge */}
-      {renderCalculationBadge()}
-
-      {/* Row 3: Stock & Expiry */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className={formStyles.formGroup}>
-          <label htmlFor="stock">Stok Adedi *</label>
-          <input
-            type="text" 
-            id="stock" 
-            {...register('stock')}
-            placeholder="0"
-          />
-          {errors.stock && (
-            <span className={formStyles.errorMessage}>{errors.stock.message as string}</span>
-          )}
-        </div>
-
-        <div className={formStyles.formGroup}>
-          <label htmlFor="maxSaleQuantity">Maks. Satış (Opsiyonel)</label>
-          <input
-            type="text" 
-            id="maxSaleQuantity" 
-            {...register('maxSaleQuantity')}
-            placeholder="Sınırsız"
-          />
         </div>
 
         <div className={formStyles.formGroup}>
@@ -561,7 +747,19 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
             )}
           </label>
           <input 
-            ref={sktRef} 
+            {...(() => {
+              const { ref: formRef, ...rest } = register('skt');
+              return {
+                ...rest,
+                ref: (e: HTMLInputElement | null) => {
+                  formRef(e);
+                  if (sktRef.current !== e) {
+                    // @ts-ignore
+                    sktRef.current = e;
+                  }
+                }
+              };
+            })()}
             type="text" 
             id="expirationDate" 
             placeholder="AA / YYYY"
@@ -571,17 +769,6 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
             <span className={formStyles.errorMessage}>{errors.skt.message as string}</span>
           )}
         </div>
-      </div>
-
-      <div className={formStyles.formGroup}>
-        <label htmlFor="description">Açıklama (Opsiyonel)</label>
-        <textarea
-          id="description"
-          {...register('description')}
-          placeholder="Ürün hakkında ek bilgi (örn: Kutu hafif hasarlı)"
-          rows={2}
-          className="w-full border rounded p-2"
-        />
       </div>
     </>
   );
@@ -661,7 +848,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
   );
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <form onSubmit={handleSubmit(onSubmit, (errors) => console.error("FORM ERRORS:", errors))}>
       <SettingsCard
         title={isEditMode ? "Teklifi Düzenle" : "Yeni Teklif Oluştur"}
         description="Teklif türünü seçin ve detayları doldurun."
@@ -675,8 +862,8 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving }) =
 
         <div className="flex flex-col gap-4">
           {renderCommonFields()}
-          {offerType === 'campaign' && renderCampaignFields()}
-          {offerType === 'tender' && renderTenderFields()}
+          {offerType === 'jointOrder' && renderCampaignFields()}
+          {offerType === 'purchaseRequest' && renderTenderFields()}
         </div>
       </SettingsCard>
     </form>

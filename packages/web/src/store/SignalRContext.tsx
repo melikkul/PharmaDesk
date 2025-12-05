@@ -40,7 +40,8 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
   }, []);
 
   useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8081";
+    // Use relative URL to leverage Next.js rewrites (proxies to backend)
+    const apiUrl = "";
     const accessToken = getAccessToken();
 
     if (!accessToken) {
@@ -57,9 +58,9 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${apiUrl}/hubs/notifications`, {
         accessTokenFactory: () => accessToken,
-        skipNegotiation: true, // Skip HTTP negotiate, use WebSocket directly
-        transport: signalR.HttpTransportType.WebSockets,
-        withCredentials: false, // Not needed when skipping negotiation
+        // skipNegotiation: true, // Removed to allow negotiation
+        // transport: signalR.HttpTransportType.WebSockets, // Removed to allow fallback
+        withCredentials: true, // Changed to true for cookie-based affinity if needed
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {
@@ -74,7 +75,10 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       .configureLogging({
         log: (logLevel: signalR.LogLevel, message: string, ...args: any[]) => {
           // Suppress the specific race-condition error
-          if (logLevel === signalR.LogLevel.Error && message.includes("Failed to start the HttpConnection before stop() was called")) {
+          if (logLevel === signalR.LogLevel.Error && (
+            message.includes("Failed to start the HttpConnection before stop() was called") ||
+            message.includes("The connection was stopped during negotiation")
+          )) {
             return;
           }
           // Forward other logs to console

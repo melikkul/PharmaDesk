@@ -20,7 +20,9 @@ services:
       retries: 5
 
   backend:
-    build: ./packages/api
+    build:
+      context: ./packages/api
+      dockerfile: Dockerfile.dev
     container_name: pharma_desk_backend
     env_file:
       - ./packages/api/.env

@@ -1,0 +1,13 @@
+FROM mcr.microsoft.com/dotnet/sdk:8.0
+
+WORKDIR /app
+
+# Expose port
+EXPOSE 8081
+
+# Environment variables
+ENV ASPNETCORE_URLS=http://+:8081
+ENV ASPNETCORE_ENVIRONMENT=Development
+
+# Run with dotnet watch for hot reload
+ENTRYPOINT ["dotnet", "watch", "run", "--project", "src/PharmaDesk.API/PharmaDesk.API.csproj", "--urls", "http://+:8081"]

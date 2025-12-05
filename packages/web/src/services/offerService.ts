@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = ''; // Use relative URL for Next.js proxy
 
 import { Offer } from '../types';
 
@@ -12,10 +12,15 @@ export const offerService = {
     return response.json();
   },
 
-  getOfferById: async (id: string): Promise<Offer> => {
-    const response = await fetch(`${API_BASE_URL}/api/offers/${id}`);
+  getOfferById: async (token: string, id: string): Promise<Offer> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${id}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
     if (!response.ok) {
-      throw new Error('Failed to fetch offer');
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch offer: ${response.status} ${response.statusText} - ${errorText}`);
     }
     return response.json();
   },
@@ -29,7 +34,7 @@ export const offerService = {
   },
 
   getMyOffers: async (token: string): Promise<Offer[]> => {
-    const response = await fetch(`${API_BASE_URL}/api/offers/my-offers`, {
+    const response = await fetch(`${API_BASE_URL}/api/offers/my-offers?_=${Date.now()}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
@@ -74,7 +79,7 @@ export const offerService = {
 
   updateOfferStatus: async (token: string, id: number, status: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${id}/status`, {
-      method: 'PUT',
+      method: 'PATCH',
       headers: {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',

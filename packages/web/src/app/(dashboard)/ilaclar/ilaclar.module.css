@@ -90,6 +90,38 @@
     border-color: var(--active-link-bg);
 }
 
+/* Miadı Geçmişler Checkbox */
+.expiredCheckbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border-radius: 8px;
+    border: 1px solid #DEE2E6;
+    background-color: #fff;
+    font-weight: 500;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+}
+
+.expiredCheckbox:hover {
+    border-color: #F39C12;
+    background-color: #FEF9E7;
+}
+
+.expiredCheckbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #F39C12;
+    cursor: pointer;
+}
+
+.expiredCheckbox span {
+    color: var(--text-primary);
+}
+
 /* Animasyonlu filtre alanı */
 .filterContainer {
     max-height: 0;
@@ -106,8 +138,30 @@
 
 .productGrid {
     display: grid;
-    /* auto-fill ile kartlar maksimum genişlikte kalır, tek kart tüm sayfayı kaplamaz */
-    grid-template-columns: repeat(auto-fill, minmax(260px, 300px));
-    gap: 25px;
+    /* 5 kartlık grid düzeni - responsive */
+    grid-template-columns: repeat(5, 1fr);
+    gap: 20px;
     width: 100%;
+}
+
+/* Tablet - 3 sütun */
+@media (max-width: 1200px) {
+    .productGrid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Mobil-Tablet - 2 sütun */
+@media (max-width: 768px) {
+    .productGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+}
+
+/* Küçük Mobil - 1 sütun */
+@media (max-width: 480px) {
+    .productGrid {
+        grid-template-columns: 1fr;
+    }
 }

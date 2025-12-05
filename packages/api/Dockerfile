@@ -1,10 +1,24 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0
+# 1. Aşama: Build (Derleme)
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Proje dosyalarını kopyala
+COPY . .
+
+# Bağımlılıkları yükle ve projeyi derle
+RUN dotnet restore
+RUN dotnet publish "src/PharmaDesk.API/PharmaDesk.API.csproj" -c Release -o /app/publish
+
+# 2. Aşama: Runtime (Çalıştırma)
+FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
+
+# Derlenmiş dosyaları build aşamasından al
+COPY --from=build /app/publish .
+
+# Port ve Çalıştırma ayarları
 EXPOSE 8081
-ENV ASPNETCORE_ENVIRONMENT=Development
+ENV ASPNETCORE_URLS=http://+:8081
+ENV ASPNETCORE_ENVIRONMENT=Production
 
-# Install dotnet-ef tool for migrations if needed
-# RUN dotnet tool install --global dotnet-ef
-# ENV PATH="$PATH:/root/.dotnet/tools"
-
-ENTRYPOINT ["dotnet", "watch", "run", "--project", "src/PharmaDesk.API/PharmaDesk.API.csproj", "--urls", "http://0.0.0.0:8081"]
+ENTRYPOINT ["dotnet", "PharmaDesk.API.dll"]
