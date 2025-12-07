@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import '@/app/(dashboard)/dashboard/dashboard.css';
 import styles from './ilaclar.module.css';
 
@@ -47,15 +48,36 @@ export default function IlaclarPage() {
         setIsFilterVisible(prev => !prev);
     }, []);
 
+    // 🆕 Offer type filtering from URL
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const typeFilter = searchParams.get('type')?.toLowerCase() || '';
+    
+    // 🆕 Handle offer type filter change
+    const handleTypeFilterChange = useCallback((type: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (type) {
+            params.set('type', type);
+        } else {
+            params.delete('type');
+        }
+        router.push(`/ilaclar?${params.toString()}`);
+    }, [searchParams, router]);
+
     // Filtered offers
     const filteredOffers = useMemo(() => {
         return offers.filter(offer => {
             const expired = isExpired(offer.expirationDate);
             // showExpired aktifse -> miadı geçmişleri göster
             // showExpired pasifse -> miadı geçmemişleri göster
-            return showExpired ? expired : !expired;
+            const expiryMatch = showExpired ? expired : !expired;
+            
+            // 🆕 Offer type filter
+            const typeMatch = !typeFilter || (offer.type?.toLowerCase() === typeFilter);
+            
+            return expiryMatch && typeMatch;
         });
-    }, [offers, showExpired]);
+    }, [offers, showExpired, typeFilter]);
 
     if (loading) {
         return (
@@ -106,6 +128,79 @@ export default function IlaclarPage() {
                     </button>
                 </div>
             </div>
+            
+            {/* 🆕 Offer Type Filter Buttons */}
+            <div style={{
+                display: 'flex',
+                gap: '10px',
+                marginBottom: '20px',
+                flexWrap: 'wrap'
+            }}>
+                <button
+                    onClick={() => handleTypeFilterChange('')}
+                    style={{
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        transition: 'all 0.2s',
+                        backgroundColor: !typeFilter ? '#3b82f6' : '#e5e7eb',
+                        color: !typeFilter ? 'white' : '#374151'
+                    }}
+                >
+                    Tümü
+                </button>
+                <button
+                    onClick={() => handleTypeFilterChange('stocksale')}
+                    style={{
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        transition: 'all 0.2s',
+                        backgroundColor: typeFilter === 'stocksale' ? '#10b981' : '#e5e7eb',
+                        color: typeFilter === 'stocksale' ? 'white' : '#374151'
+                    }}
+                >
+                    Stok Satışı
+                </button>
+                <button
+                    onClick={() => handleTypeFilterChange('jointorder')}
+                    style={{
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        transition: 'all 0.2s',
+                        backgroundColor: typeFilter === 'jointorder' ? '#f97316' : '#e5e7eb',
+                        color: typeFilter === 'jointorder' ? 'white' : '#374151'
+                    }}
+                >
+                    Ortak Sipariş
+                </button>
+                <button
+                    onClick={() => handleTypeFilterChange('purchaserequest')}
+                    style={{
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        transition: 'all 0.2s',
+                        backgroundColor: typeFilter === 'purchaserequest' ? '#8b5cf6' : '#e5e7eb',
+                        color: typeFilter === 'purchaserequest' ? 'white' : '#374151'
+                    }}
+                >
+                    Alım Talebi
+                </button>
+            </div>
             <div className={`${styles.filterContainer} ${isFilterVisible ? styles.visible : ''}`}>
                 <FilterPanel />
             </div>
@@ -115,69 +210,18 @@ export default function IlaclarPage() {
                         {showExpired ? 'Miadı geçmiş teklif bulunamadı.' : 'Henüz teklif bulunamadı.'}
                     </div>
                 ) : (
-                    // Her ilaç + barem kombinasyonu için ayrı kart
-                    Object.values(
-                        filteredOffers.reduce((acc, offer) => {
-                            // medicationId + malFazlasi kombinasyonu ile grupla
-                            const barem = (offer as any).malFazlasi || '1+0';
-                            const key = `${offer.medicationId}-${barem}`;
-                            
-                            // Parse stock for this offer
-                            const stockParts = offer.stock.split('+').map(s => parseInt(s.trim()) || 0);
-                            const offerStock = stockParts[0];
-                            const offerSold = (offer as any).soldQuantity || 0;
-                            
-                            if (!acc[key]) {
-                                // Aynı ilaç ve barem için tüm teklifleri bul
-                                const allOffersForDrugBarem = filteredOffers.filter(o => 
-                                    o.medicationId === offer.medicationId && 
-                                    ((o as any).malFazlasi || '1+0') === barem
-                                );
-                                
-                                // Toplam stok ve satılan hesapla
-                                let totalStock = 0;
-                                let totalSold = 0;
-                                allOffersForDrugBarem.forEach(o => {
-                                    const parts = o.stock.split('+').map(s => parseInt(s.trim()) || 0);
-                                    totalStock += parts[0];
-                                    totalSold += (o as any).soldQuantity || 0;
-                                });
-                                
-                                // Fiyata göre sırala ve en ucuz 2 eczaneyi al
-                                const sortedOffers = [...allOffersForDrugBarem].sort((a, b) => a.price - b.price);
-                                const topSellers = sortedOffers.slice(0, 2).map(o => ({
-                                    pharmacyId: String(o.pharmacyId),
-                                    pharmacyName: o.pharmacyName || 'Bilinmiyor',
-                                    pharmacyUsername: o.pharmacyUsername || ''
-                                }));
-                                
-                                acc[key] = {
-                                    offer: sortedOffers[0], // En ucuz teklif
-                                    offerCount: allOffersForDrugBarem.length,
-                                    totalStock,
-                                    totalSold,
-                                    remainingStock: totalStock - totalSold,
-                                    barem,
-                                    topSellers
-                                };
-                            }
-                            return acc;
-                        }, {} as Record<string, { 
-                            offer: typeof filteredOffers[0], 
-                            offerCount: number, 
-                            totalStock: number, 
-                            totalSold: number,
-                            remainingStock: number,
-                            barem: string,
-                            topSellers: { pharmacyId: string; pharmacyName: string; pharmacyUsername: string }[]
-                        }>)
-                    ).map(({ offer, offerCount, totalStock, totalSold, remainingStock, barem, topSellers }) => {
-                        // URL'e barem parametresi ekle
+                    // Her teklif için bireysel kart - offer ID ile benzersiz URL
+                    filteredOffers.map((offer) => {
+                        const barem = (offer as any).malFazlasi || '1+0';
                         const baremParam = encodeURIComponent(barem);
-                        const extraSellerCount = offerCount > 2 ? offerCount - 2 : 0;
+                        const stockParts = offer.stock.split('+').map(s => parseInt(s.trim()) || 0);
+                        const currentStock = stockParts[0];
+                        const soldQuantity = (offer as any).soldQuantity || 0;
+                        const remainingStock = Math.max(0, currentStock - soldQuantity);
+                        
                         return (
                             <ProductCard 
-                                key={`${offer.medicationId}-${barem}`} 
+                                key={offer.id} 
                                 medication={{
                                     id: offer.medicationId,
                                     name: offer.productName || 'Bilinmiyor',
@@ -185,16 +229,21 @@ export default function IlaclarPage() {
                                     imageUrl: offer.imageUrl || '/placeholder-med.png',
                                     price: offer.price,
                                     expirationDate: offer.expirationDate || '',
-                                    initialStock: totalStock,
-                                    currentStock: totalStock,
-                                    soldQuantity: totalSold,
+                                    initialStock: currentStock,
+                                    currentStock: currentStock,
+                                    soldQuantity: soldQuantity,
                                     remainingStock: remainingStock,
-                                    bonus: 0,
-                                    sellers: topSellers,
+                                    bonus: stockParts[1] || 0,
+                                    sellers: [{
+                                        pharmacyId: String(offer.pharmacyId),
+                                        pharmacyName: offer.pharmacyName || 'Bilinmiyor',
+                                        pharmacyUsername: offer.pharmacyUsername || ''
+                                    }],
                                     malFazlasi: barem
                                 }}
-                                linkHref={`/ilaclar/${offer.medicationId}?barem=${baremParam}`}
-                                extraSellerCount={extraSellerCount}
+                                linkHref={`/ilaclar/${offer.medicationId}?barem=${baremParam}&type=${offer.type?.toLowerCase() || 'stocksale'}&offerId=${offer.id}`}
+                                extraSellerCount={0}
+                                offerType={offer.type}
                             />
                         );
                     })

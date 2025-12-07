@@ -47,7 +47,7 @@ export const offerService = {
     return response.json();
   },
 
-  createOffer: async (token: string, offerData: any): Promise<void> => {
+  createOffer: async (token: string, offerData: any): Promise<{success: boolean; suggestion?: any}> => {
     const response = await fetch(`${API_BASE_URL}/api/offers`, {
       method: 'POST',
       headers: {
@@ -57,10 +57,20 @@ export const offerService = {
       body: JSON.stringify(offerData),
     });
 
+    // 🆕 Handle 409 Conflict for smart matching suggestion
+    if (response.status === 409) {
+      const suggestionData = await response.json();
+      if (suggestionData.hasSuggestion) {
+        return { success: false, suggestion: suggestionData };
+      }
+    }
+
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Failed to create offer');
     }
+
+    return { success: true };
   },
 
   updateOffer: async (token: string, id: string, offerData: any): Promise<void> => {
@@ -104,6 +114,38 @@ export const offerService = {
 
     if (!response.ok) {
       throw new Error('Failed to delete offer');
+    }
+  },
+
+  // 🆕 Depo sorumluluğunu üstlen
+  claimDepot: async (token: string, offerId: number): Promise<{ claimerUserId: number; claimedAt: string }> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/claim-depot`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to claim depot');
+    }
+
+    return response.json();
+  },
+
+  // 🆕 Depo sorumluluğundan ayrıl
+  unclaimDepot: async (token: string, offerId: number): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/claim-depot`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to unclaim depot');
     }
   }
 };

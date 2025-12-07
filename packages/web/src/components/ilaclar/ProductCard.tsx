@@ -9,9 +9,17 @@ interface ProductCardProps {
   medication: ShowroomMedication & { malFazlasi?: string };
   linkHref?: string; // Özel link URL'i (barem parametresi için)
   extraSellerCount?: number; // 2'den fazla eczane varsa kalan sayı
+  offerType?: string; // 🆕 Teklif türü: stocksale, jointorder, purchaserequest
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSellerCount = 0 }) => {
+// 🆕 Offer type badge color mapping
+const offerTypeBadgeConfig: Record<string, { bg: string; text: string; label: string }> = {
+  stocksale: { bg: '#10b981', text: 'white', label: 'Stok Satışı' },
+  jointorder: { bg: '#f97316', text: 'white', label: 'Ortak Sipariş' },
+  purchaserequest: { bg: '#8b5cf6', text: 'white', label: 'Alım Talebi' } // 🆕 Mor renk
+};
+
+const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSellerCount = 0, offerType }) => {
   // Link URL - özel veya varsayılan
   const href = linkHref || `/ilaclar/${medication.id}`;
   // Kalan stok hesapla: remainingStock varsa kullan, yoksa currentStock - soldQuantity
@@ -19,11 +27,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
   const remainingStock = medication.remainingStock ?? (medication.currentStock - soldQty);
   
   const isOutOfStock = remainingStock === 0;
-  // Stok doluluk oranı: (Stok - Alınan) / Stok * 100
-  // Alınan (soldQuantity) 0 ise bar tam dolu, artıkça azalır
-  const totalStock = medication.currentStock || 1; // 0'a bölmemek için
-  const barWidth = Math.min((remainingStock / totalStock) * 100, 100);
-
+  
   // MalFazlası parsing - "20+2" formatından bonus'u al
   const parseMF = (mf: string | undefined): { min: number; bonus: number } => {
     if (!mf || mf === '0+0') return { min: 0, bonus: 0 };
@@ -32,6 +36,44 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
   };
   
   const mfData = parseMF(medication.malFazlasi);
+  const isJointOrder = offerType?.toLowerCase() === 'jointorder';
+  const isPurchaseRequest = offerType?.toLowerCase() === 'purchaserequest'; // 🆕
+  
+  // Stok doluluk oranı hesapla
+  // Joint Order ve PurchaseRequest için: talep edilen / barem toplam (doluluk)
+  // Diğerleri için: (Stok - Alınan) / Stok (kalan)
+  const totalStock = medication.currentStock || 1;
+  let barWidth: number;
+  let barColor: string;
+  let barLabel: string = '';
+  
+  if ((isJointOrder || isPurchaseRequest) && mfData.min > 0) {
+    // 🆕 JointOrder/PurchaseRequest: barem doluluk oranı  
+    // Bar toplam baremi temsil ediyor, doluluk = talep edilen miktar
+    const baremTotal = mfData.min + mfData.bonus;
+    const requestedStock = medication.currentStock; // Bu teklifin talep ettiği stok
+    const usagePercent = (requestedStock / baremTotal) * 100;
+    barWidth = Math.min(usagePercent, 100);
+    
+    // Kalan stok hesapla
+    const kalanStok = baremTotal - requestedStock;
+    barLabel = `Kalan ${kalanStok}`;
+    
+    if (isPurchaseRequest) {
+      barColor = '#8b5cf6'; // Mor
+    } else {
+      barColor = usagePercent >= 100 ? '#ef4444' : '#f97316'; // Dolunca kırmızı, değilse turuncu
+    }
+  } else if (isPurchaseRequest) {
+    // PurchaseRequest barem olmadan: sadece aranan miktarı göster
+    barWidth = 100;
+    barColor = '#8b5cf6';
+    barLabel = `${medication.currentStock} Adet Aranıyor`;
+  } else {
+    // Normal: kalan stok oranı
+    barWidth = Math.min((remainingStock / totalStock) * 100, 100);
+    barColor = '#10b981'; // Yeşil
+  }
   const hasMF = mfData.bonus > 0;
   
   // Birim başına kar hesapla: 1+0'a göre ne kadar tasarruf
@@ -49,6 +91,26 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
       <Link href={href} className={styles.productLink}>
         <div className={styles.imageContainer}>
           {isOutOfStock && <div className={styles.outOfStockBanner}><span>TÜKENDİ</span></div>}
+          {/* 🆕 Offer Type Badge - top-left corner */}
+          {offerType && offerTypeBadgeConfig[offerType.toLowerCase()] && (
+            <div style={{
+              position: 'absolute',
+              top: '8px',
+              left: '8px',
+              backgroundColor: offerTypeBadgeConfig[offerType.toLowerCase()].bg,
+              color: offerTypeBadgeConfig[offerType.toLowerCase()].text,
+              padding: '4px 10px',
+              borderRadius: '12px',
+              fontSize: '10px',
+              fontWeight: '600',
+              zIndex: 10,
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+            }}>
+              {offerTypeBadgeConfig[offerType.toLowerCase()].label}
+            </div>
+          )}
           {/* Barem Badge - resmin üstünde sağ köşede */}
           {hasMF && (
             <div className={styles.baremBadge}>
@@ -68,7 +130,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
           {medication.sellers.length > 0 ? (
             <>
               {medication.sellers.map((seller, index) => (
-                <React.Fragment key={seller.pharmacyId}>
+                <React.Fragment key={`${seller.pharmacyId}-${index}`}>
                   <Link 
                     href={`/profile/${seller.pharmacyId}`} 
                     className={styles.pharmacyLink}
@@ -89,14 +151,22 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
           )}
         </div>
 
-        {/* Stok Barı - sadece stok sayısı */}
+        {/* Stok Barı - Joint Order için barem bazlı, diğerleri için normal */}
         <div className={styles.stockSection}>
           <div className={styles.stockBar}>
             <div 
               className={styles.stockFill} 
-              style={{ width: `${barWidth}%` }}
+              style={{ width: `${barWidth}%`, backgroundColor: barColor }}
             ></div>
-            <span className={styles.stockText}>{remainingStock} Adet</span>
+            <span className={styles.stockText}>
+              {barLabel 
+                ? barLabel 
+                : isPurchaseRequest 
+                  ? `🔍 ${medication.currentStock} Aranan Adet` 
+                  : isJointOrder 
+                    ? `${medication.currentStock} Adet Talep` 
+                    : `${remainingStock} Adet`}
+            </span>
           </div>
         </div>
 

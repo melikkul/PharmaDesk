@@ -92,6 +92,7 @@ export default function TekliflerimPage() {
   // Convert API data (backend OfferDto) to expected format
   const formattedOffers = offers.map(offer => ({
     id: offer.id,
+    medicationId: (offer as any).medicationId, // 🆕 İlaç detay sayfasına link için
     productName: offer.productName || 'Bilinmiyor',
     barcode: offer.barcode || '',
     currentStock: 0,

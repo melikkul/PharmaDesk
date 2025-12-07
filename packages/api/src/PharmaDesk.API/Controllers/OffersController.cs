@@ -3,7 +3,9 @@ using Backend.Dtos;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PharmaDesk.API.Hubs;
 using System.Security.Claims;
 
 namespace Backend.Controllers
@@ -14,10 +16,12 @@ namespace Backend.Controllers
     public class OffersController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public OffersController(AppDbContext context)
+        public OffersController(AppDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // GET /api/offers - Tüm aktif teklifleri listele (Pazaryeri)
@@ -241,6 +245,10 @@ namespace Backend.Controllers
                 MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
                 SoldQuantity = o.SoldQuantity,
                 RemainingStock = o.Stock - o.SoldQuantity
+                
+                // TODO: Depo sorumlusu bilgisi - Migration yapıldıktan sonra aktif et
+                // DepotClaimerUserId = o.DepotClaimerUserId,
+                // DepotClaimedAt = o.DepotClaimedAt
             }).ToList();
 
             return Ok(dtos);
@@ -287,6 +295,115 @@ namespace Backend.Controllers
             if (medication == null)
                 return NotFound(new { message = "Medication not found" });
 
+            // 🆕 SMART MATCHING: JointOrder veya PurchaseRequest için mevcut ilan kontrolü
+            if (offerType == OfferType.JointOrder || offerType == OfferType.PurchaseRequest)
+            {
+                Console.WriteLine($"[SMART MATCHING] Checking for existing offers. MedicationId: {medication.Id}, PharmacyId: {pharmacyId.Value}, RequestedStock: {request.Stock}");
+                
+                // Aynı ilaç için TÜM aktif JointOrder veya PurchaseRequest'leri bul (kendinki dahil)
+                var matchingOffers = await _context.Offers
+                    .Include(o => o.PharmacyProfile)
+                    .Where(o => o.MedicationId == medication.Id 
+                             && (o.Type == OfferType.JointOrder || o.Type == OfferType.PurchaseRequest)
+                             && o.Status == OfferStatus.Active)
+                    .ToListAsync();
+
+                Console.WriteLine($"[SMART MATCHING] Found {matchingOffers.Count} matching offers");
+
+                // Kalan stok yeterli olan ilk teklifi bul
+                var suitableOffer = matchingOffers.FirstOrDefault(o => 
+                {
+                    // Barem varsa: toplam barem stoku - mevcut talepler = kalan
+                    if (!string.IsNullOrEmpty(o.MalFazlasi))
+                    {
+                        var baremParts = o.MalFazlasi.Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                        var totalBaremStock = baremParts.Sum();
+                        
+                        // Bu teklifin kalan stoğu
+                        var remainingStock = totalBaremStock - o.SoldQuantity;
+                        Console.WriteLine($"[SMART MATCHING] Offer {o.Id}: Barem={o.MalFazlasi}, TotalBarem={totalBaremStock}, SoldQty={o.SoldQuantity}, Remaining={remainingStock}, Requested={request.Stock}");
+                        return remainingStock >= request.Stock;
+                    }
+                    
+                    // Barem yoksa: normal stok kontrolü
+                    var stockRemaining = o.Stock - o.SoldQuantity;
+                    Console.WriteLine($"[SMART MATCHING] Offer {o.Id}: Stock={o.Stock}, SoldQty={o.SoldQuantity}, Remaining={stockRemaining}, Requested={request.Stock}");
+                    return stockRemaining >= request.Stock;
+                });
+
+                if (suitableOffer != null)
+                {
+                    Console.WriteLine($"[SMART MATCHING] Found suitable offer! OfferId: {suitableOffer.Id}, OfferType: {suitableOffer.Type}, NewOfferType: {offerType}");
+                    
+                    // 🆕 Mantık:
+                    // - JointOrder açılıyorsa: Mevcut JointOrder veya PurchaseRequest varsa → engelle
+                    // - PurchaseRequest açılıyorsa: Mevcut JointOrder varsa → engelle, mevcut PurchaseRequest varsa → izin ver
+                    
+                    bool shouldBlock = false;
+                    string message = "";
+                    
+                    if (offerType == OfferType.JointOrder)
+                    {
+                        // JointOrder açılıyorsa her durumda engelle
+                        shouldBlock = true;
+                        message = suitableOffer.Type == OfferType.JointOrder
+                            ? "Bu ilaç için yeterli stoklu bir ortak sipariş bulundu. Yeni teklif açmak yerine mevcut gruba katılabilirsiniz."
+                            : "Bu ilaç için aynı ilacı talep eden bir alım talebi var. Mevcut talebe katılabilirsiniz.";
+                    }
+                    else if (offerType == OfferType.PurchaseRequest)
+                    {
+                        // PurchaseRequest açılıyorsa sadece mevcut JointOrder varsa engelle
+                        if (suitableOffer.Type == OfferType.JointOrder)
+                        {
+                            shouldBlock = true;
+                            message = "Bu ilaç için yeterli stoklu bir ortak sipariş bulundu. Yeni alım talebi açmak yerine mevcut siparişe katılabilirsiniz.";
+                        }
+                        else
+                        {
+                            // Mevcut de PurchaseRequest ise izin ver
+                            Console.WriteLine("[SMART MATCHING] Both are PurchaseRequest - allowing save");
+                            shouldBlock = false;
+                        }
+                    }
+                    
+                    if (shouldBlock)
+                    {
+                        // Kalan stok hesapla - tüm tekliflerin taleplerini topla
+                        int remainingStockValue;
+                        if (!string.IsNullOrEmpty(suitableOffer.MalFazlasi))
+                        {
+                            var baremParts = suitableOffer.MalFazlasi.Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                            var baremTotal = baremParts.Sum();
+                            
+                            // Tüm tekliflerin talep ettiği toplam stok
+                            var totalRequested = matchingOffers.Sum(o => o.Stock);
+                            remainingStockValue = Math.Max(0, baremTotal - totalRequested);
+                            
+                            Console.WriteLine($"[SMART MATCHING] BaremTotal: {baremTotal}, TotalRequested: {totalRequested}, Remaining: {remainingStockValue}");
+                        }
+                        else
+                        {
+                            remainingStockValue = suitableOffer.Stock - suitableOffer.SoldQuantity;
+                        }
+                        
+                        return Conflict(new 
+                        { 
+                            hasSuggestion = true,
+                            suggestedOfferId = suitableOffer.Id,
+                            suggestedMedicationId = suitableOffer.MedicationId,
+                            suggestedOfferType = suitableOffer.Type.ToString().ToLower(),
+                            barem = suitableOffer.MalFazlasi,
+                            message = message,
+                            remainingStock = remainingStockValue,
+                            pharmacyName = suitableOffer.PharmacyProfile?.PharmacyName ?? "Bilinmiyor"
+                        });
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("[SMART MATCHING] No suitable offer found - proceeding with creation");
+                }
+            }
 
             // For StockSale offers, ensure inventory exists
             if (offerType == OfferType.StockSale)
@@ -347,10 +464,24 @@ namespace Backend.Controllers
                 }
             }
 
-            // Type-specific validation (legacy support for JointOrder/PurchaseRequest)
+            // Type-specific validation for JointOrder
             if (offerType == OfferType.JointOrder)
             {
-                // JointOrder may have special validation logic if needed
+                // 🆕 Joint Order: Stock cannot exceed Barem limit (MinAdet + MalFazlasi)
+                if (!string.IsNullOrEmpty(request.MalFazlasi))
+                {
+                    var mfParts = request.MalFazlasi.Split('+');
+                    if (mfParts.Length == 2 && 
+                        int.TryParse(mfParts[0], out int minAdet) && 
+                        int.TryParse(mfParts[1], out int malFazlasi))
+                    {
+                        int baremLimit = minAdet + malFazlasi;
+                        if (request.Stock > baremLimit)
+                        {
+                            return BadRequest(new { message = $"Ortak sipariş miktarı, barem limitini ({baremLimit} adet) aşamaz." });
+                        }
+                    }
+                }
             }
             else if (offerType == OfferType.PurchaseRequest)
             {
@@ -472,6 +603,15 @@ namespace Backend.Controllers
                 WarehouseBaremId = offer.WarehouseBaremId,
                 MaxPriceLimit = offer.MaxPriceLimit
             };
+
+            // 🆕 SignalR ile tüm bağlı clientlara offer değişikliğini bildir
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
+            {
+                message = $"Yeni teklif oluşturuldu: {offer.Medication.Name}",
+                type = "entityUpdated",
+                timestamp = DateTime.UtcNow,
+                senderId = (string?)null
+            });
 
             return CreatedAtAction(nameof(GetAllOffers), new { id = offer.Id }, response);
         }
@@ -622,6 +762,94 @@ namespace Backend.Controllers
 
             return Ok(new { message = "Offer deleted successfully" });
         }
+
+        // 🆕 POST /api/offers/{id}/claim-depot - Depo sorumluluğunu üstlen
+        [HttpPost("{id}/claim-depot")]
+        public async Task<ActionResult> ClaimDepot(int id)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (!pharmacyId.HasValue)
+                return Unauthorized(new { message = "Pharmacy ID not found in token" });
+
+            var offer = await _context.Offers
+                .Include(o => o.Medication)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (offer == null)
+                return NotFound(new { message = "Offer not found" });
+
+            // Zaten birisi claim etmiş mi?
+            if (offer.DepotClaimerUserId.HasValue)
+            {
+                return Conflict(new { 
+                    message = "Bu teklif için zaten depo sorumlusu belirlenmiş.",
+                    claimerUserId = offer.DepotClaimerUserId 
+                });
+            }
+
+            // Claim et
+            offer.DepotClaimerUserId = pharmacyId.Value;
+            offer.DepotClaimedAt = DateTime.UtcNow;
+            offer.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // SignalR ile bildir
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
+            {
+                message = $"Depo sorumlusu belirlendi: {offer.Medication.Name}",
+                type = "entityUpdated",
+                timestamp = DateTime.UtcNow,
+                senderId = (string?)null
+            });
+
+            return Ok(new { 
+                message = "Depo sorumluluğu başarıyla üstlenildi.",
+                claimerUserId = pharmacyId.Value,
+                claimedAt = offer.DepotClaimedAt
+            });
+        }
+
+        // 🆕 DELETE /api/offers/{id}/claim-depot - Depo sorumluluğundan çık
+        [HttpDelete("{id}/claim-depot")]
+        public async Task<ActionResult> UnclaimDepot(int id)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (!pharmacyId.HasValue)
+                return Unauthorized(new { message = "Pharmacy ID not found in token" });
+
+            var offer = await _context.Offers
+                .Include(o => o.Medication)
+                .FirstOrDefaultAsync(o => o.Id == id);
+
+            if (offer == null)
+                return NotFound(new { message = "Offer not found" });
+
+            // Sadece claim eden kişi unclaim edebilir
+            if (offer.DepotClaimerUserId != pharmacyId.Value)
+            {
+                return Forbid();
+            }
+
+            // Unclaim
+            offer.DepotClaimerUserId = null;
+            offer.DepotClaimedAt = null;
+            offer.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // SignalR ile bildir
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
+            {
+                message = $"Depo sorumlusu ayrıldı: {offer.Medication.Name}",
+                type = "entityUpdated",
+                timestamp = DateTime.UtcNow,
+                senderId = (string?)null
+            });
+
+            return Ok(new { message = "Depo sorumluluğundan ayrıldınız." });
+        }
+
         private long? GetPharmacyIdFromToken()
         {
             var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;

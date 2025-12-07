@@ -1,7 +1,7 @@
 // src/app/(dashboard)/tekliflerim/[offerId]/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useQueryClient } from '@tanstack/react-query';
@@ -26,8 +26,23 @@ export default function DuzenleTeklifPage() {
 
   const [medicationToEdit, setMedicationToEdit] = useState<MedicationItem | null | undefined>(undefined); 
   const [isSaving, setIsSaving] = useState(false);
+  const [offerType, setOfferType] = useState<string>('stockSale'); // 🆕 Track offer type for title
 
   const { token } = useAuth(); // Auth token for API calls
+
+  // 🆕 Dynamic page title based on offer type
+  const pageTitle = useMemo(() => {
+    switch (offerType.toLowerCase()) {
+      case 'stocksale':
+        return 'Stok Satışı Teklifini Düzenle';
+      case 'jointorder':
+        return 'Ortak Sipariş Teklifini Düzenle';
+      case 'purchaserequest':
+        return 'Alım Talebini Düzenle';
+      default:
+        return 'Teklifi Düzenle';
+    }
+  }, [offerType]);
 
   useEffect(() => {
       if (!offerId || !token) return;
@@ -36,8 +51,11 @@ export default function DuzenleTeklifPage() {
           try {
               const data: any = await offerService.getOfferById(token, offerId);
               
+              // 🆕 Set offer type for page title
+              setOfferType(data.type || 'stockSale');
+              
               // Map API response to MedicationItem format expected by OfferForm
-              const medicationItem: MedicationItem & { medicationId?: number } = {
+              const medicationItem: MedicationItem & { medicationId?: number; offerType?: string } = {
                   id: data.id, // Offer ID
                   medicationId: data.medicationId, // Medication ID for barem fetch
                   productName: data.productName,
@@ -47,6 +65,7 @@ export default function DuzenleTeklifPage() {
                   status: data.status as any,
                   dateAdded: '', // Not needed for form
                   barcode: data.barcode || '', // Use barcode from API
+                  offerType: data.type, // 🆕 Pass offer type for edit mode
               };
               
               setMedicationToEdit(medicationItem);
@@ -115,7 +134,7 @@ export default function DuzenleTeklifPage() {
   return (
     <div className={styles.pageContainer}>
       <div className={styles.pageHeader}>
-        <h1 className={styles.pageTitle}>Stoktan Teklifi Düzenle</h1>
+        <h1 className={styles.pageTitle}>{pageTitle}</h1>
         <Link href="/tekliflerim" className={styles.primaryButton} style={{backgroundColor: 'var(--text-secondary)'}}>
           <BackIcon />
           <span>Geri Dön</span>

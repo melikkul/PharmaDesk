@@ -360,6 +360,7 @@
     font-size: 12px;
     display: block; /* Alt satıra geç */
     margin-top: 2px;
+    pointer-events: none; /* Ensure clicks pass through to parent */
 }
 /* --- Autocomplete Stilleri Sonu --- */
 

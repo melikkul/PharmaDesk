@@ -495,9 +495,13 @@ const OffersTable: React.FC<OffersTableProps> = ({
                                 </td>
                                 <td className="p-4">
                                     <div className="flex flex-col">
-                                        <span className="font-medium text-gray-900 group-hover:text-blue-700 transition-colors">
+                                        {/* 🆕 İlaç ismine tıklayınca ilaç detay sayfasına yönlendir */}
+                                        <Link 
+                                            href={`/ilaclar/${(item as any).medicationId || item.id}?type=${((item as any).type || 'stocksale').toLowerCase()}&offerId=${item.id}`}
+                                            className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+                                        >
                                             {item.productName}
-                                        </span>
+                                        </Link>
                                         <span className="text-xs text-gray-500 font-mono mt-0.5">
                                             {item.barcode || '-'}
                                         </span>

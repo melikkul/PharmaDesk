@@ -90,6 +90,13 @@ namespace Backend.Models
         public bool AcceptingCounterOffers { get; set; } = false; // Whether accepting counter offers
         public string? TargetPharmacyId { get; set; } // For Pharmacy Specific Offers
 
+        // 🆕 Depo Sorumlusu - Ortak Sipariş için depodan söyleyecek kişi
+        // TODO: Migration yapıldıktan sonra [NotMapped] kaldırılacak
+        [NotMapped]
+        public long? DepotClaimerUserId { get; set; } // Depodan sipariş geçeceğini söyleyen kullanıcı
+        [NotMapped]
+        public DateTime? DepotClaimedAt { get; set; } // Ne zaman üstlendiği
+
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 

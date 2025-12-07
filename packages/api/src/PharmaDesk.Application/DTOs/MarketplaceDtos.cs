@@ -78,6 +78,10 @@ namespace Backend.Dtos
         public decimal MaxPriceLimit { get; set; }
         public int SoldQuantity { get; set; } // Satılan/Sipariş geçilen adet
         public int RemainingStock { get; set; } // Kalan stok (Stock - SoldQuantity)
+
+        // 🆕 Depo Sorumlusu için
+        public long? DepotClaimerUserId { get; set; }
+        public DateTime? DepotClaimedAt { get; set; }
     }
 
     public class CreateOfferRequest

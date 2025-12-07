@@ -19,11 +19,10 @@ export const useOffers = () => {
     queryFn: async () => {
       const random = Math.random();
       const data = await offerService.getOffers(random);
-      console.log('[useOffers] Fetched offers data:', data);
       return data;
     },
-    refetchInterval: 5000, // 5 saniyede bir otomatik güncelle
-    staleTime: 3000, // 3 saniye sonra stale
+    // SignalR will handle real-time updates, no need for polling
+    staleTime: 60000, // 60 saniye cache (SignalR invalidate edecek)
   });
 
   return {
@@ -76,8 +75,8 @@ export const useMedicationOffers = (medicationId: string | number) => {
       return data;
     },
     enabled: !!medicationId, // Only run query when medicationId exists
-    refetchInterval: 5000, // 5 saniyede bir otomatik güncelle
-    staleTime: 3000, // 3 saniye sonra stale
+    // SignalR will handle real-time updates, no polling needed
+    staleTime: 60000, // 60 saniye cache (SignalR invalidate edecek)
   });
 
   // Sort offers by price (cheapest first)
