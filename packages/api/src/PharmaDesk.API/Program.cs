@@ -31,7 +31,7 @@ try
     builder.Services.AddDatabaseContexts(builder.Configuration);
     builder.Services.AddJwtAuthentication(builder.Configuration);
     builder.Services.AddCorsPolicy();
-    builder.Services.AddApplicationServices();
+    builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddHealthChecksConfiguration(builder.Configuration);
 
     var app = builder.Build();

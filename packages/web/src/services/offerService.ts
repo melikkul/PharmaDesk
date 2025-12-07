@@ -20,7 +20,9 @@ export const offerService = {
     });
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to fetch offer: ${response.status} ${response.statusText} - ${errorText}`);
+      const error: any = new Error(`Failed to fetch offer: ${response.status} ${response.statusText}`);
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   },

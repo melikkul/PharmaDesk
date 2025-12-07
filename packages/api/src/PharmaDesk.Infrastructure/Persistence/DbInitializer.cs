@@ -152,7 +152,8 @@ namespace PharmaDesk.Infrastructure.Persistence
             var medicationCount = await context.Medications.CountAsync();
             if (medicationCount == 0)
             {
-                var csvPath = "/app/ilac_verileri.csv";
+                // Use the new CSV file from scrapper
+                var csvPath = "/app/ilac_arsivi.csv";
                 var seededCount = await MedicationSeederService.SeedFromCsvAsync(context, csvPath, logger);
                 logger.LogInformation($"Seeded {seededCount} medications from CSV");
             }

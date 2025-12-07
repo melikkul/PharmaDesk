@@ -29,6 +29,17 @@ namespace Backend.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal BasePrice { get; set; } // İlaç Fiyat Kararnamesi fiyatı
 
+        /// <summary>
+        /// Alliance Healthcare API'deki ItemID - Barem sorgusu için kullanılır
+        /// </summary>
+        public int? ExternalApiId { get; set; }
+
+        /// <summary>
+        /// Muadil ilaç barkodları (JSON array formatında)
+        /// </summary>
+        [StringLength(2000)]
+        public string? Alternatives { get; set; }
+
         public ICollection<InventoryItem> InventoryItems { get; set; } = new List<InventoryItem>();
     }
 }

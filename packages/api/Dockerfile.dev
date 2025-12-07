@@ -2,6 +2,9 @@ FROM mcr.microsoft.com/dotnet/sdk:8.0
 
 WORKDIR /app
 
+# Note: Python/Playwright dependencies moved to scrapper-service container
+# This Dockerfile is now simplified to only include .NET SDK
+
 # Expose port
 EXPOSE 8081
 

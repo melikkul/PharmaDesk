@@ -2,10 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Backend.Data;
 using Backend.Dtos;
+using Backend.DTOs;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Text.Json;
 
 namespace Backend.Controllers
 {
@@ -15,10 +18,14 @@ namespace Backend.Controllers
     public class MedicationsController : ControllerBase
     {
         private readonly AppDbContext _db;
+        private readonly IExternalDrugService? _externalDrugService;
 
-        public MedicationsController(AppDbContext db)
+        public MedicationsController(
+            AppDbContext db,
+            IExternalDrugService? externalDrugService = null)
         {
             _db = db;
+            _externalDrugService = externalDrugService;
         }
 
         [HttpGet]
@@ -61,6 +68,68 @@ namespace Backend.Controllers
         }
 
         /// <summary>
+        /// Get medication with real-time barem information from Alliance Healthcare
+        /// Barem data is NOT stored in database (transient data)
+        /// </summary>
+        [HttpGet("{id}/barem")]
+        public async Task<ActionResult<DrugDetailWithBaremDto>> GetMedicationWithBarem(int id)
+        {
+            // 1. Get medication from database
+            var medication = await _db.Medications
+                .AsNoTracking()
+                .Where(m => m.Id == id)
+                .FirstOrDefaultAsync();
+
+            if (medication == null) 
+                return NotFound(new { message = "İlaç bulunamadı" });
+
+            // 2. Build base response from DB
+            var response = new DrugDetailWithBaremDto
+            {
+                Id = medication.Id,
+                ExternalApiId = medication.ExternalApiId,
+                Name = medication.Name,
+                Barcode = medication.Barcode,
+                Manufacturer = medication.Manufacturer,
+                BasePrice = medication.BasePrice,
+                PackageType = medication.PackageType,
+                Alternatives = ParseAlternatives(medication.Alternatives)
+            };
+
+            // 3. If ExternalApiId exists and service is available, fetch real-time barem
+            if (medication.ExternalApiId.HasValue && _externalDrugService != null)
+            {
+                try
+                {
+                    var externalData = await _externalDrugService.GetDrugDetailWithBaremAsync(
+                        medication.ExternalApiId.Value);
+                    
+                    if (externalData != null)
+                    {
+                        response.Barems = externalData.Barems;
+                        response.BaremFetchedAt = externalData.BaremFetchedAt;
+                        response.BaremError = externalData.BaremError;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    response.BaremError = $"Barem bilgisi alınamadı: {ex.Message}";
+                    response.BaremFetchedAt = DateTime.UtcNow;
+                }
+            }
+            else if (!medication.ExternalApiId.HasValue)
+            {
+                response.BaremError = "Bu ilaç için ExternalApiId tanımlı değil";
+            }
+            else
+            {
+                response.BaremError = "Dış servis bağlantısı yapılandırılmamış";
+            }
+
+            return Ok(response);
+        }
+
+        /// <summary>
         /// Search medications by name or barcode (fuzzy search)
         /// </summary>
         [HttpGet("search")]
@@ -88,11 +157,29 @@ namespace Backend.Controllers
                     name = m.Name,
                     barcode = m.Barcode,
                     manufacturer = m.Manufacturer,
-                    packageType = m.PackageType
+                    packageType = m.PackageType,
+                    externalApiId = m.ExternalApiId
                 })
                 .ToListAsync();
 
             return Ok(results);
+        }
+
+        /// <summary>
+        /// Parse JSON array of alternative barcodes
+        /// </summary>
+        private List<string>? ParseAlternatives(string? alternativesJson)
+        {
+            if (string.IsNullOrEmpty(alternativesJson)) return null;
+            
+            try
+            {
+                return JsonSerializer.Deserialize<List<string>>(alternativesJson);
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }

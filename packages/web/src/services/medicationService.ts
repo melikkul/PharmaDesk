@@ -3,6 +3,37 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
 
 import { Medication, InventoryItem } from '../types';
 
+// Barem response types from Alliance Healthcare API
+export interface BaremInfo {
+  warehouseId: number;
+  warehouseName: string;
+  vade: number;
+  minimumAdet: number;
+  malFazlasi: string;
+  iskontoKurum: number;
+  iskontoTicari: number;
+  birimFiyat: number;
+  discountPercentage: number;
+  maxPrice: number;
+  minQuantity: number;
+  bonusQuantity: number;
+  baremType: string;
+}
+
+export interface BaremResponse {
+  id: number;
+  externalApiId: number | null;
+  name: string | null;
+  barcode: string | null;
+  manufacturer: string | null;
+  basePrice: number;
+  packageType: string | null;
+  alternatives: string[];
+  barems: BaremInfo[];
+  baremFetchedAt: string | null;
+  baremError: string | null;
+}
+
 export const medicationService = {
   getMedications: async (token: string): Promise<Medication[]> => {
     const response = await fetch(`${API_BASE_URL}/api/medications`, {
@@ -26,6 +57,26 @@ export const medicationService = {
     }
 
     return response.json();
+  },
+
+  /**
+   * Fetch barem/discount data for a medication from Alliance Healthcare
+   * Returns real-time pricing and discount information
+   */
+  getMedicationBarem: async (medicationId: number): Promise<BaremResponse | null> => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/medications/${medicationId}/barem`);
+      
+      if (!response.ok) {
+        console.warn(`Failed to fetch barem for medication ${medicationId}: ${response.status}`);
+        return null;
+      }
+
+      return response.json();
+    } catch (error) {
+      console.error('Error fetching medication barem:', error);
+      return null;
+    }
   },
 
   getMyInventory: async (token: string): Promise<InventoryItem[]> => {

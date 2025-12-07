@@ -37,8 +37,9 @@ export default function DuzenleTeklifPage() {
               const data: any = await offerService.getOfferById(token, offerId);
               
               // Map API response to MedicationItem format expected by OfferForm
-              const medicationItem: MedicationItem = {
-                  id: data.id,
+              const medicationItem: MedicationItem & { medicationId?: number } = {
+                  id: data.id, // Offer ID
+                  medicationId: data.medicationId, // Medication ID for barem fetch
                   productName: data.productName,
                   stock: data.stock, // "100 + 10" format
                   price: data.price,
@@ -49,14 +50,22 @@ export default function DuzenleTeklifPage() {
               };
               
               setMedicationToEdit(medicationItem);
-          } catch (err) {
+          } catch (err: any) {
               console.error('Error fetching offer:', err);
+              
+              // Handle 403 Forbidden - user is not the owner
+              if (err?.status === 403 || err?.message?.includes('403')) {
+                  alert('Bu teklifi düzenleme yetkiniz bulunmamaktadır. Sadece kendi tekliflerinizi düzenleyebilirsiniz.');
+                  router.push('/tekliflerim');
+                  return;
+              }
+              
               setMedicationToEdit(null);
           }
       };
 
       fetchOffer();
-  }, [offerId, token]);
+  }, [offerId, token, router]);
 
   // Form Kaydetme Fonksiyonu
   const handleUpdateOffer = useCallback(async (formData: any) => {

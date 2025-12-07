@@ -16,7 +16,7 @@ import {
 import { stockOfferTiers, StockOfferTier } from '@/lib/stockOfferMockData';
 import SettingsCard from '@/components/settings/SettingsCard';
 import formStyles from './OfferForm.module.css';
-import { medicationService } from '@/services/medicationService';
+import { medicationService, BaremInfo, BaremResponse } from '@/services/medicationService';
 // Icon imports temporarily disabled due to workspace module resolution issues
 // import { 
 //   Calculator as CalculatorIcon, 
@@ -119,19 +119,40 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   const [selectedInventoryItem, setSelectedInventoryItem] = useState<MedicationItem | null>(null);
   const [searchDebounceTimer, setSearchDebounceTimer] = useState<NodeJS.Timeout | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  
+  // Alliance Healthcare Barem State (Real API Data)
+  const [apiBarems, setApiBarems] = useState<BaremInfo[]>([]);
+  const [isFetchingBarem, setIsFetchingBarem] = useState(false);
+  const [selectedMedicationId, setSelectedMedicationId] = useState<number | null>(null);
+  const [baremApiError, setBaremApiError] = useState<string | null>(null);
 
-  // Filter tiers based on selected product - more flexible matching
+  // Convert API barem data to tier format for display
   const availableTiers = useMemo(() => {
-    if (!productSearchTerm) return [];
-    // Extract first word for matching (e.g., "PAROL" from "PAROL 500 MG 20 TABLET")
-    const searchFirstWord = productSearchTerm.split(' ')[0].toLowerCase();
-    return stockOfferTiers.filter((t: StockOfferTier) => {
-      const tierFirstWord = t.medicationName.split(' ')[0].toLowerCase();
-      return tierFirstWord === searchFirstWord || 
-             t.medicationName.toLowerCase().includes(searchFirstWord) ||
-             searchFirstWord.includes(tierFirstWord);
-    });
-  }, [productSearchTerm]);
+    if (apiBarems.length === 0) {
+      // Fallback to mock data if no API barems
+      if (!productSearchTerm) return [];
+      const searchFirstWord = productSearchTerm.split(' ')[0].toLowerCase();
+      return stockOfferTiers.filter((t: StockOfferTier) => {
+        const tierFirstWord = t.medicationName.split(' ')[0].toLowerCase();
+        return tierFirstWord === searchFirstWord || 
+               t.medicationName.toLowerCase().includes(searchFirstWord) ||
+               searchFirstWord.includes(tierFirstWord);
+      });
+    }
+    
+    // Convert API barems to tier format
+    return apiBarems.map((barem, index) => ({
+      id: `alliance-${index}`,
+      medicationName: productSearchTerm,
+      minQuantity: barem.minimumAdet,
+      mf: barem.malFazlasi || barem.bonusQuantity > 0 ? String(barem.bonusQuantity) : '0',
+      unitPrice: barem.birimFiyat,
+      vade: barem.vade,
+      iskontoKurum: barem.iskontoKurum,
+      iskontoTicari: barem.iskontoTicari,
+      isFromAlliance: true // Flag to identify Alliance data
+    }));
+  }, [apiBarems, productSearchTerm]);
 
   // Pre-select barem in edit mode based on initialBaremId or initialMalFazlasi
   useEffect(() => {
@@ -204,6 +225,39 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   }, [watchedSkt]);
 
   // === EFFECTS ===
+  // Fetch barem data in EDIT MODE when medication is provided
+  useEffect(() => {
+    const fetchBaremForEditMode = async () => {
+      if (isEditMode && medication && apiBarems.length === 0 && !isFetchingBarem) {
+        // Use medicationId if available (from offer), otherwise fall back to id
+        const medId = (medication as any).medicationId || medication.id;
+        if (!medId) return;
+        
+        setIsFetchingBarem(true);
+        setBaremApiError(null);
+        
+        try {
+          // Fetch barem using the correct medication ID
+          const baremResponse = await medicationService.getMedicationBarem(medId);
+          
+          if (baremResponse && baremResponse.barems && baremResponse.barems.length > 0) {
+            setApiBarems(baremResponse.barems);
+            console.log('✅ Edit mode: Barem data fetched for medication:', medId, 'tiers:', baremResponse.barems.length);
+          } else if (baremResponse?.baremError) {
+            setBaremApiError(baremResponse.baremError);
+          }
+        } catch (error) {
+          console.error('❌ Edit mode: Failed to fetch barem:', error);
+          setBaremApiError('Barem bilgisi çekilemedi');
+        } finally {
+          setIsFetchingBarem(false);
+        }
+      }
+    };
+    
+    fetchBaremForEditMode();
+  }, [isEditMode, medication]);
+
   useEffect(() => {
     let initialItem: MedicationItem | null | undefined = null;
 
@@ -274,7 +328,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
       setSearchDebounceTimer(timer);
   };
 
-  const handleSelectSuggestion = (suggestion: any) => {
+  const handleSelectSuggestion = async (suggestion: any) => {
       if (offerType === 'stockSale') {
           // Set form values first
           setValue('productName', suggestion.name, { shouldValidate: true });
@@ -287,6 +341,39 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
           // Update state after form values are set
           setProductSearchTerm(suggestion.name);
           setSelectedInventoryItem(null);
+          setSelectedMedicationId(suggestion.id);
+          
+          // Fetch barem data from Alliance Healthcare API
+          if (suggestion.id) {
+            setIsFetchingBarem(true);
+            setApiBarems([]);
+            setBaremApiError(null);
+            setSelectedTier(null);
+            
+            try {
+              const baremResponse = await medicationService.getMedicationBarem(suggestion.id);
+              
+              if (baremResponse && baremResponse.barems && baremResponse.barems.length > 0) {
+                setApiBarems(baremResponse.barems);
+                
+                // Auto-fill price from first barem if available
+                const firstBarem = baremResponse.barems[0];
+                if (firstBarem.birimFiyat > 0) {
+                  setValue('price', firstBarem.birimFiyat.toFixed(2).replace('.', ','));
+                }
+                
+                console.log('✅ Barem data fetched:', baremResponse.barems.length, 'tiers');
+              } else if (baremResponse?.baremError) {
+                setBaremApiError(baremResponse.baremError);
+                console.warn('⚠️ Barem API error:', baremResponse.baremError);
+              }
+            } catch (error) {
+              console.error('❌ Failed to fetch barem:', error);
+              setBaremApiError('Barem bilgisi çekilemedi');
+            } finally {
+              setIsFetchingBarem(false);
+            }
+          }
       } else {
           setValue('productName', suggestion.name, { shouldValidate: true });
           setProductSearchTerm(suggestion.name);
@@ -368,7 +455,8 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
         // Private offer fields
         isPrivate: isPharmacySpecific,
         targetPharmacyIds: isPharmacySpecific && selectedPharmacyId ? selectedPharmacyId : null,
-        warehouseBaremId: selectedTier ? selectedTier.id : null,
+        // warehouseBaremId should be int - alliance tiers use string IDs so we skip them
+        warehouseBaremId: selectedTier && typeof selectedTier.id === 'number' ? selectedTier.id : null,
         maxPriceLimit: tierPriceLimit,
 
         // Campaign
@@ -514,95 +602,123 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
 
   const renderCommonFields = () => (
     <>
-      {/* Row 1: Product Search & Barcode */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className={`${formStyles.formGroup} ${formStyles.autocompleteWrapper}`}>
-          <label htmlFor="productName">İlaç Adı *</label>
-          <Controller
-            control={control}
-            name="productName"
-            render={({ field: { onChange, onBlur, value, ref } }) => (
-              <input
-                type="text"
-                id="productName"
-                ref={ref}
-                value={value || ''}
-                onChange={(e) => {
-                  const upper = e.target.value.toUpperCase();
-                  onChange(upper);
-                  handleProductSearchChange(e);
-                }}
-                onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
-                onBlur={() => {
-                  onBlur();
-                  if (suggestions.length > 0) {
-                    handleSelectSuggestion(suggestions[0]);
-                  }
-                  setTimeout(() => setIsAutocompleteOpen(false), 500);
-                }}
-                placeholder="İlaç ara..."
-                disabled={isEditMode}
-                autoComplete="off"
-                className="w-full"
-              />
+      {/* Section: İlaç Bilgileri */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          💊 İlaç Bilgileri
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* İlaç Adı - Geniş */}
+          <div className={`${formStyles.formGroup} ${formStyles.autocompleteWrapper} md:col-span-2`}>
+            <label htmlFor="productName" className="block text-sm font-medium text-gray-700 mb-1">İlaç Adı *</label>
+            <Controller
+              control={control}
+              name="productName"
+              render={({ field: { onChange, onBlur, value, ref } }) => (
+                <input
+                  type="text"
+                  id="productName"
+                  ref={ref}
+                  value={value || ''}
+                  onChange={(e) => {
+                    const upper = e.target.value.toUpperCase();
+                    onChange(upper);
+                    handleProductSearchChange(e);
+                  }}
+                  onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
+                  onBlur={() => {
+                    onBlur();
+                    if (suggestions.length > 0) {
+                      handleSelectSuggestion(suggestions[0]);
+                    }
+                    setTimeout(() => setIsAutocompleteOpen(false), 500);
+                  }}
+                  placeholder="İlaç adı yazarak arayın..."
+                  disabled={isEditMode}
+                  autoComplete="off"
+                  className="w-full h-11 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                />
+              )}
+            />
+            {errors.productName && (
+              <span className="text-xs text-red-500 mt-1">{errors.productName.message as string}</span>
             )}
-          />
-          {errors.productName && (
-            <span className={formStyles.errorMessage}>{errors.productName.message as string}</span>
-          )}
-          {renderAutocompleteList()}
-        </div>
+            {renderAutocompleteList()}
+          </div>
 
-        <div className={formStyles.formGroup}>
-          <label htmlFor="barcode">Barkod</label>
-          <input 
-            type="text" 
-            id="barcode" 
-            {...register('barcode')}
-            readOnly 
-            style={{ backgroundColor: '#f5f5f5', cursor: 'not-allowed' }} 
-          />
+          {/* Barkod */}
+          <div className={formStyles.formGroup}>
+            <label htmlFor="barcode" className="block text-sm font-medium text-gray-700 mb-1">Barkod</label>
+            <input 
+              type="text" 
+              id="barcode" 
+              {...register('barcode')}
+              readOnly 
+              className="w-full h-11 px-4 border border-gray-200 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
+            />
+          </div>
         </div>
       </div>
 
-      {/* Row 2: Tier Selection */}
-      <div className="grid grid-cols-1 gap-4 mt-2">
+      {/* Barem Tablosu */}
+      <div className="mb-6">
+        {/* LOADING STATE */}
+        {isFetchingBarem && (
+          <div className="flex items-center justify-center gap-2 p-4 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+            <span className="text-blue-600 font-medium">Barem bilgisi yükleniyor...</span>
+          </div>
+        )}
+        
+        {/* BAREM API ERROR */}
+        {baremApiError && !isFetchingBarem && (
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm">
+            ⚠️ {baremApiError} - Manuel değer girişi yapabilirsiniz.
+          </div>
+        )}
+        
         {/* TIER SELECTION UI */}
-        {availableTiers.length > 0 && (
-          <div className="mt-4 mb-4 col-span-3">
-            <label className={formStyles.label}>
-              Stoktan Teklif Baremleri * <span className="text-red-500 text-xs">(Barem seçimi zorunludur)</span>
+        {!isFetchingBarem && apiBarems.length > 0 && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <label className="block text-sm font-semibold text-gray-700 mb-3">
+              📋 Satış Koşulları * <span className="text-red-500 text-xs font-normal">(Barem seçimi zorunludur)</span>
             </label>
-            <div className={`overflow-x-auto border rounded-lg ${baremError && !selectedTier ? 'border-red-500 border-2' : ''}`}>
-              <table className="w-full text-sm text-left">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50">
+            <div className={`overflow-hidden rounded-lg border ${baremError && !selectedTier ? 'border-red-500 border-2' : 'border-gray-200'}`}>
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-2">Min. Adet</th>
-                    <th className="px-4 py-2">MF</th>
-                    <th className="px-4 py-2">Birim Fiyat (Vergi Hariç)</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Min. Adet</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">MF (Mal Fazlası)</th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Birim Fiyat</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {availableTiers.map((tier: StockOfferTier) => (
+                <tbody className="divide-y divide-gray-100">
+                  {availableTiers.map((tier: any) => (
                     <tr 
                       key={tier.id} 
                       onClick={() => {
                         setSelectedTier(tier);
-                        setBaremError(false); // Clear error when tier selected
+                        setBaremError(false);
                         setValue('minSaleQuantity', tier.minQuantity.toString());
-                        setValue('bonus', tier.mf); // Set bonus for MF display
-                        // Clear price error if any
+                        setValue('bonus', tier.mf);
+                        if (tier.unitPrice) {
+                          setValue('price', tier.unitPrice.toFixed(2).replace('.', ','));
+                        }
                         const currentPriceStr = getValues('price');
                         const currentPrice = currentPriceStr ? parseFloat(currentPriceStr.replace(',', '.')) : 0;
                         if (currentPrice > 0 && currentPrice <= tier.unitPrice) {
                           clearErrors('price');
                         }
                       }}
-                      className={`cursor-pointer border-b hover:bg-blue-50 ${selectedTier?.id === tier.id ? 'bg-blue-100 border-blue-300' : 'bg-white'}`}
+                      className={`cursor-pointer transition-colors ${
+                        selectedTier?.id === tier.id 
+                          ? 'bg-blue-50 border-l-4 border-l-blue-500' 
+                          : 'bg-white hover:bg-gray-50'
+                      }`}
                     >
-                      <td className="px-4 py-2 font-medium">{tier.minQuantity}</td>
-                      <td className="px-4 py-2">{tier.mf}</td>
-                      <td className="px-4 py-2 font-bold text-emerald-600">{tier.unitPrice.toFixed(2)} TL</td>
+                      <td className="px-4 py-3 font-medium text-gray-900">{tier.minQuantity} adet</td>
+                      <td className="px-4 py-3 text-gray-600">{tier.mf || '-'}</td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-600">{tier.unitPrice?.toFixed(2) || '0.00'} ₺</td>
                     </tr>
                   ))}
                 </tbody>
@@ -612,163 +728,169 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
               <p className="mt-2 text-xs text-red-500">⚠️ Lütfen yukarıdan bir barem seçiniz.</p>
             )}
             {selectedTier && (
-              <div className="mt-2 text-xs text-blue-600 flex justify-between items-center">
-                <span>Seçilen Barem: <strong>{selectedTier.minQuantity}+{selectedTier.mf}</strong> | Fiyat Limiti: <strong>{selectedTier.unitPrice.toFixed(2)} TL</strong></span>
+              <div className="mt-3 p-3 bg-blue-50 rounded-lg flex justify-between items-center">
+                <span className="text-sm text-blue-700">
+                  ✓ Seçilen: <strong>{selectedTier.minQuantity} adet</strong> | 
+                  MF: <strong>{selectedTier.mf || '-'}</strong> | 
+                  Fiyat: <strong>{selectedTier.unitPrice?.toFixed(2)} ₺</strong>
+                </span>
                 <button 
                   type="button" 
                   onClick={() => {
                     setSelectedTier(null);
                     setValue('minSaleQuantity', '0');
                     setValue('bonus', '');
+                    setValue('price', '');
                   }}
-                  className="text-red-500 hover:underline"
+                  className="text-xs text-red-500 hover:text-red-700 hover:underline"
                 >
-                  Seçimi Temizle
+                  Temizle
                 </button>
               </div>
             )}
           </div>
         )}
+      </div>
 
-        <div className={formStyles.row}>
+      {/* Section: Teklif Detayları */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <h3 className="text-sm font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          💰 Teklif Detayları
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {/* Birim Fiyat */}
           <div className={formStyles.formGroup}>
-            <label className={formStyles.label}>Birim Fiyat (TL) *</label>
-            <input
-              {...register('price', { 
-                validate: (value) => {
-                  if (selectedTier && value) {
-                    const num = parseFloat(value.replace(',', '.'));
-                    if (!isNaN(num) && num > selectedTier.unitPrice) {
-                      return `Maksimum fiyat ${selectedTier.unitPrice.toFixed(2)} TL olabilir.`;
+            <label className="block text-sm font-medium text-gray-700 mb-1">Birim Fiyat (₺) *</label>
+            <div className="relative">
+              <input
+                {...register('price', { 
+                  validate: (value) => {
+                    if (selectedTier && value) {
+                      const num = parseFloat(value.replace(',', '.'));
+                      if (!isNaN(num) && num > selectedTier.unitPrice) {
+                        return `Maksimum ${selectedTier.unitPrice.toFixed(2)} ₺`;
+                      }
                     }
+                    return true;
                   }
-                  return true;
-                }
-              })}
-              type="text"
-              placeholder="0,00"
-              className={`${formStyles.input} ${errors.price ? formStyles.inputError : ''}`}
-              style={
-                selectedTier && watch('price') && 
-                parseFloat((watch('price') || '0').replace(',', '.')) > selectedTier.unitPrice
-                  ? { borderColor: '#ef4444', borderWidth: '2px', backgroundColor: '#fef2f2' }
-                  : {}
-              }
-            />
+                })}
+                type="text"
+                placeholder="0,00"
+                className={`w-full h-11 px-4 pr-8 border rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.price || (selectedTier && watch('price') && parseFloat((watch('price') || '0').replace(',', '.')) > selectedTier.unitPrice)
+                    ? 'border-red-500 bg-red-50' 
+                    : 'border-gray-300'
+                }`}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₺</span>
+            </div>
             {errors.price && (
-              <span className={formStyles.errorMessage}>{errors.price.message as string}</span>
+              <span className="text-xs text-red-500 mt-1 block">{errors.price.message as string}</span>
             )}
-            {/* Prominent inline warning when price exceeds barem limit */}
-            {selectedTier && watch('price') && 
-             parseFloat((watch('price') || '0').replace(',', '.')) > selectedTier.unitPrice && (
-              <div style={{
-                marginTop: '8px',
-                padding: '12px',
-                backgroundColor: '#fef2f2',
-                border: '2px solid #ef4444',
-                borderRadius: '8px',
-                color: '#dc2626',
-                fontSize: '14px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-              }}>
-                <span style={{ fontSize: '20px' }}>⚠️</span>
+            {/* Prominent price warning */}
+            {selectedTier && watch('price') && parseFloat((watch('price') || '0').replace(',', '.')) > selectedTier.unitPrice && (
+              <div className="mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm flex items-center gap-2">
+                <span className="text-lg">⚠️</span>
                 <span>
-                  Girdiğiniz fiyat ({watch('price')} TL), seçilen baremin maksimum fiyatından 
-                  <strong> ({selectedTier.unitPrice.toFixed(2)} TL)</strong> fazla! 
-                  Lütfen fiyatı düşürün.
+                  Fiyat <strong>{watch('price')} ₺</strong>, baremin maksimum fiyatından 
+                  <strong> ({selectedTier.unitPrice.toFixed(2)} ₺)</strong> yüksek!
                 </span>
               </div>
             )}
           </div>
 
+          {/* Stok Miktarı */}
           <div className={formStyles.formGroup}>
-            <label className={formStyles.label}>Stok Miktarı *</label>
-            <input
-              {...register('stock')}
-              type="number"
-              placeholder="0"
-              className={`${formStyles.input} ${errors.stock ? formStyles.inputError : ''}`}
-            />
-            {errors.stock && (
-              <span className={formStyles.errorMessage}>{errors.stock.message as string}</span>
-            )}
-          </div>
-        </div>
-
-        {/* PHARMACY SPECIFIC TOGGLE */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-          <div className="flex items-center mb-4">
-            <input
-              type="checkbox"
-              id="pharmacySpecific"
-              checked={isPharmacySpecific}
-              onChange={(e) => {
-                setIsPharmacySpecific(e.target.checked);
-                if (!e.target.checked) setSelectedPharmacyId('');
-              }}
-              className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <label htmlFor="pharmacySpecific" className="ml-2 text-sm font-medium text-gray-900">
-              Eczaneye Özel Teklif
-            </label>
-          </div>
-          
-          {isPharmacySpecific && (
-            <div className="animate-fade-in">
-              <label className={formStyles.label}>Hedef Eczane Seçin</label>
-              <select
-                value={selectedPharmacyId}
-                onChange={(e) => setSelectedPharmacyId(e.target.value)}
-                className={formStyles.select}
-              >
-                <option value="">Eczane Seçiniz...</option>
-                {otherPharmaciesData.map(p => (
-                  <option key={p.id} value={p.id}>
-                    {p.pharmacyName} ({p.group})
-                  </option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-500">Bu teklifi sadece seçilen eczane görebilecektir.</p>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Stok Miktarı *</label>
+            <div className="relative">
+              <input
+                {...register('stock')}
+                type="number"
+                placeholder="0"
+                min="1"
+                className={`w-full h-11 px-4 pr-12 border rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  errors.stock ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                }`}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">adet</span>
             </div>
-          )}
-        </div>
-
-        <div className={formStyles.formGroup}>
-          <label htmlFor="expirationDate" className="flex items-center gap-2">
-            Son Kullanma Tarihi *
-            {isExpiryWarning && (
-              <span className="text-amber-600 text-xs flex items-center gap-1">
-                {/* <ExclamationTriangleIcon className="w-3 h-3" /> */}
-                ⚠️ Yakın Tarih!
-              </span>
+            {errors.stock && (
+              <span className="text-xs text-red-500 mt-1">{errors.stock.message as string}</span>
             )}
-          </label>
-          <input 
-            {...(() => {
-              const { ref: formRef, ...rest } = register('skt');
-              return {
-                ...rest,
-                ref: (e: HTMLInputElement | null) => {
-                  formRef(e);
-                  if (sktRef.current !== e) {
-                    // @ts-ignore
-                    sktRef.current = e;
+          </div>
+
+          {/* Son Kullanma Tarihi */}
+          <div className={formStyles.formGroup}>
+            <label htmlFor="expirationDate" className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-2">
+              Son Kullanma Tarihi *
+              {isExpiryWarning && (
+                <span className="text-amber-600 text-xs">⚠️ Yakın!</span>
+              )}
+            </label>
+            <input 
+              {...(() => {
+                const { ref: formRef, ...rest } = register('skt');
+                return {
+                  ...rest,
+                  ref: (e: HTMLInputElement | null) => {
+                    formRef(e);
+                    if (sktRef.current !== e) {
+                      // @ts-ignore
+                      sktRef.current = e;
+                    }
                   }
-                }
-              };
-            })()}
-            type="text" 
-            id="expirationDate" 
-            placeholder="AA / YYYY"
-            className={isExpiryWarning ? 'border-amber-500 bg-amber-50' : ''}
-          />
-          {errors.skt && (
-            <span className={formStyles.errorMessage}>{errors.skt.message as string}</span>
-          )}
+                };
+              })()}
+              type="text" 
+              id="expirationDate" 
+              placeholder="AA / YYYY"
+              className={`w-full h-11 px-4 border rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                isExpiryWarning ? 'border-amber-500 bg-amber-50' : 'border-gray-300'
+              }`}
+            />
+            {errors.skt && (
+              <span className="text-xs text-red-500 mt-1">{errors.skt.message as string}</span>
+            )}
+          </div>
         </div>
+      </div>
+
+      {/* Section: Eczaneye Özel */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="pharmacySpecific"
+            checked={isPharmacySpecific}
+            onChange={(e) => {
+              setIsPharmacySpecific(e.target.checked);
+              if (!e.target.checked) setSelectedPharmacyId('');
+            }}
+            className="w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <label htmlFor="pharmacySpecific" className="text-sm font-medium text-gray-900">
+            🎯 Eczaneye Özel Teklif
+          </label>
+        </div>
+        
+        {isPharmacySpecific && (
+          <div className="mt-4 pl-8 animate-fade-in">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Hedef Eczane</label>
+            <select
+              value={selectedPharmacyId}
+              onChange={(e) => setSelectedPharmacyId(e.target.value)}
+              className="w-full md:w-1/2 h-11 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Eczane seçiniz...</option>
+              {otherPharmaciesData.map(p => (
+                <option key={p.id} value={p.id}>
+                  {p.pharmacyName} ({p.group})
+                </option>
+              ))}
+            </select>
+            <p className="mt-2 text-xs text-gray-500">Bu teklifi sadece seçilen eczane görebilecektir.</p>
+          </div>
+        )}
       </div>
     </>
   );

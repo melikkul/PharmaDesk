@@ -19,6 +19,26 @@ services:
       timeout: 5s
       retries: 5
 
+  # Python scrapper microservice - persistent browser with Playwright
+  scrapper-service:
+    build:
+      context: ./scrapper
+      dockerfile: Dockerfile
+    container_name: pharma_desk_scrapper
+    networks:
+      - pharmanet
+    environment:
+      ALLIANCE_PHARMACY_CODE: "16195"
+      ALLIANCE_USERNAME: "YENIBANU"
+      ALLIANCE_PASSWORD: "94030067"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      start_period: 120s
+      retries: 3
+    restart: unless-stopped
+
   backend:
     build:
       context: ./packages/api
@@ -31,16 +51,18 @@ services:
     networks:
       - pharmanet
     volumes:
-      - ./ilac_verileri.csv:/app/ilac_verileri.csv:ro
-      - ./packages/api:/app  # Development mode: sync code and migrations
+      - ./packages/api:/app
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
       ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001"
-      ADMIN_DEFAULT_PASSWORD: "melik123"  # Change this in production!
+      ADMIN_DEFAULT_PASSWORD: "melik123"
+      SCRAPPER_SERVICE_URL: "http://scrapper-service:8000"
     depends_on:
       db:
-        condition: service_healthy # DB tam hazır olana kadar bekle
+        condition: service_healthy
+      scrapper-service:
+        condition: service_started
 
   frontend-web:
     build:

@@ -6,8 +6,16 @@ using System.Text;
 
 namespace Backend.Services
 {
+    /// <summary>
+    /// İlaç verilerini CSV'den yükleyen seeder servisi.
+    /// Yeni CSV formatı: Sira_ID, API_ID, Urun_Ismi, Urun_Barkodu, Muadil_Barkodlari
+    /// </summary>
     public static class MedicationSeederService
     {
+        /// <summary>
+        /// Yeni ilac_arsivi.csv formatından veri yükler
+        /// CSV Columns: Sira_ID, API_ID, Urun_Ismi, Urun_Barkodu, Muadil_Barkodlari
+        /// </summary>
         public static async Task<int> SeedFromCsvAsync(AppDbContext context, string csvPath, ILogger logger)
         {
             try
@@ -21,17 +29,23 @@ namespace Backend.Services
                 logger.LogInformation($"Reading CSV file: {csvPath}");
                 
                 var medications = new List<Medication>();
-                int atcCounter = 1;
                 int totalRecords = 0;
                 int successfulRecords = 0;
                 
-                using (var reader = new StreamReader(csvPath, new UTF8Encoding(false))) // Detect BOM
+                using (var reader = new StreamReader(csvPath, new UTF8Encoding(false)))
                 {
                     // Skip header line
                     var header = await reader.ReadLineAsync();
                     if (header != null && header.Length > 0)
                     {
-                        logger.LogInformation($"CSV Header: {header.Substring(0, Math.Min(100, header.Length))}...");
+                        logger.LogInformation($"CSV Header: {header}");
+                        
+                        // Validate header format
+                        var expectedHeader = "Sira_ID,API_ID,Urun_Ismi,Urun_Barkodu,Muadil_Barkodlari";
+                        if (!header.StartsWith("Sira_ID"))
+                        {
+                            logger.LogWarning($"Unexpected CSV header format. Expected: {expectedHeader}");
+                        }
                     }
                     
                     while (!reader.EndOfStream)
@@ -39,34 +53,60 @@ namespace Backend.Services
                         try
                         {
                             var record = await ReadCsvRecordAsync(reader);
-                            if (record == null || record.Count < 1) continue;
+                            if (record == null || record.Count < 3) continue;
                             
                             totalRecords++;
                             
-                            // Skip if no name
-                            if (string.IsNullOrWhiteSpace(record[0]))
+                            // Parse fields
+                            // Column 0: Sira_ID (will be used as Id)
+                            // Column 1: API_ID (ExternalApiId - for Alliance Healthcare)
+                            // Column 2: Urun_Ismi (Name)
+                            // Column 3: Urun_Barkodu (Barcode) - optional
+                            // Column 4: Muadil_Barkodlari (Alternatives JSON) - optional
+                            
+                            if (!int.TryParse(record[0].Trim(), out int siraId))
+                            {
+                                logger.LogDebug($"Skipping record {totalRecords}: Invalid Sira_ID '{record[0]}'");
+                                continue;
+                            }
+                            
+                            int? apiId = null;
+                            if (record.Count > 1 && int.TryParse(record[1].Trim(), out int parsedApiId))
+                            {
+                                apiId = parsedApiId;
+                            }
+                            
+                            var name = record.Count > 2 ? record[2].Trim() : string.Empty;
+                            if (string.IsNullOrWhiteSpace(name))
                             {
                                 logger.LogDebug($"Skipping record {totalRecords}: No name");
                                 continue;
                             }
+                            
+                            var barcode = record.Count > 3 && !string.IsNullOrWhiteSpace(record[3]) 
+                                ? TruncateString(record[3].Trim(), 100) 
+                                : null;
+                            
+                            // Muadil_Barkodlari is already in JSON array format from Python scrapper
+                            var alternatives = record.Count > 4 && !string.IsNullOrWhiteSpace(record[4]) 
+                                ? TruncateString(record[4].Trim(), 2000) 
+                                : null;
 
+                            // Use auto-generated ID, store CSV's Sira_ID in Description for reference
                             var medication = new Medication
                             {
-                                Name = TruncateString(record[0].Trim(), 255),
-                                Barcode = record.Count > 1 && !string.IsNullOrWhiteSpace(record[1]) 
-                                    ? TruncateString(record[1].Trim(), 100) 
-                                    : null,
-                                Manufacturer = record.Count > 2 && !string.IsNullOrWhiteSpace(record[2])
-                                    ? TruncateString(record[2].Trim(), 200)
-                                    : null,
-                                Description = record.Count > 3 ? TruncateString(record[3].Trim(), 1000) : null,
-                                ATC = $"ATC{atcCounter:D6}",
-                                PackageType = TruncateString(ExtractPackageType(record[0]), 100),
+                                // ID is auto-generated by EF/PostgreSQL
+                                ExternalApiId = apiId ?? siraId, // Use API_ID if available, otherwise use Sira_ID
+                                Name = TruncateString(name, 255),
+                                Barcode = barcode,
+                                Alternatives = alternatives,
+                                ATC = $"ATC{successfulRecords + 1:D6}", // Use sequential ATC codes
+                                PackageType = TruncateString(ExtractPackageType(name), 100),
+                                Description = $"CSV_REF:{siraId}", // Store original Sira_ID for reference
                                 BasePrice = 0.0m
                             };
 
                             medications.Add(medication);
-                            atcCounter++;
                             successfulRecords++;
 
                             // Batch insert every 1000 records
@@ -85,7 +125,7 @@ namespace Backend.Services
                         }
                     }
                     
-                    logger.LogInformation($"Finished reading CSV. Total records processed: {totalRecords}, Successful: {successfulRecords}, EndOfStream: {reader.EndOfStream}");
+                    logger.LogInformation($"Finished reading CSV. Total records processed: {totalRecords}, Successful: {successfulRecords}");
                 }
 
                 // Insert remaining medications
@@ -168,64 +208,6 @@ namespace Backend.Services
             }
 
             return fields.Count > 0 ? fields : null;
-        }
-
-        private static List<string> ParseCsvLine(string line)
-        {
-            var fields = new List<string>();
-            var currentField = new StringBuilder();
-            bool inQuotes = false;
-            bool fieldStarted = false;
-
-            for (int i = 0; i < line.Length; i++)
-            {
-                char c = line[i];
-
-                if (c == '"')
-                {
-                    if (!fieldStarted)
-                    {
-                        // Starting a quoted field
-                        inQuotes = true;
-                        fieldStarted = true;
-                    }
-                    else if (inQuotes)
-                    {
-                        // Check if this is an escaped quote (double quote)
-                        if (i + 1 < line.Length && line[i + 1] == '"')
-                        {
-                            currentField.Append('"');
-                            i++; // Skip the next quote
-                        }
-                        else
-                        {
-                            // End of quoted field
-                            inQuotes = false;
-                        }
-                    }
-                    else
-                    {
-                        // Quote inside unquoted field - treat as normal char
-                        currentField.Append(c);
-                    }
-                }
-                else if (c == ',' && !inQuotes)
-                {
-                    // Field separator (not inside quotes)
-                    fields.Add(currentField.ToString());
-                    currentField.Clear();
-                    fieldStarted = false;
-                }
-                else
-                {
-                    currentField.Append(c);
-                    if (!fieldStarted) fieldStarted = true;
-                }
-            }
-
-            // Add the last field
-            fields.Add(currentField.ToString());
-            return fields;
         }
 
         private static string ExtractPackageType(string medicationName)

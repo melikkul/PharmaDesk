@@ -140,10 +140,12 @@ namespace Backend.Controllers
             return Ok(offers);
         }
 
-        // GET /api/offers/{id} - Teklif detayını getir
+        // GET /api/offers/{id} - Teklif detayını getir (Owner check)
         [HttpGet("{id}")]
         public async Task<ActionResult<OfferDto>> GetOfferById(int id)
         {
+            var pharmacyId = GetPharmacyIdFromToken();
+            
             var offer = await _context.Offers
                 .Include(o => o.Medication)
                 .Include(o => o.PharmacyProfile)
@@ -151,6 +153,17 @@ namespace Backend.Controllers
 
             if (offer == null)
                 return NotFound(new { message = "Offer not found" });
+
+            // Authorization: Only owner can view their offers in edit mode
+            // Non-owners can only view active public offers
+            if (offer.PharmacyProfileId != pharmacyId)
+            {
+                // Allow viewing active public offers (marketplace)
+                if (offer.Status != OfferStatus.Active || offer.IsPrivate)
+                {
+                    return Forbid();
+                }
+            }
 
             var response = new OfferDto
             {

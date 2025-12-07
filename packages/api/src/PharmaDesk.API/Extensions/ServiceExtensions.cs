@@ -82,17 +82,33 @@ namespace PharmaDesk.API.Extensions
         /// <summary>
         /// Adds application-specific services
         /// </summary>
-        public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+        public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<AuthService>();
             services.AddHttpContextAccessor();
             services.AddSignalR();
+            
+            // Add memory cache for barem data caching
+            services.AddMemoryCache();
             
             // Configure form options for file uploads
             services.Configure<FormOptions>(o =>
             {
                 o.MultipartBodyLengthLimit = 5 * 1024 * 1024; // 5 MB
             });
+            
+            // Register HttpClient for scrapper service
+            services.AddHttpClient<AllianceHealthcareClient>(client =>
+            {
+                var scrapperUrl = Environment.GetEnvironmentVariable("SCRAPPER_SERVICE_URL") 
+                    ?? configuration.GetValue<string>("ScrapperService:BaseUrl")
+                    ?? "http://scrapper-service:8000";
+                client.BaseAddress = new Uri(scrapperUrl);
+                client.Timeout = TimeSpan.FromSeconds(60);
+            });
+            
+            // Register external drug service
+            services.AddScoped<IExternalDrugService, ExternalDrugService>();
             
             return services;
         }
