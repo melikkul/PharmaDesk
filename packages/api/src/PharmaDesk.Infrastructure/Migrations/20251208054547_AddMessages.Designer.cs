@@ -3,17 +3,20 @@ using System;
 using Backend.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace PharmaDesk.Infrastructure.Persistence.Migrations
+namespace PharmaDesk.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251208054547_AddMessages")]
+    partial class AddMessages
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -278,10 +281,6 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                         .HasMaxLength(15)
                         .HasColumnType("character varying(15)");
 
-                    b.Property<string>("Alternatives")
-                        .HasMaxLength(2000)
-                        .HasColumnType("character varying(2000)");
-
                     b.Property<string>("Barcode")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
@@ -292,9 +291,6 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
-
-                    b.Property<int?>("ExternalApiId")
-                        .HasColumnType("integer");
 
                     b.Property<string>("Manufacturer")
                         .HasMaxLength(200)
@@ -418,15 +414,6 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<decimal>("DepotPrice")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<string>("Description")
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("DiscountPercentage")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<DateTime?>("EndDate")
                         .HasColumnType("timestamp with time zone");
 
@@ -434,18 +421,6 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("InventoryItemId")
-                        .HasColumnType("integer");
-
-                    b.Property<bool>("IsPrivate")
-                        .HasColumnType("boolean");
-
-                    b.Property<string>("MalFazlasi")
-                        .HasColumnType("text");
-
-                    b.Property<decimal>("MaxPriceLimit")
-                        .HasColumnType("decimal(18,2)");
-
-                    b.Property<int?>("MaxSaleQuantity")
                         .HasColumnType("integer");
 
                     b.Property<int>("MedicationId")
@@ -457,9 +432,6 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                     b.Property<int?>("MinimumOrderQuantity")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("NetPrice")
-                        .HasColumnType("decimal(18,2)");
-
                     b.Property<long>("PharmacyProfileId")
                         .HasColumnType("bigint");
 
@@ -469,29 +441,17 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("PublishDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int>("SoldQuantity")
-                        .HasColumnType("integer");
-
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
                     b.Property<int>("Stock")
                         .HasColumnType("integer");
 
-                    b.Property<string>("TargetPharmacyId")
-                        .HasColumnType("text");
-
-                    b.Property<string>("TargetPharmacyIds")
-                        .HasColumnType("text");
-
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<int?>("WarehouseBaremId")
-                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

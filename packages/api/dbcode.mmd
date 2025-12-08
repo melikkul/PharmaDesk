@@ -1,0 +1,146 @@
+erDiagram
+    %% --- YÖNETİM ---
+    Group {
+        int Id PK
+        string Name
+        string Description
+    }
+    
+    Admin {
+        int Id PK
+        string Email
+        string PasswordHash
+        string FirstName
+        string LastName
+        datetime CreatedAt
+    }
+
+    %% --- MERKEZİ TABLO ---
+    PharmacyProfile {
+        int Id PK
+        string PublicId
+        string GLN
+        string PharmacyName
+        string Username
+        string PhoneNumber
+        string City
+        string District
+        string Address
+        decimal Balance
+        int GroupId FK
+        string ServicePackage
+        string ProfileImagePath
+        string CoverImageUrl
+        datetime RegistrationDate
+        datetime CreatedAt
+    }
+
+    IdentityUser {
+        int Id PK
+        int PharmacyId FK
+        string GLN
+        string Email
+        string PasswordHash
+        string FirstName
+        string LastName
+        string Role
+        bool IsFirstLogin
+        datetime CreatedAt
+    }
+
+    %% --- STOK & ÜRÜN ---
+    Medication {
+        int Id PK
+        string ATC "Barkod/ATC Kodu"
+        string Name
+        string Manufacturer
+        decimal Price
+    }
+
+    InventoryItem {
+        int Id PK
+        int PharmacyProfileId FK
+        int MedicationId FK
+        int Quantity
+        string BatchNumber "Parti No"
+        datetime ExpiryDate "Miad"
+        decimal CostPrice
+        decimal SalePrice
+        int BonusQuantity
+    }
+
+    %% --- PAZARYERİ ---
+    Offer {
+        int Id PK
+        int PharmacyProfileId FK
+        int MedicationId FK
+        decimal Price
+        int Stock
+        int BonusQuantity
+        string Status "Active, Paused..."
+        datetime CreatedAt
+    }
+
+    %% --- LOJİSTİK & TRANSFER ---
+    Shipment {
+        int Id PK
+        string OrderNumber
+        int SenderPharmacyId FK
+        int ReceiverPharmacyId FK
+        int MedicationId FK
+        int Quantity
+        string TrackingNumber
+        string Carrier
+        string Status
+        json TrackingHistory
+        datetime CreatedAt
+    }
+
+    Transaction {
+        int Id PK
+        int PharmacyProfileId FK
+        int CounterpartyPharmacyId FK
+        decimal Amount
+        string Type "Sale, Purchase..."
+        string Status
+        string Description
+        datetime Date
+        string RelatedReferenceId
+    }
+
+    %% --- İLETİŞİM ---
+    Message {
+        int Id PK
+        int SenderPharmacyId FK
+        int ReceiverPharmacyId FK
+        string Content
+        bool IsRead
+        datetime CreatedAt
+    }
+
+    Notification {
+        int Id PK
+        int PharmacyProfileId FK
+        string Type
+        string Title
+        string Message
+        bool IsRead
+        datetime CreatedAt
+    }
+
+    %% --- İLİŞKİLER ---
+    Group ||--o{ PharmacyProfile : "içerir"
+    PharmacyProfile ||--o{ IdentityUser : "personeli"
+    
+    PharmacyProfile ||--o{ InventoryItem : "stok tutar"
+    Medication ||--o{ InventoryItem : "tanımlar"
+    
+    PharmacyProfile ||--o{ Offer : "ilan açar"
+    Medication ||--o{ Offer : "satılır"
+    
+    PharmacyProfile ||--o{ Shipment : "gönderir/alır"
+    Medication ||--o{ Shipment : "taşınır"
+    
+    PharmacyProfile ||--o{ Transaction : "işlem yapar"
+    PharmacyProfile ||--o{ Message : "mesajlaşır"
+    PharmacyProfile ||--o{ Notification : "bildirim alır"

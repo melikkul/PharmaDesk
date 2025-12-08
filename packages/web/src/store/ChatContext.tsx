@@ -1,12 +1,12 @@
 "use client";
 
-import React, { createContext, useContext } from "react";
-import { useMockChat } from "@/store/MockChatContext";
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useSignalR } from "@/store/SignalRContext";
 
 export interface Message {
-  id: string;
+  id: string | number;
   content: string;
-  senderId: number;
+  senderId: string;
   sentAt: string;
   isRead: boolean;
 }
@@ -19,19 +19,65 @@ interface ChatContextType {
 
 const ChatContext = createContext<ChatContextType>({
   messages: {},
-  sendMessage: async () => {},
-  loadMessages: async () => {},
+  sendMessage: async () => { },
+  loadMessages: async () => { },
 });
 
 export const useChatContext = () => useContext(ChatContext);
 
 export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
-  const { messages, sendMessage, markAsRead } = useMockChat();
+  const { connection } = useSignalR();
+  const [messages, setMessages] = useState<Record<string, Message[]>>({});
 
-  // loadMessages is now a no-op since we use mock data
+  useEffect(() => {
+    if (!connection) return;
+
+    connection.on("ReceiveMessage", (msg: Message) => {
+      console.log("Mesaj alındı:", msg);
+
+      setMessages((prev) => {
+        const partnerId = msg.senderId;
+
+        const list = prev[partnerId] || [];
+        if (list.some(m => m.id === msg.id)) return prev;
+
+        return { ...prev, [partnerId]: [...list, msg] };
+      });
+    });
+
+    return () => {
+      connection.off("ReceiveMessage");
+    };
+  }, [connection]);
+
+  const sendMessage = async (receiverId: string, content: string) => {
+    if (!connection) return;
+    try {
+      await connection.invoke("SendMessage", receiverId, content);
+    } catch (err) {
+      console.error("Mesaj hatası:", err);
+    }
+  };
+
   const loadMessages = async (otherUserId: string) => {
-    // Mock data is already loaded, just mark as read
-    markAsRead(otherUserId);
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/Messages/${otherUserId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMessages(prev => ({
+          ...prev,
+          [otherUserId]: data
+        }));
+      }
+    } catch (error) {
+      console.error("Geçmiş mesajlar yüklenemedi:", error);
+    }
   };
 
   return (

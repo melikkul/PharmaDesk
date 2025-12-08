@@ -39,6 +39,9 @@ namespace Backend.Data
         // --- EXTERNAL RESOURCES ---
         public DbSet<WarehouseBarem> WarehouseBarems { get; set; }
 
+        // --- MESSAGING ---
+        public DbSet<Message> Messages { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);

@@ -10,11 +10,13 @@ type ConnectionState = "Connected" | "Disconnected" | "Reconnecting";
 interface SignalRContextType {
   connectionState: ConnectionState;
   connection: signalR.HubConnection | null;
+  onlineUsers: Set<string>;
 }
 
 const SignalRContext = createContext<SignalRContextType>({
   connectionState: "Disconnected",
   connection: null,
+  onlineUsers: new Set<string>(),
 });
 
 export const useSignalR = () => useContext(SignalRContext);
@@ -26,6 +28,7 @@ interface SignalRProviderProps {
 export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) => {
   const [connection, setConnection] = useState<signalR.HubConnection | null>(null);
   const [connectionState, setConnectionState] = useState<ConnectionState>("Disconnected");
+  const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set<string>());
   const queryClient = useQueryClient();
 
   const getAccessToken = useCallback(() => {
@@ -127,7 +130,7 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       senderId?: string;
     }) => {
       if (!isMounted) return;
-      
+
       console.log("[SignalR] Received notification:", notification);
 
       // Display toast based on notification type
@@ -152,29 +155,36 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       }
     });
 
+    // Listen for online users updates
+    newConnection.on("ReceiveOnlineUsers", (users: string[]) => {
+      if (!isMounted) return;
+      console.log("[SignalR] Online users updated:", users);
+      setOnlineUsers(new Set(users));
+    });
+
     // Start connection with abort handling
     const startConnection = async () => {
       if (!isMounted || abortController.signal.aborted) return;
-      
+
       isConnecting = true;
-      
+
       try {
         await newConnection.start();
-        
+
         // Check if we were aborted during the connection attempt
         if (abortController.signal.aborted || !isMounted) {
           // Connection started but we need to stop immediately
           await newConnection.stop();
           return;
         }
-        
+
         console.log("[SignalR] Connected successfully");
         setConnectionState("Connected");
         setConnection(newConnection);
         isConnecting = false;
       } catch (error: any) {
         isConnecting = false;
-        
+
         // Silently handle connection errors
         // Common errors during rapid mount/unmount:
         // - "Failed to start before stop" 
@@ -195,25 +205,25 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
     // Cleanup on unmount
     return () => {
       isMounted = false;
-      
+
       // Signal abort to prevent connection from completing
       abortController.abort();
-      
+
       if (currentConnection) {
         const connectionState = currentConnection.state;
         console.log("[SignalR] Cleanup - connection state:", connectionState);
-        
+
         // Wait for ongoing connection attempt to finish before stopping
         const cleanup = async () => {
           // If we're currently connecting, wait a bit for it to finish or abort
           if (isConnecting) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
-          
+
           // Now safely stop if not already disconnected
-          if (currentConnection && 
-              connectionState !== signalR.HubConnectionState.Disconnected && 
-              connectionState !== signalR.HubConnectionState.Disconnecting) {
+          if (currentConnection &&
+            connectionState !== signalR.HubConnectionState.Disconnected &&
+            connectionState !== signalR.HubConnectionState.Disconnecting) {
             try {
               await currentConnection.stop();
             } catch (err) {
@@ -221,17 +231,17 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
             }
           }
         };
-        
+
         cleanup();
       }
-      
+
       setConnection(null);
       setConnectionState("Disconnected");
     };
   }, [getAccessToken, queryClient]);
 
   return (
-    <SignalRContext.Provider value={{ connectionState, connection }}>
+    <SignalRContext.Provider value={{ connectionState, connection, onlineUsers }}>
       {children}
     </SignalRContext.Provider>
   );
