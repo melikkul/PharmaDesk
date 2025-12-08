@@ -17,6 +17,10 @@ namespace Backend.Data
         public DbSet<InventoryItem> InventoryItems { get; set; }
         public DbSet<Admin> Admins { get; set; }
         
+        // --- CARRIERS & LOGISTICS ---
+        public DbSet<Carrier> Carriers { get; set; }
+        public DbSet<CarrierRegistrationToken> CarrierRegistrationTokens { get; set; }
+        
         // --- MARKETPLACE & SALES ---
         public DbSet<Offer> Offers { get; set; }
         public DbSet<Cart> Carts { get; set; }
@@ -97,6 +101,9 @@ namespace Backend.Data
             modelBuilder.Entity<MarketDemand>()
                 .HasIndex(md => new { md.City, md.LastSearchedDate });
             
+            // Message indexing
+            modelBuilder.Entity<Message>()
+                .HasIndex(m => new { m.SenderId, m.ReceiverId });
 
             
             // Report indexing
@@ -111,6 +118,21 @@ namespace Backend.Data
             modelBuilder.Entity<PharmacySettings>()
                 .HasIndex(ps => ps.PharmacyProfileId)
                 .IsUnique();
+            
+            // --- CARRIER INDEXES ---
+            // Carrier email unique constraint
+            modelBuilder.Entity<Carrier>()
+                .HasIndex(c => c.Email)
+                .IsUnique();
+            
+            // CarrierRegistrationToken unique constraint
+            modelBuilder.Entity<CarrierRegistrationToken>()
+                .HasIndex(crt => crt.Token)
+                .IsUnique();
+            
+            // CarrierRegistrationToken indexing for token validation queries
+            modelBuilder.Entity<CarrierRegistrationToken>()
+                .HasIndex(crt => new { crt.IsUsed, crt.ExpiresAt });
 
             // Admin seed data removed - no automatic admin accounts
             

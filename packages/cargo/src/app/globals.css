@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-gradient-to-br from-cargo-dark via-cargo to-cargo-light text-white font-sans;
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  .btn-primary {
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply glass hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+  }
+
+  .input-field {
+    @apply glass w-full px-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200;
+  }
+
+  .card {
+    @apply glass rounded-2xl p-6 shadow-2xl animate-fade-in;
+  }
+
+  .scan-frame {
+    @apply absolute inset-0 border-4 border-primary-500 rounded-2xl animate-pulse-slow;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

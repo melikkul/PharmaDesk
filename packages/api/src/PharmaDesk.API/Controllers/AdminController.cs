@@ -1,5 +1,6 @@
 using Backend.Data;
 using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +14,13 @@ namespace Backend.Controllers
     {
         private readonly IdentityDbContext _db;
         private readonly AppDbContext _appDb;
+        private readonly CarrierAuthService _carrierAuth;
 
-        public AdminController(IdentityDbContext db, AppDbContext appDb)
+        public AdminController(IdentityDbContext db, AppDbContext appDb, CarrierAuthService carrierAuth)
         {
             _db = db;
             _appDb = appDb;
+            _carrierAuth = carrierAuth;
         }
 
         [HttpGet("stats")]
@@ -178,6 +181,31 @@ namespace Backend.Controllers
             catch (Exception ex)
             {
                 return StatusCode(500, new { error = "Failed to assign group: " + ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Admin creates a registration token for a carrier
+        /// </summary>
+        [HttpPost("carriers/create-registration-token")]
+        public async Task<IActionResult> CreateCarrierRegistrationToken([FromBody] Backend.Dtos.CreateCarrierTokenRequest req)
+        {
+            try
+            {
+                // Get admin ID from JWT token
+                var adminIdClaim = User.FindFirst("id")?.Value;
+                if (string.IsNullOrEmpty(adminIdClaim) || !int.TryParse(adminIdClaim, out int adminId))
+                {
+                    // For development, use admin ID 1 if not authenticated
+                    adminId = 1;
+                }
+
+                var response = await _carrierAuth.CreateRegistrationTokenAsync(req, adminId);
+                return Ok(response);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Failed to create registration token: " + ex.Message });
             }
         }
     }

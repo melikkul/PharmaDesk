@@ -85,6 +85,7 @@ namespace PharmaDesk.API.Extensions
         public static IServiceCollection AddApplicationServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddScoped<AuthService>();
+            services.AddScoped<CarrierAuthService>();
             services.AddHttpContextAccessor();
             services.AddSignalR();
             
