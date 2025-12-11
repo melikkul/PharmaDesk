@@ -108,6 +108,7 @@ export default function TekliflerimPage() {
     type: offer.type || 'stockSale',
     isPrivate: (offer as any).isPrivate || false,
     malFazlasi: (offer as any).malFazlasi || '0+0',
+    imageUrl: offer.imageUrl || null, // 🆕 Görsel URL
   }));
 
   return (

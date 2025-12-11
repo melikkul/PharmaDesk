@@ -42,6 +42,7 @@ export const useDashboard = () => {
           productName: offer.productName || offer.ProductName || 'İsimsiz Ürün',
           stock: offer.stock || offer.Stock,
           price: offer.price || offer.Price,
+          imageUrl: offer.imageUrl || offer.ImageUrl,
           status: (offer.status || offer.Status || '').toLowerCase(),
         }));
       }

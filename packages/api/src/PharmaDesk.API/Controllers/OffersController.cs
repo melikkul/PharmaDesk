@@ -65,7 +65,8 @@ namespace Backend.Controllers
                     PharmacyUsername = o.PharmacyProfile.Username,
                     Description = o.Medication.Description,
                     Manufacturer = o.Medication.Manufacturer,
-                    ImageUrl = null, // Placeholder or add to DB later
+                    ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
+                    ImageCount = o.Medication.ImageCount,
                     ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                     CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
                     CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
@@ -77,9 +78,46 @@ namespace Backend.Controllers
                     DiscountPercentage = o.DiscountPercentage,
                     NetPrice = o.NetPrice,
                     MaxSaleQuantity = o.MaxSaleQuantity,
-                    OfferDescription = o.Description
+                    OfferDescription = o.Description,
+                    SoldQuantity = o.SoldQuantity
                 })
                 .ToListAsync();
+
+            // Calculate total ordered quantity per (MedicationId, SellerPharmacyId) - no OfferId needed
+            var orderQuantitiesByMedicationAndSeller = await _context.OrderItems
+                .Include(oi => oi.Order)
+                .ThenInclude(o => o.BuyerPharmacy)
+                .GroupBy(oi => new { oi.MedicationId, oi.Order.SellerPharmacyId })
+                .Select(g => new { 
+                    g.Key.MedicationId, 
+                    g.Key.SellerPharmacyId, 
+                    TotalQuantity = g.Sum(x => x.Quantity),
+                    Buyers = g.Select(x => new {
+                        x.Order.BuyerPharmacyId,
+                        BuyerName = x.Order.BuyerPharmacy != null ? x.Order.BuyerPharmacy.PharmacyName : "Bilinmiyor",
+                        x.Quantity,
+                        OrderDate = x.Order.CreatedAt
+                    }).ToList()
+                })
+                .ToListAsync();
+            
+            // Update SoldQuantity and Buyers for each offer based on MedicationId and PharmacyId
+            foreach (var offer in offers)
+            {
+                var orderData = orderQuantitiesByMedicationAndSeller
+                    .FirstOrDefault(x => x.MedicationId == offer.MedicationId && x.SellerPharmacyId.ToString() == offer.PharmacyId);
+                if (orderData != null)
+                {
+                    offer.SoldQuantity += orderData.TotalQuantity;
+                    offer.Buyers = orderData.Buyers.Select(b => new BuyerInfo
+                    {
+                        PharmacyId = b.BuyerPharmacyId,
+                        PharmacyName = b.BuyerName,
+                        Quantity = b.Quantity,
+                        OrderDate = b.OrderDate.ToString("dd/MM/yyyy")
+                    }).ToList();
+                }
+            }
 
             return Ok(offers);
         }
@@ -117,7 +155,8 @@ namespace Backend.Controllers
                     PharmacyUsername = o.PharmacyProfile.Username,
                     Description = o.Medication.Description,
                     Manufacturer = o.Medication.Manufacturer,
-                    ImageUrl = null,
+                    ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
+                    ImageCount = o.Medication.ImageCount,
                     ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                     CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
                     CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
@@ -184,7 +223,8 @@ namespace Backend.Controllers
                 PharmacyUsername = offer.PharmacyProfile.Username,
                 Description = offer.Medication.Description,
                 Manufacturer = offer.Medication.Manufacturer,
-                ImageUrl = null,
+                ImageUrl = !string.IsNullOrEmpty(offer.Medication.ImagePath) ? $"/{offer.Medication.ImagePath}" : "/logoYesil.png",
+                ImageCount = offer.Medication.ImageCount,
                 ExpirationDate = offer.ExpirationDate.HasValue ? offer.ExpirationDate.Value.ToString("MM/yyyy") : null,
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
                 CampaignBonusMultiplier = offer.Type == OfferType.JointOrder ? offer.CampaignBonusMultiplier : null,
@@ -220,6 +260,36 @@ namespace Backend.Controllers
                 .OrderBy(o => o.Price) // En ucuzdan pahalıya
                 .ToListAsync();
 
+            // Her offer için alıcıları çek - SellerPharmacyId ve MedicationId ile eşleştir
+            // Aynı satıcı + aynı ilaç = bu offer'dan sipariş edilmiş
+            // var medicationId = offers.FirstOrDefault()?.MedicationId ?? 0; // Removed: Use parameter instead
+            var sellerIds = offers.Select(o => o.PharmacyProfileId).Distinct().ToList();
+            
+            // Order'lardan buyer bilgilerini çek
+            var allOrders = await _context.Orders
+                .Include(o => o.BuyerPharmacy)
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Medication)
+                .Where(o => sellerIds.Contains(o.SellerPharmacyId) && 
+                           o.OrderItems.Any(oi => oi.MedicationId == medicationId))
+                .ToListAsync();
+            
+            // Offer bazında grupla (seller + medication)
+            var buyersByOffer = offers.ToDictionary(
+                o => o.Id,
+                o => allOrders
+                    .Where(order => order.SellerPharmacyId == o.PharmacyProfileId)
+                    .Select(order => new
+                    {
+                        PharmacyId = order.BuyerPharmacyId,
+                        PharmacyName = order.BuyerPharmacy.PharmacyName,
+                        Quantity = order.OrderItems.Where(oi => oi.MedicationId == medicationId).Sum(oi => oi.Quantity),
+                        OrderDate = order.OrderDate
+                    })
+                    .Where(b => b.Quantity > 0)
+                    .ToList()
+            );
+
             var dtos = offers.Select(o => new OfferDto
             {
                 Id = o.Id,
@@ -235,7 +305,7 @@ namespace Backend.Controllers
                 PharmacyUsername = o.PharmacyProfile.Username,
                 Description = o.Medication.Description,
                 Manufacturer = o.Medication.Manufacturer,
-                ImageUrl = null,
+                ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
                 ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
                 CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
                 CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
@@ -244,11 +314,18 @@ namespace Backend.Controllers
                 // Barem bilgisi
                 MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
                 SoldQuantity = o.SoldQuantity,
-                RemainingStock = o.Stock - o.SoldQuantity
+                RemainingStock = o.Stock - o.SoldQuantity,
                 
-                // TODO: Depo sorumlusu bilgisi - Migration yapıldıktan sonra aktif et
-                // DepotClaimerUserId = o.DepotClaimerUserId,
-                // DepotClaimedAt = o.DepotClaimedAt
+                // 🆕 Sipariş veren alıcılar
+                Buyers = buyersByOffer.TryGetValue(o.Id, out var buyers) 
+                    ? buyers.Select(b => new BuyerInfo
+                    {
+                        PharmacyId = b.PharmacyId,
+                        PharmacyName = b.PharmacyName,
+                        Quantity = b.Quantity,
+                        OrderDate = b.OrderDate.ToString("dd/MM/yyyy")
+                    }).ToList()
+                    : new List<BuyerInfo>()
             }).ToList();
 
             return Ok(dtos);
@@ -464,29 +541,8 @@ namespace Backend.Controllers
                 }
             }
 
-            // Type-specific validation for JointOrder
-            if (offerType == OfferType.JointOrder)
-            {
-                // 🆕 Joint Order: Stock cannot exceed Barem limit (MinAdet + MalFazlasi)
-                if (!string.IsNullOrEmpty(request.MalFazlasi))
-                {
-                    var mfParts = request.MalFazlasi.Split('+');
-                    if (mfParts.Length == 2 && 
-                        int.TryParse(mfParts[0], out int minAdet) && 
-                        int.TryParse(mfParts[1], out int malFazlasi))
-                    {
-                        int baremLimit = minAdet + malFazlasi;
-                        if (request.Stock > baremLimit)
-                        {
-                            return BadRequest(new { message = $"Ortak sipariş miktarı, barem limitini ({baremLimit} adet) aşamaz." });
-                        }
-                    }
-                }
-            }
-            else if (offerType == OfferType.PurchaseRequest)
-            {
-                // PurchaseRequest may have special validation logic if needed
-            }
+            // 🆕 JointOrder ve PurchaseRequest için barem limit kontrolü frontend'de yapılıyor (baremMultiple destekli)
+            // Backend'de bu kontrol kaldırılmıştır çünkü frontend daha doğru hesaplama yapıyor
 
             // Parse expiration date
             DateTime? expirationDate = null;
@@ -571,6 +627,19 @@ namespace Backend.Controllers
             _context.Offers.Add(offer);
             await _context.SaveChangesAsync();
 
+            // 🆕 Teklif oluşturma işlem kaydı
+            var offerTransaction = new Transaction
+            {
+                PharmacyProfileId = pharmacyId.Value,
+                Type = TransactionType.OfferCreated,
+                Amount = 0, // Para işlemi yok
+                Description = $"Teklif oluşturuldu: {medication.Name} ({offer.Stock} adet, {offer.Price:N2} TL)",
+                Date = DateTime.UtcNow,
+                RelatedReferenceId = offer.Id.ToString()
+            };
+            _context.Transactions.Add(offerTransaction);
+            await _context.SaveChangesAsync();
+
             // Load navigation properties for response
             await _context.Entry(offer).Reference(o => o.Medication).LoadAsync();
             await _context.Entry(offer).Reference(o => o.PharmacyProfile).LoadAsync();
@@ -590,7 +659,8 @@ namespace Backend.Controllers
                 PharmacyUsername = offer.PharmacyProfile.Username,
                 Description = offer.Medication.Description,
                 Manufacturer = offer.Medication.Manufacturer,
-                ImageUrl = null,
+                ImageUrl = !string.IsNullOrEmpty(offer.Medication.ImagePath) ? $"/{offer.Medication.ImagePath}" : "/logoYesil.png",
+                ImageCount = offer.Medication.ImageCount,
                 ExpirationDate = offer.ExpirationDate?.ToString("MM/yyyy"),
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
                 BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd"),
@@ -604,11 +674,12 @@ namespace Backend.Controllers
                 MaxPriceLimit = offer.MaxPriceLimit
             };
 
-            // 🆕 SignalR ile tüm bağlı clientlara offer değişikliğini bildir
+            // 🆕 SignalR ile tüm bağlı clientlara sessiz veri yenileme bildirimi
+            // Toast'lar lokal olarak frontend component'lerinde gösteriliyor
             await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
             {
                 message = $"Yeni teklif oluşturuldu: {offer.Medication.Name}",
-                type = "entityUpdated",
+                type = "entityUpdated", // Frontend'de toast göstermiyor, sadece veri yenileme
                 timestamp = DateTime.UtcNow,
                 senderId = (string?)null
             });
@@ -625,6 +696,7 @@ namespace Backend.Controllers
                 return Unauthorized(new { message = "Pharmacy not found" });
 
             var offer = await _context.Offers
+                .Include(o => o.Medication) // 🆕 Medication bilgisi için
                 .FirstOrDefaultAsync(o => o.Id == id && o.PharmacyProfileId == pharmacyId.Value);
 
             if (offer == null)
@@ -635,6 +707,16 @@ namespace Backend.Controllers
                 offer.Status = newStatus;
                 offer.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
+                
+                // 🆕 SignalR ile tüm bağlı clientlara bildir
+                await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
+                {
+                    message = $"Teklif durumu güncellendi: {offer.Medication?.Name ?? "Bilinmeyen"}",
+                    type = "entityUpdated",
+                    timestamp = DateTime.UtcNow,
+                    senderId = (string?)null
+                });
+                
                 return Ok(new { message = "Offer status updated successfully" });
             }
 
@@ -720,6 +802,28 @@ namespace Backend.Controllers
             offer.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
+            // 🆕 Teklif güncelleme işlem kaydı
+            var updateTransaction = new Transaction
+            {
+                PharmacyProfileId = pharmacyId.Value,
+                Type = TransactionType.OfferUpdated,
+                Amount = 0,
+                Description = $"Teklif güncellendi: {offer.Medication.Name} ({offer.Stock} adet, {offer.Price:N2} TL)",
+                Date = DateTime.UtcNow,
+                RelatedReferenceId = offer.Id.ToString()
+            };
+            _context.Transactions.Add(updateTransaction);
+            await _context.SaveChangesAsync();
+
+            // 🆕 SignalR ile tüm bağlı clientlara bildir
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
+            {
+                message = $"Teklif güncellendi: {offer.Medication.Name}",
+                type = "entityUpdated",
+                timestamp = DateTime.UtcNow,
+                senderId = (string?)null
+            });
+
             var response = new OfferDto
             {
                 Id = offer.Id,
@@ -734,7 +838,8 @@ namespace Backend.Controllers
                 PharmacyUsername = offer.PharmacyProfile.Username,
                 Description = offer.Medication.Description,
                 Manufacturer = offer.Medication.Manufacturer,
-                ImageUrl = null,
+                ImageUrl = !string.IsNullOrEmpty(offer.Medication.ImagePath) ? $"/{offer.Medication.ImagePath}" : "/logoYesil.png",
+                ImageCount = offer.Medication.ImageCount,
                 CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
                 CampaignBonusMultiplier = offer.Type == OfferType.JointOrder ? offer.CampaignBonusMultiplier : null,
                 BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
@@ -752,13 +857,39 @@ namespace Backend.Controllers
                 return Unauthorized(new { message = "Pharmacy not found" });
 
             var offer = await _context.Offers
+                .Include(o => o.Medication) // 🆕 Medication bilgisi için
                 .FirstOrDefaultAsync(o => o.Id == id && o.PharmacyProfileId == pharmacyId.Value);
 
             if (offer == null)
                 return NotFound(new { message = "Offer not found" });
 
+            var medicationName = offer.Medication?.Name ?? "Bilinmeyen İlaç";
+            var offerStock = offer.Stock;
+            var offerPrice = offer.Price;
+            
             _context.Offers.Remove(offer);
             await _context.SaveChangesAsync();
+
+            // 🆕 Teklif silme işlem kaydı
+            var deleteTransaction = new Transaction
+            {
+                PharmacyProfileId = pharmacyId.Value,
+                Type = TransactionType.OfferDeleted,
+                Amount = 0,
+                Description = $"Teklif silindi: {medicationName} ({offerStock} adet, {offerPrice:N2} TL)",
+                Date = DateTime.UtcNow
+            };
+            _context.Transactions.Add(deleteTransaction);
+            await _context.SaveChangesAsync();
+
+            // 🆕 SignalR ile tüm bağlı clientlara bildir
+            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
+            {
+                message = $"Teklif silindi: {medicationName}",
+                type = "entityUpdated",
+                timestamp = DateTime.UtcNow,
+                senderId = (string?)null
+            });
 
             return Ok(new { message = "Offer deleted successfully" });
         }
@@ -864,5 +995,46 @@ namespace Backend.Controllers
             Console.WriteLine($"[DEBUG] Failed to parse PharmacyId from claim: '{pharmacyIdClaim}'");
             return null;
         }
+
+        /// <summary>
+        /// Parse AllImagePaths JSON array into List of URL strings
+        /// Example: ["images/24/1.png","images/24/2.jpg"] -> ["/images/24/1.png", "/images/24/2.jpg"]
+        /// Returns null if no images or parsing fails
+        /// </summary>
+        private static List<string>? ParseImageUrls(string? allImagePaths)
+        {
+            if (string.IsNullOrWhiteSpace(allImagePaths))
+                return null;
+
+            try
+            {
+                var trimmed = allImagePaths.Trim();
+                if (!trimmed.StartsWith("[") || !trimmed.EndsWith("]"))
+                    return null;
+
+                var content = trimmed.Substring(1, trimmed.Length - 2);
+                if (string.IsNullOrWhiteSpace(content))
+                    return null;
+
+                var paths = new List<string>();
+                var items = content.Split(',');
+                
+                foreach (var item in items)
+                {
+                    var cleaned = item.Trim().Trim('"');
+                    if (!string.IsNullOrEmpty(cleaned) && cleaned.StartsWith("images/"))
+                    {
+                        paths.Add($"/{cleaned}");
+                    }
+                }
+
+                return paths.Count > 0 ? paths : null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
 }
+

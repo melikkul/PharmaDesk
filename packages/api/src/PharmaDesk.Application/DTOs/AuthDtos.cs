@@ -40,6 +40,7 @@ namespace Backend.Dtos
         public string PublicId { get; set; } = string.Empty; // YENİ
         public string City { get; set; } = string.Empty;
         public string District { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty; // 🆕 Açık adres
         
         [System.Text.Json.Serialization.JsonPropertyName("pharmacyId")]
         public string PharmacyId { get; set; } = string.Empty; // Changed from long to string for JSON serialization

@@ -7,6 +7,20 @@ import { orderService } from '@/services/orderService';
 import { Order } from '@/types';
 import styles from './orderDetail.module.css';
 
+const KDV_RATE = 0.10;
+
+const normalizeTurkish = (text: string): string => {
+  if (!text) return '-';
+  return text
+    .replace(/ş/g, 's').replace(/Ş/g, 'S')
+    .replace(/ğ/g, 'g').replace(/Ğ/g, 'G')
+    .replace(/ü/g, 'u').replace(/Ü/g, 'U')
+    .replace(/ö/g, 'o').replace(/Ö/g, 'O')
+    .replace(/ç/g, 'c').replace(/Ç/g, 'C')
+    .replace(/ı/g, 'i').replace(/İ/g, 'I')
+    .replace(/₺/g, 'TL');
+};
+
 export default function OrderDetailPage() {
   const router = useRouter();
   const params = useParams();
@@ -16,19 +30,16 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      router.push('/login');
-      return;
-    }
+    if (!token) { router.push('/login'); return; }
     fetchOrderDetail();
   }, [token, id]);
 
   const fetchOrderDetail = async () => {
     setLoading(true);
     setError(null);
-
     try {
       if (!token) throw new Error('Token not found');
       const data = await orderService.getOrderById(token, id);
@@ -41,106 +52,301 @@ export default function OrderDetailPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>Yükleniyor...</div>
-      </div>
-    );
-  }
+  const handleDownloadPdf = async () => {
+    if (!order) return;
+    setPdfLoading(true);
 
-  if (error || !order) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.error}>{error || 'Sipariş bulunamadı'}</div>
-        <button onClick={() => router.back()} className={styles.backButton}>
-          Geri Dön
-        </button>
-      </div>
-    );
-  }
+    try {
+      const { jsPDF } = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      
+      const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const orderData = order as any;
+      const pw = 210; // A4 genişlik
+      const ph = 297; // A4 yükseklik
+      const n = normalizeTurkish;
+      const margin = 15;
+      
+      const subtotal = order.orderItems?.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0) || 0;
+      const kdvTotal = subtotal * KDV_RATE;
+      const grandTotal = subtotal + kdvTotal;
+      const fmt = (num: number) => num.toFixed(2).replace('.', ',') + ' TL';
+
+      // Logo yükle ve orantıyı koru
+      const loadLogo = (): Promise<{data: string, width: number, height: number}> => new Promise((resolve) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          canvas.getContext('2d')?.drawImage(img, 0, 0);
+          resolve({
+            data: canvas.toDataURL('image/png'),
+            width: img.width,
+            height: img.height
+          });
+        };
+        img.onerror = () => resolve({data: '', width: 0, height: 0});
+        img.src = '/logoYesil.png';
+      });
+
+      const logo = await loadLogo();
+      let y = margin;
+
+      // ═══════════════════════════════════════════════════════════════
+      // HEADER
+      // ═══════════════════════════════════════════════════════════════
+      
+      // Logo (orantılı boyut)
+      if (logo.data) {
+        const logoHeight = 15;
+        const logoWidth = (logo.width / logo.height) * logoHeight;
+        doc.addImage(logo.data, 'PNG', margin, y, logoWidth, logoHeight);
+      }
+      
+      // FATURA başlığı (ortada)
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(30, 64, 175);
+      doc.text('FATURA', pw / 2, y + 9, { align: 'center' });
+      
+      // Fatura No ve Tarih (sağda, kutu içinde) - daha geniş kutu
+      const infoBoxWidth = 65;
+      const infoBoxHeight = 22;
+      const infoBoxX = pw - margin - infoBoxWidth;
+      
+      doc.setFillColor(248, 250, 252);
+      doc.roundedRect(infoBoxX, y - 2, infoBoxWidth, infoBoxHeight, 2, 2, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.roundedRect(infoBoxX, y - 2, infoBoxWidth, infoBoxHeight, 2, 2, 'S');
+      
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100);
+      doc.text('Fatura No:', infoBoxX + 3, y + 5);
+      doc.text('Tarih:', infoBoxX + 3, y + 13);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(40);
+      doc.text(order.orderNumber || '-', infoBoxX + infoBoxWidth - 3, y + 5, { align: 'right' });
+      doc.text(order.orderDate || '-', infoBoxX + infoBoxWidth - 3, y + 13, { align: 'right' });
+      
+      y += 22;
+      
+      // Mavi çizgi
+      doc.setDrawColor(30, 64, 175);
+      doc.setLineWidth(0.8);
+      doc.line(margin, y, pw - margin, y);
+      
+      y += 10;
+
+      // ═══════════════════════════════════════════════════════════════
+      // SATICI VE ALICI KUTULARI
+      // ═══════════════════════════════════════════════════════════════
+      
+      const boxWidth = (pw - margin * 2 - 8) / 2;
+      const boxHeight = 38;
+      
+      // SATICI kutusu
+      doc.setFillColor(250, 251, 252);
+      doc.roundedRect(margin, y, boxWidth, boxHeight, 3, 3, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(margin, y, boxWidth, boxHeight, 3, 3, 'S');
+      
+      // Başlık şeridi
+      doc.setFillColor(30, 64, 175);
+      doc.rect(margin, y, boxWidth, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(255);
+      doc.text('SATICI', margin + 4, y + 5);
+      
+      // İçerik
+      doc.setTextColor(30);
+      doc.setFontSize(10);
+      doc.text(n(orderData.sellerPharmacyName || '-'), margin + 4, y + 14);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(80);
+      doc.text(`VKN: ${orderData.sellerTaxNumber || '-'}  |  V.D.: ${n(orderData.sellerTaxOffice || '-')}`, margin + 4, y + 21);
+      doc.text(`GLN: ${orderData.sellerGLN || '-'}`, margin + 4, y + 27);
+      doc.text(`Tel: ${orderData.sellerPhone || '-'}`, margin + 4, y + 33);
+      
+      // ALICI kutusu
+      const aliciX = margin + boxWidth + 8;
+      doc.setFillColor(250, 251, 252);
+      doc.roundedRect(aliciX, y, boxWidth, boxHeight, 3, 3, 'F');
+      doc.setDrawColor(220, 220, 220);
+      doc.roundedRect(aliciX, y, boxWidth, boxHeight, 3, 3, 'S');
+      
+      // Başlık şeridi
+      doc.setFillColor(16, 185, 129);
+      doc.rect(aliciX, y, boxWidth, 7, 'F');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8);
+      doc.setTextColor(255);
+      doc.text('ALICI', aliciX + 4, y + 5);
+      
+      // İçerik
+      doc.setTextColor(30);
+      doc.setFontSize(10);
+      doc.text(n(orderData.buyerPharmacyName || '-'), aliciX + 4, y + 14);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(80);
+      doc.text(`VKN: ${orderData.buyerTaxNumber || '-'}  |  V.D.: ${n(orderData.buyerTaxOffice || '-')}`, aliciX + 4, y + 21);
+      doc.text(`GLN: ${orderData.buyerGLN || '-'}`, aliciX + 4, y + 27);
+      doc.text(`Tel: ${orderData.buyerPhone || '-'}`, aliciX + 4, y + 33);
+      
+      y += boxHeight + 10;
+
+      // ═══════════════════════════════════════════════════════════════
+      // ÜRÜNLER TABLOSU
+      // ═══════════════════════════════════════════════════════════════
+      
+      const tableData = order.orderItems?.map((item, i) => {
+        const t = item.quantity * item.unitPrice;
+        const k = t * KDV_RATE;
+        return [
+          String(i + 1),
+          n((item as any).medicationName || '-'),
+          String(item.quantity),
+          fmt(item.unitPrice),
+          fmt(t),
+          '%10',
+          fmt(k),
+          fmt(t + k)
+        ];
+      }) || [];
+
+      autoTable(doc, {
+        startY: y,
+        head: [['#', 'Urun Adi', 'Adet', 'Birim', 'Tutar', 'KDV', 'KDV Tut.', 'Toplam']],
+        body: tableData,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [30, 64, 175],
+          textColor: [255, 255, 255],
+          fontSize: 7,
+          fontStyle: 'bold',
+          halign: 'center',
+          cellPadding: 2,
+          minCellHeight: 6
+        },
+        bodyStyles: {
+          fontSize: 8,
+          textColor: [40, 40, 40],
+          cellPadding: 2,
+          minCellHeight: 6,
+          lineColor: [220, 220, 220],
+          lineWidth: 0.2
+        },
+        alternateRowStyles: {
+          fillColor: [250, 251, 252]
+        },
+        columnStyles: {
+          0: { halign: 'center', cellWidth: 8 },
+          1: { halign: 'left', cellWidth: 'auto' },
+          2: { halign: 'center', cellWidth: 14 },
+          3: { halign: 'right', cellWidth: 20 },
+          4: { halign: 'right', cellWidth: 20 },
+          5: { halign: 'center', cellWidth: 12 },
+          6: { halign: 'right', cellWidth: 18 },
+          7: { halign: 'right', cellWidth: 22 }
+        },
+        margin: { left: margin, right: margin },
+        tableWidth: 'auto',
+        styles: {
+          overflow: 'linebreak',
+          font: 'helvetica',
+          cellWidth: 'wrap'
+        }
+      });
+
+      // ═══════════════════════════════════════════════════════════════
+      // FOOTER
+      // ═══════════════════════════════════════════════════════════════
+      
+      doc.setDrawColor(220, 220, 220);
+      doc.setLineWidth(0.3);
+      doc.line(margin, ph - 18, pw - margin, ph - 18);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7);
+      doc.setTextColor(120);
+      doc.text(`Durum: ${n(order.status)} | Odeme: ${n(order.paymentStatus)}`, margin, ph - 12);
+      doc.text('PharmaDesk | ' + new Date().toLocaleDateString('tr-TR'), pw - margin, ph - 12, { align: 'right' });
+
+      doc.save(`fatura-${order.orderNumber}.pdf`);
+    } catch (err) {
+      console.error('PDF hatası:', err);
+      alert('PDF oluşturulurken hata oluştu.');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
+
+  const formatCurrency = (n: number) => n.toFixed(2).replace('.', ',') + ' ₺';
+
+  if (loading) return <div className={styles.container}><div className={styles.loading}>Yükleniyor...</div></div>;
+  if (error || !order) return (
+    <div className={styles.container}>
+      <div className={styles.error}>{error || 'Sipariş bulunamadı'}</div>
+      <button onClick={() => router.back()} className={styles.backButton}>Geri Dön</button>
+    </div>
+  );
+
+  const orderData = order as any;
 
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <button onClick={() => router.back()} className={styles.backButton}>
-          ← Siparişlere Dön
-        </button>
+        <button onClick={() => router.back()} className={styles.backButton}>← Siparişlere Dön</button>
         <h1>Sipariş Detayı</h1>
+        <button onClick={handleDownloadPdf} className={styles.downloadButton} disabled={pdfLoading}>
+          {pdfLoading ? '⏳ Oluşturuluyor...' : '📄 Fatura İndir'}
+        </button>
       </div>
 
-      <div className={styles.content}>
+      <div className={styles.invoiceContainer}>
         <div className={styles.card}>
           <h2>Sipariş Bilgileri</h2>
           <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <span className={styles.label}>Sipariş No:</span>
-              <span className={styles.value}>{order.orderNumber}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <span className={styles.label}>Tarih:</span>
-              <span className={styles.value}>
-                {new Date(order.orderDate).toLocaleString('tr-TR')}
-              </span>
-            </div>
-            <div className={styles.infoItem}>
-              <span className={styles.label}>Durum:</span>
-              <span className={`${styles.value} ${styles.status}`}>
-                {order.status}
-              </span>
-            </div>
-            <div className={styles.infoItem}>
-              <span className={styles.label}>Ödeme Durumu:</span>
-              <span className={styles.value}>{order.paymentStatus}</span>
-            </div>
+            <div className={styles.infoItem}><span className={styles.label}>Sipariş No:</span><span className={styles.value}>{order.orderNumber}</span></div>
+            <div className={styles.infoItem}><span className={styles.label}>Tarih:</span><span className={styles.value}>{order.orderDate}</span></div>
+            <div className={styles.infoItem}><span className={styles.label}>Durum:</span><span className={`${styles.value} ${styles.status}`}>{order.status}</span></div>
+            <div className={styles.infoItem}><span className={styles.label}>Ödeme Durumu:</span><span className={styles.value}>{order.paymentStatus}</span></div>
           </div>
         </div>
 
-        <div className={styles.card}>
-          <h2>Taraflar</h2>
-          <div className={styles.partiesGrid}>
-            <div className={styles.party}>
-              <h3>Alıcı Eczane</h3>
-              <p>{order.buyerPharmacy?.pharmacyName || 'Bilinmiyor'}</p>
-            </div>
-            <div className={styles.party}>
-              <h3>Satıcı Eczane</h3>
-              <p>{order.sellerPharmacy?.pharmacyName || 'Bilinmiyor'}</p>
-            </div>
-          </div>
+        <div className={styles.partiesSection}>
+          <div className={styles.partyCard}><h3 className={styles.partyTitle}>Satıcı Eczane</h3><p className={styles.partyName}>{orderData.sellerPharmacyName || '-'}</p></div>
+          <div className={styles.partyCard}><h3 className={styles.partyTitle}>Alıcı Eczane</h3><p className={styles.partyName}>{orderData.buyerPharmacyName || '-'}</p></div>
         </div>
 
-        <div className={styles.card}>
-          <h2>Sipariş Ürünleri</h2>
-          <table className={styles.itemsTable}>
-            <thead>
-              <tr>
-                <th>Ürün</th>
-                <th>Miktar</th>
-                <th>Birim Fiyat</th>
-                <th>MF</th>
-                <th>Toplam</th>
-              </tr>
-            </thead>
+        <div className={styles.productsSection}>
+          <h3 className={styles.sectionTitle}>Sipariş Ürünleri</h3>
+          <table className={styles.invoiceTable}>
+            <thead><tr><th>Ürün</th><th className={styles.numericCol}>Miktar</th><th className={styles.numericCol}>Birim Fiyat</th><th className={styles.numericCol}>Toplam</th><th className={styles.numericCol}>Kar</th></tr></thead>
             <tbody>
-              {order.orderItems?.map((item, index) => (
-                <tr key={item.id || index}>
-                  <td>{item.medication?.name || 'Ürün'}</td>
-                  <td>{item.quantity}</td>
-                  <td>{item.unitPrice.toFixed(2).replace('.', ',')} ₺</td>
-                  <td>{item.bonusQuantity || 0}</td>
-                  <td>{(item.quantity * item.unitPrice).toFixed(2).replace('.', ',')} ₺</td>
+              {order.orderItems?.map((item, i) => (
+                <tr key={item.id || i}>
+                  <td><a href={`/ilaclar/${item.medicationId}`} className={styles.productLink}>{(item as any).medicationName || '-'}</a></td>
+                  <td className={styles.numericCol}>{item.quantity}</td>
+                  <td className={styles.numericCol}>{formatCurrency(item.unitPrice)}</td>
+                  <td className={styles.numericCol}>{formatCurrency(item.quantity * item.unitPrice)}</td>
+                  <td className={styles.numericCol} style={{ color: (item.profitAmount || 0) > 0 ? '#16a34a' : 'inherit' }}>
+                    {(item.profitAmount || 0) > 0 ? `+${formatCurrency(item.profitAmount || 0)}` : '-'}
+                  </td>
                 </tr>
               ))}
             </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={4} className={styles.totalLabel}>Genel Toplam</td>
-                <td className={styles.totalValue}>
-                  {order.totalAmount.toFixed(2).replace('.', ',')} ₺
-                </td>
-              </tr>
-            </tfoot>
+            <tfoot><tr><td colSpan={4} className={styles.totalLabel}>Genel Toplam</td><td className={styles.totalValue}>{formatCurrency(order.totalAmount)}</td></tr></tfoot>
           </table>
         </div>
       </div>

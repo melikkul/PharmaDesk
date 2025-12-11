@@ -174,28 +174,19 @@ export default function GrubumPage() {
                     Bakiye
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grup Yükü
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Alım
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Alım Tutarı
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sistem Kazancı
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Teklif Sayısı
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Gönderi
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Gönderi Tutarı
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Gruba Kazandırdığı
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Toplam Kar
                   </th>
                 </tr>
               </thead>
@@ -215,28 +206,19 @@ export default function GrubumPage() {
                       {formatCurrency(stat.balance)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                      {stat.groupLoad}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                       {stat.purchaseCount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                       {formatCurrency(stat.purchaseAmount)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
-                      {formatCurrency(stat.systemEarnings)}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
                       {stat.offerCount}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                      {stat.shipmentCount}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                      {formatCurrency(stat.shipmentAmount)}
-                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
                       {formatCurrency(stat.groupContribution)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-green-600 font-medium">
+                      {formatCurrency(stat.totalProfit)}
                     </td>
                   </tr>
                 ))}
@@ -271,6 +253,12 @@ export default function GrubumPage() {
               <div className="text-blue-700">Toplam Grup Katkısı</div>
               <div className="text-xl font-bold text-blue-900">
                 {formatCurrency(statistics.reduce((sum, s) => sum + s.groupContribution, 0))}
+              </div>
+            </div>
+            <div>
+              <div className="text-blue-700">Toplam Kar</div>
+              <div className="text-xl font-bold text-green-600">
+                {formatCurrency(statistics.reduce((sum, s) => sum + s.totalProfit, 0))}
               </div>
             </div>
           </div>

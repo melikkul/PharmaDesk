@@ -1,5 +1,5 @@
 // src/components/ilaclar/ProductCard.tsx
-import React from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { PharmacyLink, PriceDisplay } from '@/components/common';
 import type { ShowroomMedication } from '../../lib/dashboardData';
@@ -10,6 +10,7 @@ interface ProductCardProps {
   linkHref?: string; // Özel link URL'i (barem parametresi için)
   extraSellerCount?: number; // 2'den fazla eczane varsa kalan sayı
   offerType?: string; // 🆕 Teklif türü: stocksale, jointorder, purchaserequest
+  buyers?: { pharmacyId: number; pharmacyName: string; quantity: number; orderDate?: string }[]; // 🆕 Sipariş verenler
 }
 
 // 🆕 Offer type badge color mapping
@@ -19,15 +20,10 @@ const offerTypeBadgeConfig: Record<string, { bg: string; text: string; label: st
   purchaserequest: { bg: '#8b5cf6', text: 'white', label: 'Alım Talebi' } // 🆕 Mor renk
 };
 
-const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSellerCount = 0, offerType }) => {
+const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSellerCount = 0, offerType, buyers }) => {
   // Link URL - özel veya varsayılan
   const href = linkHref || `/ilaclar/${medication.id}`;
-  // Kalan stok hesapla: remainingStock varsa kullan, yoksa currentStock - soldQuantity
-  const soldQty = medication.soldQuantity ?? 0;
-  const remainingStock = medication.remainingStock ?? (medication.currentStock - soldQty);
-  
-  const isOutOfStock = remainingStock === 0;
-  
+
   // MalFazlası parsing - "20+2" formatından bonus'u al
   const parseMF = (mf: string | undefined): { min: number; bonus: number } => {
     if (!mf || mf === '0+0') return { min: 0, bonus: 0 };
@@ -38,25 +34,66 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
   const mfData = parseMF(medication.malFazlasi);
   const isJointOrder = offerType?.toLowerCase() === 'jointorder';
   const isPurchaseRequest = offerType?.toLowerCase() === 'purchaserequest'; // 🆕
+
+  // Kalan stok hesapla
+  const soldQty = medication.soldQuantity ?? 0;
+  const remainingStock = medication.remainingStock ?? (medication.currentStock - soldQty); // Standard calculation
+  
+  // Determine if Out of Stock
+  let isOutOfStock = remainingStock <= 0;
+
+  // For Joint Order / Purchase Request
+  if (isJointOrder || isPurchaseRequest) {
+      const singleBaremTotal = mfData.min + mfData.bonus;
+      
+      // Only apply Barem logic if we have a REAL barem (> 1). 
+      // '1+0' is the default for missing data, and causes false 'Tükendi' (0 remaining).
+      if (mfData.min > 0 && singleBaremTotal > 1) {
+          // Correct Barem Logic when Barem is known and valid
+          const requestedStock = medication.currentStock || 0;
+          // Calculate orderedStock from buyers array directly (more reliable than soldQuantity)
+          const orderedStock = (buyers && buyers.length > 0) 
+              ? buyers.reduce((sum, b) => sum + b.quantity, 0) 
+              : 0;
+          const totalUsedStock = requestedStock + orderedStock;
+          
+          const baremMultiple = Math.max(1, Math.ceil(totalUsedStock / singleBaremTotal));
+          const effectiveBaremTotal = singleBaremTotal * baremMultiple;
+          const jointRemaining = Math.max(0, effectiveBaremTotal - totalUsedStock);
+          
+          isOutOfStock = jointRemaining === 0;
+      } else {
+          // Fallback: If no Barem info available (or default 1+0), assume available (never Tükendi)
+          isOutOfStock = false;
+      }
+  }
   
   // Stok doluluk oranı hesapla
-  // Joint Order ve PurchaseRequest için: talep edilen / barem toplam (doluluk)
-  // Diğerleri için: (Stok - Alınan) / Stok (kalan)
   const totalStock = medication.currentStock || 1;
   let barWidth: number;
   let barColor: string;
   let barLabel: string = '';
   
-  if ((isJointOrder || isPurchaseRequest) && mfData.min > 0) {
+  if ((isJointOrder || isPurchaseRequest) && mfData.min > 0 && (mfData.min > 1 || mfData.bonus > 0)) {
     // 🆕 JointOrder/PurchaseRequest: barem doluluk oranı  
-    // Bar toplam baremi temsil ediyor, doluluk = talep edilen miktar
-    const baremTotal = mfData.min + mfData.bonus;
+    // Talep = currentStock, Siparişler = soldQuantity
+    const singleBaremTotal = mfData.min + mfData.bonus;
     const requestedStock = medication.currentStock; // Bu teklifin talep ettiği stok
-    const usagePercent = (requestedStock / baremTotal) * 100;
+    // Calculate orderedStock from buyers array directly (more reliable than soldQuantity)
+    const orderedStock = (buyers && buyers.length > 0) 
+        ? buyers.reduce((sum, b) => sum + b.quantity, 0) 
+        : 0;
+    const totalUsedStock = requestedStock + orderedStock;
+    
+    // 🆕 Barem katını hesapla: toplam kullanım / tek barem = kaç kat
+    const baremMultiple = Math.ceil(totalUsedStock / singleBaremTotal);
+    const effectiveBaremTotal = singleBaremTotal * Math.max(1, baremMultiple);
+    
+    const usagePercent = (totalUsedStock / effectiveBaremTotal) * 100;
     barWidth = Math.min(usagePercent, 100);
     
-    // Kalan stok hesapla
-    const kalanStok = baremTotal - requestedStock;
+    // 🆕 Kalan stok: efektif barem toplamı - talep - siparişler
+    const kalanStok = Math.max(0, effectiveBaremTotal - totalUsedStock);
     barLabel = `Kalan ${kalanStok}`;
     
     if (isPurchaseRequest) {
@@ -85,6 +122,59 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
   const perUnitProfit = hasMF && totalUnits > 0 
     ? (mfData.bonus / totalUnits) * medication.price 
     : 0;
+
+  // 🆕 Multi-image hover state
+  const [hoverImageIndex, setHoverImageIndex] = useState(0);
+  
+  // 🆕 Use imageCount from API (comes from backend, default to 1)
+  // TEMPORARILY DISABLED: Until AllImagePaths API is implemented, 
+  // only show 1 image to prevent 404 errors from different extensions
+  // TODO: Re-enable when API returns imageUrls array with correct paths
+  const validImageCount = 1; // Math.min(medication.imageCount ?? 1, 4);
+  
+  // 🆕 Generate possible image paths from first image (limited by validImageCount)
+  const imagePaths = useMemo(() => {
+    const imageUrl = medication.imageUrl;
+    if (!imageUrl) return [];
+    
+    // Only return the first image URL
+    const cleanPath = imageUrl.replace(/^\//, '');
+    return [cleanPath];
+  }, [medication.imageUrl]);
+  
+  // 🆕 Handle mouse move for hover zones - use imagePaths.length for actual available images
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const actualCount = imagePaths.length;
+    if (actualCount <= 1) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    const zoneWidth = width / actualCount;
+    const index = Math.min(Math.floor(x / zoneWidth), actualCount - 1);
+    
+    setHoverImageIndex(index);
+  }, [imagePaths.length]);
+  
+  const handleMouseLeave = useCallback(() => {
+    setHoverImageIndex(0);
+  }, []);
+  
+  // 🆕 Get current image URL with backend prefix
+  const getCurrentImageUrl = () => {
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+    
+    // No images available
+    if (imagePaths.length === 0) {
+      return medication.imageUrl?.startsWith('/images/') 
+        ? `${baseUrl}${medication.imageUrl}` 
+        : '/logoYesil.png';
+    }
+    
+    // Clamp index to available paths
+    const safeIndex = Math.min(hoverImageIndex, imagePaths.length - 1);
+    return `${baseUrl}/${imagePaths[safeIndex]}`;
+  };
 
   return (
     <div className={`${styles.cardWrapper} ${isOutOfStock ? styles.outOfStock : ''}`}>
@@ -119,7 +209,38 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
               <span className={styles.baremBonus}>{mfData.bonus}</span>
             </div>
           )}
-          <img src={medication.imageUrl || "/dolorex_placeholder.png"} alt={medication.name} className={styles.productImage} />
+          {/* 🆕 Hover zone image container */}
+          <div 
+            className={styles.hoverImageZone}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+          >
+            <img 
+              src={getCurrentImageUrl()}
+              alt={medication.name} 
+              className={styles.productImage}
+              onError={(e) => {
+                // Only show fallback if first image fails
+                if (hoverImageIndex === 0) {
+                  e.currentTarget.src = '/logoYesil.png';
+                } else {
+                  // Go back to first image
+                  setHoverImageIndex(0);
+                }
+              }}
+            />
+            {/* 🆕 Hover indicator dots - only show for multiple images */}
+            {imagePaths.length > 1 && (
+              <div className={styles.imageIndicators}>
+                {imagePaths.map((_, index) => (
+                  <div 
+                    key={index} 
+                    className={`${styles.indicator} ${hoverImageIndex === index ? styles.indicatorActive : ''}`}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </Link>
 

@@ -10,6 +10,7 @@ namespace Backend.Models
 
         public int OrderId { get; set; }
         public int MedicationId { get; set; }
+        public int? OfferId { get; set; } // 🆕 Hangi teklif için sipariş verildi
 
         [Required]
         public int Quantity { get; set; }
@@ -19,11 +20,17 @@ namespace Backend.Models
 
         public int BonusQuantity { get; set; } = 0; // Kazanılan MF
 
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal ProfitAmount { get; set; } = 0; // Kar miktarı (Barem bonus'undan hesaplanan)
+
         // Navigation Properties
         [ForeignKey(nameof(OrderId))]
         public Order Order { get; set; } = null!;
 
         [ForeignKey(nameof(MedicationId))]
         public Medication Medication { get; set; } = null!;
+        
+        [ForeignKey(nameof(OfferId))]
+        public Offer? Offer { get; set; }
     }
 }

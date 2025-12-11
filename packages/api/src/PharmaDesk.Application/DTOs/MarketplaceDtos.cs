@@ -32,6 +32,11 @@ namespace Backend.Dtos
         public decimal GonderiTutari { get; set; }
         public decimal GrubaKazandirdigi { get; set; }
         public string KayitTarihi { get; set; } = string.Empty;
+        
+        /// <summary>
+        /// Admin tarafından tanımlanan kargo hizmeti durumu.
+        /// </summary>
+        public bool HasShippingService { get; set; } = false;
     }
 
     // ========== OFFER DTOs ==========
@@ -54,6 +59,8 @@ namespace Backend.Dtos
         public string? Description { get; set; }
         public string? Manufacturer { get; set; }
         public string? ImageUrl { get; set; }
+        public int ImageCount { get; set; } = 1;
+        public List<string>? ImageUrls { get; set; } // All image paths for carousel
         
         // Campaign-specific fields
         public string? CampaignEndDate { get; set; }
@@ -82,6 +89,18 @@ namespace Backend.Dtos
         // 🆕 Depo Sorumlusu için
         public long? DepotClaimerUserId { get; set; }
         public DateTime? DepotClaimedAt { get; set; }
+        
+        // 🆕 Sipariş veren alıcılar (JointOrder, PurchaseRequest için)
+        public List<BuyerInfo>? Buyers { get; set; }
+    }
+
+    // 🆕 Sipariş veren alıcı bilgisi
+    public class BuyerInfo
+    {
+        public long PharmacyId { get; set; }
+        public string PharmacyName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public string? OrderDate { get; set; }
     }
 
     public class CreateOfferRequest

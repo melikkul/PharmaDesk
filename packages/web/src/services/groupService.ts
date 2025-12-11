@@ -15,6 +15,7 @@ export interface GroupMemberStatistics {
   shipmentCount: number;
   shipmentAmount: number;
   groupContribution: number;
+  totalProfit: number; // 🆕 Toplam kar
 }
 
 export interface GroupStatisticsFilters {

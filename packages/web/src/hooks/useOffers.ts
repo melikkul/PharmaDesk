@@ -86,6 +86,7 @@ export const useMedicationOffers = (medicationId: string | number) => {
     offers: sortedOffers,
     loading: query.isLoading,
     error: query.error?.message ?? null,
+    refetch: query.refetch,
   };
 };
 

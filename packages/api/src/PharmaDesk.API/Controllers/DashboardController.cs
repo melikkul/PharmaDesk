@@ -66,6 +66,7 @@ namespace Backend.Controllers
 
             // Recent offers
             var recentOffers = await _context.Offers
+                .Include(o => o.Medication)
                 .Where(o => o.PharmacyProfileId == pharmacyId)
                 .OrderByDescending(o => o.CreatedAt)
                 .Take(5)
@@ -73,24 +74,43 @@ namespace Backend.Controllers
                 {
                     o.Id,
                     o.MedicationId,
-                    ProductName = o.Medication.Name, // Added ProductName
+                    ProductName = o.Medication.Name,
                     Stock = o.Stock,
                     Price = o.Price,
                     Status = o.Status.ToString(),
+                    ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
                     o.CreatedAt
                 })
                 .ToListAsync();
 
-            // Balance history (last 7 days)
+            // Balance history (last 7 days) - İlaç adı ve sipariş ID'si dahil
             var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
             var balanceHistory = await _context.Transactions
                 .Where(t => t.PharmacyProfileId == pharmacyId && t.Date >= sevenDaysAgo)
-                .OrderBy(t => t.Date)
+                .OrderByDescending(t => t.Date)
+                .Take(10)
                 .Select(t => new
                 {
-                    Date = t.Date.ToString("yyyy-MM-dd"),
+                    Id = t.Id,
+                    Date = t.Date.ToString("dd/MM/yyyy"),
                     t.Amount,
-                    Type = t.Type.ToString()
+                    Type = t.Amount >= 0 ? "positive" : "negative",
+                    Description = t.Description,
+                    // İlgili siparişteki ilaç adını al
+                    ProductName = t.RelatedReferenceId != null 
+                        ? _context.Orders
+                            .Where(o => o.OrderNumber == t.RelatedReferenceId)
+                            .SelectMany(o => o.OrderItems)
+                            .Select(oi => oi.Medication.Name)
+                            .FirstOrDefault()
+                        : null,
+                    // Sipariş ID'sini al
+                    OrderId = t.RelatedReferenceId != null
+                        ? _context.Orders
+                            .Where(o => o.OrderNumber == t.RelatedReferenceId)
+                            .Select(o => (int?)o.Id)
+                            .FirstOrDefault()
+                        : null
                 })
                 .ToListAsync();
 

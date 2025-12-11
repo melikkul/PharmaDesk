@@ -36,6 +36,9 @@ const NewOfferFormContent = () => {
   // 🆕 Suggestion Modal State
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
   const [suggestionData, setSuggestionData] = useState<SuggestionData | null>(null);
+  
+  // 🆕 Error Toast State
+  const [errorToast, setErrorToast] = useState<string | null>(null);
 
   // Real API integration
   const handleSave = async (data: any) => {
@@ -103,7 +106,8 @@ const NewOfferFormContent = () => {
       
     } catch (error: any) {
       console.error('Error creating offer:', error);
-      alert(`Hata: ${error.message || 'Teklif oluşturulamadı'}`);
+      setErrorToast(`⚠️ ${error.message || 'Teklif oluşturulamadı'}`);
+      setTimeout(() => setErrorToast(null), 5000);
     }
   };
 
@@ -118,6 +122,34 @@ const NewOfferFormContent = () => {
 
   return (
     <>
+      {/* 🆕 Error Toast - Sağ üst köşe */}
+      {errorToast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 10000,
+          padding: '14px 20px',
+          backgroundColor: '#fef2f2',
+          border: '2px solid #ef4444',
+          borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: '#b91c1c',
+          animation: 'slideIn 0.3s ease-out',
+          maxWidth: '400px'
+        }}>
+          {errorToast}
+          <style>{`
+            @keyframes slideIn {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
+      
       {/* 🆕 Suggestion Modal */}
       {showSuggestionModal && suggestionData && (
         <div style={{

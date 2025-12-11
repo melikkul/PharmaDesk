@@ -16,16 +16,30 @@
     box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
+.productImageContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 350px; /* Sabit minimum yükseklik */
+}
+
 .productImageContainer img {
     width: 100%;
+    max-width: 400px;
+    height: 300px; /* Sabit yükseklik */
     border-radius: 8px;
     border: 1px solid var(--border-color);
+    object-fit: contain;
+    background-color: #fafafa;
 }
 
 .imageThumbnails {
     display: flex;
     gap: 10px;
     margin-top: 15px;
+    justify-content: center; /* Thumbnail'leri ortala */
+    min-height: 60px; /* Sabit yükseklik */
 }
 
 .thumb {
@@ -35,6 +49,7 @@
     border: 2px solid var(--border-color);
     cursor: pointer;
     overflow: hidden;
+    flex-shrink: 0; /* Küçülmesini engelle */
 }
 .thumb img {
     width: 100%;
@@ -44,6 +59,7 @@
 
 .thumb.activeThumb {
     border-color: var(--active-link-bg);
+    box-shadow: 0 0 8px rgba(26, 188, 156, 0.4);
 }
 
 

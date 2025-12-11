@@ -2,7 +2,9 @@ using Backend.Data;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PharmaDesk.API.Hubs;
 
 namespace Backend.Controllers
 {
@@ -12,10 +14,12 @@ namespace Backend.Controllers
     public class CartsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
 
-        public CartsController(AppDbContext context)
+        public CartsController(AppDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // GET /api/carts - Get current user's cart
@@ -68,8 +72,33 @@ namespace Backend.Controllers
             if (offer.Status != OfferStatus.Active)
                 return BadRequest(new { message = "Offer is not active" });
 
-            if (request.Quantity > offer.Stock)
-                return BadRequest(new { message = "Insufficient stock" });
+            // Calculate available stock based on offer type
+            int availableStock;
+            if (offer.Type == OfferType.JointOrder || offer.Type == OfferType.PurchaseRequest)
+            {
+                // For JointOrder/PurchaseRequest: available = barem total - sold quantity
+                // Parse barem if exists (format: "20+2")
+                if (!string.IsNullOrEmpty(offer.MalFazlasi))
+                {
+                    var baremParts = offer.MalFazlasi.Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                    var baremTotal = baremParts.Sum();
+                    // Calculate barem multiple based on offer stock
+                    var baremMultiple = Math.Max(1, (int)Math.Ceiling((double)offer.Stock / Math.Max(1, baremTotal)));
+                    availableStock = (baremTotal * baremMultiple) - offer.SoldQuantity;
+                }
+                else
+                {
+                    availableStock = offer.Stock - offer.SoldQuantity;
+                }
+            }
+            else
+            {
+                // For StockSale: available = stock - sold quantity
+                availableStock = offer.Stock - offer.SoldQuantity;
+            }
+
+            if (request.Quantity > availableStock)
+                return BadRequest(new { message = $"Yetersiz stok. Mevcut stok: {availableStock}" });
 
             // Get or create cart
             var cart = await _context.Carts
@@ -104,6 +133,19 @@ namespace Backend.Controllers
 
             await _context.SaveChangesAsync();
 
+            // SignalR ile kullanıcıya bildir
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await _hubContext.Clients.Group(userId).SendAsync("ReceiveCartUpdate", new
+                {
+                    type = "itemAdded",
+                    offerId = request.OfferId,
+                    quantity = request.Quantity,
+                    cartItemCount = cart.CartItems.Count
+                });
+            }
+
             return Ok(new { message = "Item added to cart", cartItemCount = cart.CartItems.Count });
         }
 
@@ -126,13 +168,47 @@ namespace Backend.Controllers
             if (request.Quantity <= 0)
                 return BadRequest(new { message = "Quantity must be positive" });
 
-            if (request.Quantity > cartItem.Offer.Stock)
-                return BadRequest(new { message = "Insufficient stock" });
+            // Calculate available stock based on offer type
+            var offer = cartItem.Offer;
+            int availableStock;
+            if (offer.Type == OfferType.JointOrder || offer.Type == OfferType.PurchaseRequest)
+            {
+                if (!string.IsNullOrEmpty(offer.MalFazlasi))
+                {
+                    var baremParts = offer.MalFazlasi.Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                    var baremTotal = baremParts.Sum();
+                    var baremMultiple = Math.Max(1, (int)Math.Ceiling((double)offer.Stock / Math.Max(1, baremTotal)));
+                    availableStock = (baremTotal * baremMultiple) - offer.SoldQuantity;
+                }
+                else
+                {
+                    availableStock = offer.Stock - offer.SoldQuantity;
+                }
+            }
+            else
+            {
+                availableStock = offer.Stock - offer.SoldQuantity;
+            }
+
+            if (request.Quantity > availableStock)
+                return BadRequest(new { message = $"Yetersiz stok. Mevcut stok: {availableStock}" });
 
             cartItem.Quantity = request.Quantity;
             cartItem.Cart.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // SignalR ile kullanıcıya bildir
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await _hubContext.Clients.Group(userId).SendAsync("ReceiveCartUpdate", new
+                {
+                    type = "quantityUpdated",
+                    cartItemId = id,
+                    quantity = request.Quantity
+                });
+            }
 
             return Ok(new { message = "Quantity updated" });
         }
@@ -157,13 +233,63 @@ namespace Backend.Controllers
 
             await _context.SaveChangesAsync();
 
+            // Sepetteki kalan item sayısını hesapla
+            var remainingItems = await _context.CartItems
+                .CountAsync(ci => ci.Cart.PharmacyProfileId == pharmacyId.Value);
+
+            // SignalR ile kullanıcıya bildir
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await _hubContext.Clients.Group(userId).SendAsync("ReceiveCartUpdate", new
+                {
+                    type = "itemRemoved",
+                    cartItemId = id,
+                    cartItemCount = remainingItems
+                });
+            }
+
             return Ok(new { message = "Item removed from cart" });
         }
 
-        private int? GetPharmacyIdFromToken()
+        // DELETE /api/carts/clear - Clear all items from cart
+        [HttpDelete("clear")]
+        public async Task<ActionResult> ClearCart()
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (pharmacyId == null)
+                return Unauthorized(new { message = "Pharmacy not found" });
+
+            var cart = await _context.Carts
+                .Include(c => c.CartItems)
+                .FirstOrDefaultAsync(c => c.PharmacyProfileId == pharmacyId.Value);
+
+            if (cart == null || !cart.CartItems.Any())
+                return Ok(new { message = "Cart is already empty" });
+
+            _context.CartItems.RemoveRange(cart.CartItems);
+            cart.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // SignalR ile kullanıcıya bildir
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userId))
+            {
+                await _hubContext.Clients.Group(userId).SendAsync("ReceiveCartUpdate", new
+                {
+                    type = "cartCleared",
+                    cartItemCount = 0
+                });
+            }
+
+            return Ok(new { message = "Cart cleared successfully" });
+        }
+
+        private long? GetPharmacyIdFromToken()
         {
             var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
-            if (int.TryParse(pharmacyIdClaim, out var pharmacyId))
+            if (long.TryParse(pharmacyIdClaim, out var pharmacyId))
                 return pharmacyId;
             return null;
         }

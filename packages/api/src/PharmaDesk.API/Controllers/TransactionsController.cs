@@ -1,175 +1,99 @@
-using Backend.Data;
-using Backend.Dtos;
-using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Backend.Data;
+using Backend.Models;
 using System.Security.Claims;
 
 namespace Backend.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
+    [ApiController]
     [Authorize]
     public class TransactionsController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IdentityDbContext _identityContext;
+        private readonly ILogger<TransactionsController> _logger;
 
-        public TransactionsController(AppDbContext context)
+        public TransactionsController(AppDbContext context, IdentityDbContext identityContext, ILogger<TransactionsController> logger)
         {
             _context = context;
+            _identityContext = identityContext;
+            _logger = logger;
         }
 
-        // GET /api/transactions?groupId=123 - İşlem geçmişini getir
+        /// <summary>
+        /// Kullanıcının işlem geçmişini getirir
+        /// </summary>
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<TransactionDto>>> GetTransactions(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 50,
-            [FromQuery] string? type = null,
-            [FromQuery] int? groupId = null)
+        public async Task<IActionResult> GetTransactions()
         {
-            var pharmacyId = GetPharmacyIdFromToken();
+            var pharmacyId = await GetPharmacyIdFromToken();
             if (pharmacyId == null)
-                return Unauthorized(new { message = "Pharmacy not found" });
+            {
+                return Unauthorized(new { message = "Eczane profili bulunamadı" });
+            }
 
-            var query = _context.Transactions
+            var transactions = await _context.Transactions
                 .Include(t => t.CounterpartyPharmacy)
-                .Where(t => t.PharmacyProfileId == pharmacyId.Value)
-                .AsQueryable();
-
-            // Filter by type if provided
-            if (!string.IsNullOrEmpty(type) && Enum.TryParse<TransactionType>(type, true, out var transactionType))
-            {
-                query = query.Where(t => t.Type == transactionType);
-            }
-
-            // Filter by group if groupId is provided
-            if (groupId.HasValue)
-            {
-                query = query.Where(t =>
-                    t.CounterpartyPharmacyId == null || // Include non-pharmacy transactions (deposits, etc.)
-                    _context.PharmacyGroups.Any(pg =>
-                        pg.GroupId == groupId.Value &&
-                        pg.IsActive &&
-                        pg.PharmacyProfileId == t.CounterpartyPharmacyId));
-            }
-
-            var transactions = await query
+                .Where(t => t.PharmacyProfileId == pharmacyId)
                 .OrderByDescending(t => t.Date)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            var response = transactions.Select(t => new TransactionDto
-            {
-                Id = FormatTransactionId(t),
-                Date = t.Date.ToString("yyyy-MM-dd"),
-                Type = TranslateTransactionType(t.Type),
-                ProductName = t.Description.Contains("Bakiye") ? null : ExtractProductName(t.Description),
-                Counterparty = FormatCounterparty(t),
-                Amount = t.Amount,
-                Status = TranslateTransactionStatus(t.Status)
-            });
-
-            return Ok(response);
-        }
-
-        // GET /api/transactions/balance - Bakiye ve son işlemler
-        [HttpGet("balance")]
-        public async Task<ActionResult> GetBalance()
-        {
-            var pharmacyId = GetPharmacyIdFromToken();
-            if (pharmacyId == null)
-                return Unauthorized(new { message = "Pharmacy not found" });
-
-            var pharmacy = await _context.PharmacyProfiles.FindAsync(pharmacyId.Value);
-            if (pharmacy == null)
-                return NotFound(new { message = "Pharmacy not found" });
-
-            var recentTransactions = await _context.Transactions
-                .Where(t => t.PharmacyProfileId == pharmacyId.Value)
-                .OrderByDescending(t => t.Date)
-                .Take(10)
-                .Select(t => new
+                .Select(t => new TransactionDto
                 {
-                    id = t.Id,
-                    date = t.Date.ToString("dd/MM/yyyy"),
-                    description = t.Description,
-                    amount = t.Amount,
-                    type = t.Amount >= 0 ? "positive" : "negative"
+                    Id = t.Id,
+                    Date = t.Date.ToString("dd.MM.yyyy HH:mm"),
+                    Type = MapTransactionType(t.Type),
+                    ProductName = t.Description,
+                    Counterparty = t.CounterpartyPharmacy != null ? t.CounterpartyPharmacy.PharmacyName : null,
+                    Amount = t.Amount,
+                    Status = MapTransactionStatus(t.Status)
                 })
                 .ToListAsync();
 
-            return Ok(new
-            {
-                balance = pharmacy.Balance,
-                recentTransactions
-            });
+            return Ok(transactions);
         }
 
-        // POST /api/transactions - Yeni işlem oluştur (Manuel bakiye yükleme vb.)
-        [HttpPost]
-        public async Task<ActionResult<TransactionDto>> CreateTransaction([FromBody] CreateTransactionRequest request)
+        /// <summary>
+        /// Kullanıcının bakiyesini getirir
+        /// </summary>
+        [HttpGet("balance")]
+        public async Task<IActionResult> GetBalance()
         {
-            var pharmacyId = GetPharmacyIdFromToken();
+            var pharmacyId = await GetPharmacyIdFromToken();
             if (pharmacyId == null)
-                return Unauthorized(new { message = "Pharmacy not found" });
-
-            if (!Enum.TryParse<TransactionType>(request.Type, true, out var transactionType))
-                return BadRequest(new { message = "Invalid transaction type" });
-
-            var transaction = new Transaction
             {
-                PharmacyProfileId = pharmacyId.Value,
-                Amount = request.Amount,
-                Type = transactionType,
-                Description = request.Description,
-                Date = DateTime.UtcNow,
-                RelatedReferenceId = request.RelatedReferenceId,
-                Status = TransactionStatus.Completed,
-                CounterpartyPharmacyId = request.CounterpartyPharmacyId
-            };
-
-            _context.Transactions.Add(transaction);
-
-            // Update pharmacy balance
-            var pharmacy = await _context.PharmacyProfiles.FindAsync(pharmacyId.Value);
-            if (pharmacy != null)
-            {
-                pharmacy.Balance += request.Amount;
+                return Unauthorized(new { message = "Eczane profili bulunamadı" });
             }
 
-            await _context.SaveChangesAsync();
+            var pharmacy = await _context.PharmacyProfiles
+                .Where(p => p.Id == pharmacyId)
+                .Select(p => new { p.Balance })
+                .FirstOrDefaultAsync();
 
-            var response = new TransactionDto
+            if (pharmacy == null)
             {
-                Id = FormatTransactionId(transaction),
-                Date = transaction.Date.ToString("yyyy-MM-dd"),
-                Type = TranslateTransactionType(transaction.Type),
-                ProductName = null,
-                Counterparty = transaction.Description,
-                Amount = transaction.Amount,
-                Status = TranslateTransactionStatus(transaction.Status)
-            };
+                return NotFound(new { message = "Eczane bulunamadı" });
+            }
 
-            return CreatedAtAction(nameof(GetTransactions), new { id = transaction.Id }, response);
+            return Ok(new { balance = pharmacy.Balance });
         }
 
-        // Helper methods
-        private string FormatTransactionId(Transaction t)
+        private async Task<long?> GetPharmacyIdFromToken()
         {
-            var prefix = t.Type switch
-            {
-                TransactionType.Sale => "S",
-                TransactionType.Purchase => "A",
-                TransactionType.Deposit => "BKY",
-                TransactionType.Refund => "IADE",
-                _ => "T"
-            };
-            return $"{prefix}-{t.Id:D5}";
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+                return null;
+
+            var pharmacyId = await _identityContext.IdentityUsers
+                .Where(u => u.Id == userId)
+                .Select(u => u.PharmacyId)
+                .FirstOrDefaultAsync();
+
+            return pharmacyId;
         }
 
-        private string TranslateTransactionType(TransactionType type)
+        private static string MapTransactionType(TransactionType type)
         {
             return type switch
             {
@@ -178,49 +102,33 @@ namespace Backend.Controllers
                 TransactionType.Deposit => "Bakiye Yükleme",
                 TransactionType.Withdraw => "Para Çekme",
                 TransactionType.Refund => "İade",
-                _ => type.ToString()
+                TransactionType.OfferCreated => "Teklif Oluşturuldu",
+                TransactionType.OfferUpdated => "Teklif Güncellendi",
+                TransactionType.OfferDeleted => "Teklif Silindi",
+                _ => "Diğer"
             };
         }
 
-        private string TranslateTransactionStatus(TransactionStatus status)
+        private static string MapTransactionStatus(TransactionStatus status)
         {
             return status switch
             {
                 TransactionStatus.Completed => "Tamamlandı",
                 TransactionStatus.Processing => "İşlemde",
-                TransactionStatus.Cancelled => "İptal Edildi",
-                _ => status.ToString()
+                TransactionStatus.Cancelled => "İptal",
+                _ => "Bilinmiyor"
             };
         }
+    }
 
-        private string? ExtractProductName(string description)
-        {
-            // Simple extraction - can be improved
-            if (description.Contains(":"))
-            {
-                var parts = description.Split(':');
-                if (parts.Length > 1)
-                    return parts[1].Trim();
-            }
-            return null;
-        }
-
-        private string? FormatCounterparty(Transaction t)
-        {
-            if (t.CounterpartyPharmacy != null)
-            {
-                var prefix = t.Type == TransactionType.Sale ? "Alıcı" : "Satıcı";
-                return $"{prefix}: {t.CounterpartyPharmacy.PharmacyName}";
-            }
-            return t.Type == TransactionType.Deposit ? "Banka Transferi" : null;
-        }
-
-        private int? GetPharmacyIdFromToken()
-        {
-            var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
-            if (int.TryParse(pharmacyIdClaim, out var pharmacyId))
-                return pharmacyId;
-            return null;
-        }
+    public class TransactionDto
+    {
+        public int Id { get; set; }
+        public string Date { get; set; } = string.Empty;
+        public string Type { get; set; } = string.Empty;
+        public string? ProductName { get; set; }
+        public string? Counterparty { get; set; }
+        public decimal Amount { get; set; }
+        public string Status { get; set; } = string.Empty;
     }
 }

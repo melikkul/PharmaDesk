@@ -13,7 +13,7 @@ interface CartPanelProps {
 }
 
 const CartPanel: React.FC<CartPanelProps> = ({ show, onClose }) => {
-  const { cartItems, clearCart, updateQuantity, removeFromCart } = useCart();
+  const { cartItems, clearCart, updateQuantity, removeFromCart, pendingUpdates } = useCart();
 
   const total = useMemo(() => {
     return cartItems.reduce((acc, item) => acc + item.product.price * item.quantity, 0);
@@ -41,6 +41,7 @@ const CartPanel: React.FC<CartPanelProps> = ({ show, onClose }) => {
                 item={item}
                 onUpdateQuantity={updateQuantity}
                 onRemove={removeFromCart}
+                isPending={pendingUpdates && pendingUpdates.has(`${item.product.id}-${item.sellerName}`)}
               />
             ))}
           </div>

@@ -83,11 +83,14 @@ export default function DashboardLayout({
 }) {
   // 1. ADIM: Tüm state ve fonksiyonları hook'tan al
   const panelValues = useDashboardPanels();
-  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  const { user, logout, isAuthenticated, isLoading, token } = useAuth();
   const router = useRouter();
   
   // Sidebar state for mobile
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
+  
+  // Balance state - fetch from API
+  const [balance, setBalance] = React.useState<number>(0);
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
@@ -102,9 +105,38 @@ export default function DashboardLayout({
     if (!isLoading && !isAuthenticated) {
       console.log('[Dashboard Layout] User not authenticated, performing logout and redirecting');
       logout(); // Clear cookies/storage to prevent middleware loop
-      // router.push('/anasayfa'); // logout() already redirects to '/'
     }
   }, [isAuthenticated, isLoading, logout, router]);
+
+  // Fetch balance from API
+  React.useEffect(() => {
+    const fetchBalance = async () => {
+      if (!token) return;
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+        const response = await fetch(`${API_BASE_URL}/api/transactions/balance`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setBalance(data.balance);
+        }
+      } catch (err) {
+        console.error('[Layout] Bakiye çekilemedi:', err);
+      }
+    };
+    fetchBalance();
+  }, [token]);
+
+  // Merge real user data with dummy data for missing fields (like balance)
+  const headerUserData = {
+    ...pharmacyData,
+    pharmacyName: user?.pharmacyName || pharmacyData.pharmacyName,
+    pharmacistInCharge: user?.fullName || pharmacyData.pharmacistInCharge,
+    username: user?.fullName || pharmacyData.username,
+    publicId: user?.publicId,
+    balance: balance, // API'den gelen bakiye
+  };
 
   // Show loading or nothing while checking authentication
   if (isLoading || !isAuthenticated) {
@@ -114,15 +146,6 @@ export default function DashboardLayout({
       </div>
     );
   }
-
-  // Merge real user data with dummy data for missing fields (like balance)
-  const headerUserData = {
-    ...pharmacyData,
-    pharmacyName: user?.pharmacyName || pharmacyData.pharmacyName,
-    pharmacistInCharge: user?.fullName || pharmacyData.pharmacistInCharge,
-    username: user?.fullName || pharmacyData.username,
-    publicId: user?.publicId, // YENİ: PublicId'yi geçir
-  };
 
   return (
         <DashboardContext.Provider value={panelValues}>

@@ -46,6 +46,9 @@ namespace Backend.Data
         // --- MESSAGING ---
         public DbSet<Message> Messages { get; set; }
 
+        // --- STOCK LOCKING ---
+        public DbSet<StockLock> StockLocks { get; set; }
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -133,6 +136,15 @@ namespace Backend.Data
             // CarrierRegistrationToken indexing for token validation queries
             modelBuilder.Entity<CarrierRegistrationToken>()
                 .HasIndex(crt => new { crt.IsUsed, crt.ExpiresAt });
+
+            // --- STOCK LOCKING INDEXES ---
+            // StockLock indexing for checkout page queries
+            modelBuilder.Entity<StockLock>()
+                .HasIndex(sl => new { sl.OfferId, sl.ExpiresAt });
+            
+            // StockLock indexing for user-specific queries
+            modelBuilder.Entity<StockLock>()
+                .HasIndex(sl => sl.PharmacyProfileId);
 
             // Admin seed data removed - no automatic admin accounts
             

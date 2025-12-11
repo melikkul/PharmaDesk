@@ -66,6 +66,14 @@
     border-radius: 8px;
 }
 
+.productImage {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 8px;
+    background-color: var(--border-color);
+}
+
 .textRight { text-align: right; }
 .fontBold { font-weight: 700; }
 .textGreen { color: var(--positive-color); }

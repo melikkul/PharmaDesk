@@ -9,6 +9,10 @@ export interface User {
   pharmacyId: number;
   role: UserRole;
   isFirstLogin: boolean;
+  hasShippingService?: boolean; // Admin tarafından tanımlanan kargo hizmeti
+  city?: string;       // 🆕 Şehir
+  district?: string;   // 🆕 İlçe  
+  address?: string;    // 🆕 Açık adres
 }
 
 export interface LoginResponse {
@@ -123,10 +127,19 @@ export interface Offer {
   description?: string;
   manufacturer?: string;
   imageUrl?: string;
+  imageCount?: number; // Number of images for multi-image gallery
   campaignEndDate?: string;
   campaignBonusMultiplier?: number;
   minimumOrderQuantity?: number;
   biddingDeadline?: string;
+  buyers?: BuyerInfo[]; // 🆕 Sipariş veren alıcılar
+}
+
+export interface BuyerInfo {
+  pharmacyId: number;
+  pharmacyName: string;
+  quantity: number;
+  orderDate?: string;
 }
 
 // Orders
@@ -136,6 +149,7 @@ export interface OrderItem {
   quantity: number;
   unitPrice: number;
   bonusQuantity: number;
+  profitAmount?: number; // 🆕 Kar miktarı
   medication: {
     id: number;
     name: string;

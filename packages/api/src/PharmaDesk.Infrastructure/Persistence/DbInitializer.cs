@@ -24,6 +24,126 @@ namespace PharmaDesk.Infrastructure.Persistence
                 var pharmacyDb = services.GetRequiredService<AppDbContext>();
                 await pharmacyDb.Database.MigrateAsync();
                 logger.LogInformation("AppDbContext migrations applied successfully.");
+                
+                // Ensure HasShippingService column exists (added after initial migrations)
+                try
+                {
+                    await pharmacyDb.Database.ExecuteSqlRawAsync(@"
+                        DO $$ 
+                        BEGIN 
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name = 'PharmacyProfiles' 
+                                AND column_name = 'HasShippingService'
+                            ) THEN 
+                                ALTER TABLE ""PharmacyProfiles"" 
+                                ADD COLUMN ""HasShippingService"" BOOLEAN NOT NULL DEFAULT FALSE;
+                                RAISE NOTICE 'Added HasShippingService column to PharmacyProfiles';
+                            END IF;
+                        END $$;
+                    ");
+                    logger.LogInformation("HasShippingService column ensured in PharmacyProfiles.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not ensure HasShippingService column - may already exist");
+                }
+
+                // Ensure ImagePath column exists in Medications table
+                try
+                {
+                    await pharmacyDb.Database.ExecuteSqlRawAsync(@"
+                        DO $$ 
+                        BEGIN 
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name = 'Medications' 
+                                AND column_name = 'ImagePath'
+                            ) THEN 
+                                ALTER TABLE ""Medications"" 
+                                ADD COLUMN ""ImagePath"" VARCHAR(500) NULL;
+                                RAISE NOTICE 'Added ImagePath column to Medications';
+                            END IF;
+                        END $$;
+                    ");
+                    logger.LogInformation("ImagePath column ensured in Medications.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not ensure ImagePath column - may already exist");
+                }
+
+                // Ensure ImageCount column exists in Medications table
+                try
+                {
+                    await pharmacyDb.Database.ExecuteSqlRawAsync(@"
+                        DO $$ 
+                        BEGIN 
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name = 'Medications' 
+                                AND column_name = 'ImageCount'
+                            ) THEN 
+                                ALTER TABLE ""Medications"" 
+                                ADD COLUMN ""ImageCount"" INTEGER NOT NULL DEFAULT 1;
+                                RAISE NOTICE 'Added ImageCount column to Medications';
+                            END IF;
+                        END $$;
+                    ");
+                    logger.LogInformation("ImageCount column ensured in Medications.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not ensure ImageCount column - may already exist");
+                }
+
+                // Ensure AllImagePaths column exists in Medications table (for multi-image support)
+                try
+                {
+                    await pharmacyDb.Database.ExecuteSqlRawAsync(@"
+                        DO $$ 
+                        BEGIN 
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name = 'Medications' 
+                                AND column_name = 'AllImagePaths'
+                            ) THEN 
+                                ALTER TABLE ""Medications"" 
+                                ADD COLUMN ""AllImagePaths"" VARCHAR(2000) NULL;
+                                RAISE NOTICE 'Added AllImagePaths column to Medications';
+                            END IF;
+                        END $$;
+                    ");
+                    logger.LogInformation("AllImagePaths column ensured in Medications.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not ensure AllImagePaths column - may already exist");
+                }
+
+                // Ensure StockLocks table exists (for checkout stock reservation)
+                try
+                {
+                    await pharmacyDb.Database.ExecuteSqlRawAsync(@"
+                        CREATE TABLE IF NOT EXISTS ""StockLocks"" (
+                            ""Id"" SERIAL PRIMARY KEY,
+                            ""OfferId"" INTEGER NOT NULL,
+                            ""PharmacyProfileId"" BIGINT NOT NULL,
+                            ""LockedQuantity"" INTEGER NOT NULL,
+                            ""LockedAt"" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                            ""ExpiresAt"" TIMESTAMP WITH TIME ZONE NOT NULL,
+                            CONSTRAINT ""FK_StockLocks_Offers"" FOREIGN KEY (""OfferId"") REFERENCES ""Offers""(""Id"") ON DELETE CASCADE,
+                            CONSTRAINT ""FK_StockLocks_PharmacyProfiles"" FOREIGN KEY (""PharmacyProfileId"") REFERENCES ""PharmacyProfiles""(""Id"") ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS ""IX_StockLocks_OfferId"" ON ""StockLocks""(""OfferId"");
+                        CREATE INDEX IF NOT EXISTS ""IX_StockLocks_PharmacyProfileId"" ON ""StockLocks""(""PharmacyProfileId"");
+                    ");
+                    logger.LogInformation("StockLocks table ensured.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not ensure StockLocks table - may already exist");
+                }
 
                 var identityDb = services.GetRequiredService<IdentityDbContext>();
                 // Fix: EnsureCreated skips if DB exists. We must manually ensure IdentityUsers table exists.
@@ -152,8 +272,8 @@ namespace PharmaDesk.Infrastructure.Persistence
             var medicationCount = await context.Medications.CountAsync();
             if (medicationCount == 0)
             {
-                // Use the new CSV file from scrapper
-                var csvPath = "/app/ilac_arsivi.csv";
+                // Use the new CSV file with image paths
+                var csvPath = "/app/ilac_arsivi_with_images.csv";
                 var seededCount = await MedicationSeederService.SeedFromCsvAsync(context, csvPath, logger);
                 logger.LogInformation($"Seeded {seededCount} medications from CSV");
             }

@@ -41,7 +41,7 @@ namespace Backend.Models
         
         // --- YENİ ALANLAR: Frontend Entegrasyonu için ---
         [Column(TypeName = "decimal(18,2)")]
-        public decimal Balance { get; set; } = 0; // Cüzdan bakiyesi
+        public decimal Balance { get; set; } = 15000; // Cüzdan bakiyesi - varsayılan 15000 ₺
         
         public string? CoverImageUrl { get; set; } // Kapak fotoğrafı
         
@@ -49,6 +49,12 @@ namespace Backend.Models
         public string? Username { get; set; } // URL-friendly benzersiz kimlik (örn: yildiz-eczanesi)
         
         public DateTime RegistrationDate { get; set; } = DateTime.UtcNow; // Kayıt tarihi
+        
+        /// <summary>
+        /// Admin tarafından tanımlanan kargo hizmeti durumu.
+        /// True ise eczane PharmaDesk kargo hizmetinden yararlanabilir.
+        /// </summary>
+        public bool HasShippingService { get; set; } = false; // Default: kargo hizmeti yok
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

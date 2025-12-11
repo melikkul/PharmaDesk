@@ -40,6 +40,25 @@ namespace Backend.Models
         [StringLength(2000)]
         public string? Alternatives { get; set; }
 
+        /// <summary>
+        /// İlaç görseli yolu (örn: "images/24/1.png")
+        /// JSON array'den ilk görsel alınır, görsel yoksa null
+        /// </summary>
+        [StringLength(500)]
+        public string? ImagePath { get; set; }
+
+        /// <summary>
+        /// Tüm ilaç görsel yolları (JSON array formatında)
+        /// Örnek: ["images/24/1.png", "images/24/2.jpg"]
+        /// </summary>
+        [StringLength(2000)]
+        public string? AllImagePaths { get; set; }
+
+        /// <summary>
+        /// İlaç görsel sayısı (CSV'deki JSON array'den hesaplanır)
+        /// </summary>
+        public int ImageCount { get; set; } = 1;
+
         public ICollection<InventoryItem> InventoryItems { get; set; } = new List<InventoryItem>();
     }
 }

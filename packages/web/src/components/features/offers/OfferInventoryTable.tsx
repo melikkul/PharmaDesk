@@ -494,17 +494,29 @@ const OffersTable: React.FC<OffersTableProps> = ({
                                     </div>
                                 </td>
                                 <td className="p-4">
-                                    <div className="flex flex-col">
-                                        {/* 🆕 İlaç ismine tıklayınca ilaç detay sayfasına yönlendir */}
-                                        <Link 
-                                            href={`/ilaclar/${(item as any).medicationId || item.id}?type=${((item as any).type || 'stocksale').toLowerCase()}&offerId=${item.id}`}
-                                            className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer"
-                                        >
-                                            {item.productName}
-                                        </Link>
-                                        <span className="text-xs text-gray-500 font-mono mt-0.5">
-                                            {item.barcode || '-'}
-                                        </span>
+                                    <div className="flex items-center gap-3">
+                                        {/* Ürün Görseli */}
+                                        <img 
+                                            src={
+                                                (item as any).imageUrl?.startsWith('/images/') 
+                                                    ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${(item as any).imageUrl}`
+                                                    : ((item as any).imageUrl || '/logoYesil.png')
+                                            }
+                                            alt={item.productName}
+                                            className="w-12 h-12 rounded-lg object-cover border border-gray-200 bg-gray-50"
+                                        />
+                                        <div className="flex flex-col">
+                                            {/* 🆕 İlaç ismine tıklayınca ilaç detay sayfasına yönlendir */}
+                                            <Link 
+                                                href={`/ilaclar/${(item as any).medicationId || item.id}?type=${((item as any).type || 'stocksale').toLowerCase()}&offerId=${item.id}`}
+                                                className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer"
+                                            >
+                                                {item.productName}
+                                            </Link>
+                                            <span className="text-xs text-gray-500 font-mono mt-0.5">
+                                                {item.barcode || '-'}
+                                            </span>
+                                        </div>
                                     </div>
                                 </td>
                                 <td className="p-4">

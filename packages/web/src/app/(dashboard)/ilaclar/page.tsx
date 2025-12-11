@@ -212,7 +212,11 @@ export default function IlaclarPage() {
                 ) : (
                     // Her teklif için bireysel kart - offer ID ile benzersiz URL
                     filteredOffers.map((offer) => {
-                        const barem = (offer as any).malFazlasi || '1+0';
+                        // For Joint Order / PurchaseRequest, stock field contains the barem (e.g. "15+5")
+                        // For Stock Sale, malFazlasi might have it, otherwise default to '1+0'
+                        const offerTypeLC = offer.type?.toLowerCase();
+                        const isJointType = offerTypeLC === 'jointorder' || offerTypeLC === 'purchaserequest';
+                        const barem = isJointType ? offer.stock : ((offer as any).malFazlasi || '1+0');
                         const baremParam = encodeURIComponent(barem);
                         const stockParts = offer.stock.split('+').map(s => parseInt(s.trim()) || 0);
                         const currentStock = stockParts[0];
@@ -226,7 +230,8 @@ export default function IlaclarPage() {
                                     id: offer.medicationId,
                                     name: offer.productName || 'Bilinmiyor',
                                     manufacturer: offer.manufacturer || 'Bilinmiyor',
-                                    imageUrl: offer.imageUrl || '/placeholder-med.png',
+                                    imageUrl: offer.imageUrl || '/logoYesil.png',
+                                    imageCount: offer.imageCount || 1,
                                     price: offer.price,
                                     expirationDate: offer.expirationDate || '',
                                     initialStock: currentStock,
@@ -244,6 +249,7 @@ export default function IlaclarPage() {
                                 linkHref={`/ilaclar/${offer.medicationId}?barem=${baremParam}&type=${offer.type?.toLowerCase() || 'stocksale'}&offerId=${offer.id}`}
                                 extraSellerCount={0}
                                 offerType={offer.type}
+                                buyers={offer.buyers}
                             />
                         );
                     })

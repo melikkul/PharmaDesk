@@ -5,12 +5,18 @@ import DashboardCard from '../DashboardCard';
 import type { Offer } from '../../lib/dashboardData';
 import tableStyles from './Table.module.css';
 
+interface OfferWithImage extends Offer {
+  imageUrl?: string;
+}
+
 interface OffersCardProps {
-  data: Offer[];
+  data: OfferWithImage[];
   limit: number;
 }
 
 const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
+  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+  
   return (
     <DashboardCard title="TEKLİFLERİM">
       <table className={tableStyles.table}>
@@ -25,7 +31,16 @@ const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
         <tbody>
           {data.slice(0, limit).map(item => (
             <tr key={item.id}>
-              <td><div className={tableStyles.productImagePlaceholder}></div></td>
+              <td>
+                <img 
+                  src={item.imageUrl?.startsWith('/images/') 
+                    ? `${apiBaseUrl}${item.imageUrl}` 
+                    : (item.imageUrl || '/logoYesil.png')}
+                  alt={item.productName}
+                  className={tableStyles.productImage}
+                  onError={(e) => { e.currentTarget.src = '/logoYesil.png'; }}
+                />
+              </td>
               <td>{item.productName}</td>
               <td>{item.stock}</td>
               <td>{item.price.toFixed(2)} ₺</td>

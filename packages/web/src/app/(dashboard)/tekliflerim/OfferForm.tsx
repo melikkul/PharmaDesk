@@ -133,6 +133,8 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   const [baremError, setBaremError] = useState(false); // Only show error after submit attempt
   const [isPharmacySpecific, setIsPharmacySpecific] = useState(false);
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>('');
+  const [baremMultiple, setBaremMultiple] = useState<number>(1); // 🆕 Barem katı
+  const [warningToast, setWarningToast] = useState<string | null>(null); // 🆕 Sağ üst köşe uyarısı
   
   // 🆕 Existing offer warning for Joint Order
   const { offers: allOffers } = useOffers();
@@ -144,40 +146,28 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
     link: string;
   } | null>(null);
   
-  // 🆕 Joint Order stock limit calculation (stok = barem limit'e eşit veya küçük olmalı)
+  // 🆕 Joint Order stock limit calculation (stok = barem katı x barem limit'e eşit veya küçük olmalı)
   const jointOrderMaxStock = useMemo(() => {
     if (offerType !== 'jointOrder' || !selectedTier) return null;
     // Parse MF value from tier (e.g., "2" or in some cases "20+2" format)
     const mfValue = selectedTier.mf?.includes('+') 
       ? parseInt(selectedTier.mf.split('+')[1]) || 0 
       : parseInt(selectedTier.mf) || 0;
-    return selectedTier.minQuantity + mfValue;
-  }, [offerType, selectedTier]);
+    const singleBaremTotal = selectedTier.minQuantity + mfValue;
+    // 🆕 Barem katı ile çarp
+    return singleBaremTotal * baremMultiple;
+  }, [offerType, selectedTier, baremMultiple]);
   
-  // 🆕 Purchase Request stock limit (stok = barem limitinden KÜÇÜK olmalı)
+  // 🆕 Purchase Request stock limit (stok = barem katı x barem limitinden KÜÇÜK olmalı)
   const purchaseRequestMaxStock = useMemo(() => {
     if (offerType !== 'purchaseRequest' || !selectedTier) return null;
     const mfValue = selectedTier.mf?.includes('+') 
       ? parseInt(selectedTier.mf.split('+')[1]) || 0 
       : parseInt(selectedTier.mf) || 0;
-    return selectedTier.minQuantity + mfValue - 1; // -1 çünkü toplam EŞIT olamaz, KÜÇÜK olmalı
-  }, [offerType, selectedTier]);
-  
-  const isStockOverLimit = useMemo(() => {
-    const stockNum = parseInt(watchedStock || '0', 10);
-    
-    // Joint Order: stok <= barem limit
-    if (jointOrderMaxStock !== null) {
-      return stockNum > jointOrderMaxStock;
-    }
-    
-    // Purchase Request: stok < barem limit (yani stok'un baremin toplamından az olması gerekiyor)
-    if (purchaseRequestMaxStock !== null) {
-      return stockNum > purchaseRequestMaxStock;
-    }
-    
-    return false;
-  }, [jointOrderMaxStock, purchaseRequestMaxStock, watchedStock]);
+    const singleBaremTotal = selectedTier.minQuantity + mfValue;
+    // 🆕 Barem katı ile çarp, -1 çünkü toplam EŞIT olamaz, KÜÇÜK olmalı
+    return (singleBaremTotal * baremMultiple) - 1;
+  }, [offerType, selectedTier, baremMultiple]);
   
   // Autocomplete State
   const [productSearchTerm, setProductSearchTerm] = useState(
@@ -195,6 +185,91 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   const [isFetchingBarem, setIsFetchingBarem] = useState(false);
   const [selectedMedicationId, setSelectedMedicationId] = useState<number | null>(null);
   const [baremApiError, setBaremApiError] = useState<string | null>(null);
+
+  // 🆕 Mevcut tekliflere göre kalan stok hesabı
+  const remainingStockForBarem = useMemo(() => {
+    if (!selectedTier || !selectedMedicationId || (offerType !== 'jointOrder' && offerType !== 'purchaseRequest')) {
+      return null;
+    }
+    
+    // Barem toplamını hesapla (1 kat için)
+    const mfValue = selectedTier.mf?.includes('+') 
+      ? parseInt(selectedTier.mf.split('+')[1]) || 0 
+      : parseInt(selectedTier.mf) || 0;
+    const singleBaremTotal = selectedTier.minQuantity + mfValue;
+    
+    // 🆕 Barem katına göre toplam stok (örn: 2 kat x 100 = 200)
+    const totalBaremStock = singleBaremTotal * baremMultiple;
+    
+    // Barem formatı: "minQuantity+mf" (örn: "20+2")
+    const baremFormat = `${selectedTier.minQuantity}+${selectedTier.mf?.includes('+') ? selectedTier.mf.split('+')[1] : selectedTier.mf}`;
+    
+    // Bu ilaç ve barem için mevcut teklifleri bul
+    const existingOffersForBarem = allOffers.filter((offer: any) => {
+      // Aynı ilaç ID'si mi?
+      if (offer.medicationId !== selectedMedicationId) return false;
+      
+      // Aynı tür mü? (jointOrder veya purchaseRequest)
+      if (offer.offerType?.toLowerCase() !== 'jointorder' && 
+          offer.offerType?.toLowerCase() !== 'purchaserequest') return false;
+      
+      // Aynı barem mi? malFazlasi alanını kontrol et
+      const offerBarem = offer.malFazlasi || offer.stock;
+      if (!offerBarem) return false;
+      
+      // Barem formatlarını karşılaştır (örn: "20+2" vs "20+2")
+      const offerBaremNormalized = offerBarem.toString().replace(/\s/g, '');
+      const selectedBaremNormalized = baremFormat.replace(/\s/g, '');
+      
+      return offerBaremNormalized === selectedBaremNormalized;
+    });
+    
+    // Mevcut tekliflerdeki toplam talep edilen miktarı hesapla
+    const totalRequested = existingOffersForBarem.reduce((sum: number, offer: any) => {
+      // stock alanından miktarı al
+      let stockAmount = 0;
+      if (typeof offer.stock === 'number') {
+        stockAmount = offer.stock;
+      } else if (typeof offer.stock === 'string') {
+        const parts = offer.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
+        stockAmount = parts[0] || 0;
+      }
+      return sum + stockAmount;
+    }, 0);
+    
+    // 🆕 Mevcut tekliflerde ortak sipariş var mı?
+    const hasJointOrder = existingOffersForBarem.some((offer: any) => 
+      offer.offerType?.toLowerCase() === 'jointorder' || offer.type?.toLowerCase() === 'jointorder'
+    );
+    
+    // 🆕 Kalan stok = barem katı x barem toplamı - toplam talep edilen
+    const remaining = totalBaremStock - totalRequested;
+    
+    return {
+      baremTotal: totalBaremStock, // 🆕 Artık barem katına göre
+      singleBaremTotal, // 1 baremin toplamı
+      totalRequested,
+      remaining: Math.max(0, remaining),
+      existingOfferCount: existingOffersForBarem.length,
+      hasJointOrder // 🆕 Mevcut tekliflerde ortak sipariş var mı?
+    };
+  }, [selectedTier, selectedMedicationId, offerType, allOffers, baremMultiple]); // 🆕 baremMultiple eklendi
+  
+  const isStockOverLimit = useMemo(() => {
+    const stockNum = parseInt(watchedStock || '0', 10);
+    
+    // Joint Order: stok <= barem katı x barem limit
+    if (jointOrderMaxStock !== null) {
+      return stockNum > jointOrderMaxStock;
+    }
+    
+    // Purchase Request: stok < barem limit (yani stok'un baremin toplamından az olması gerekiyor)
+    if (purchaseRequestMaxStock !== null) {
+      return stockNum > purchaseRequestMaxStock;
+    }
+    
+    return false;
+  }, [jointOrderMaxStock, purchaseRequestMaxStock, watchedStock]);
 
   // Convert API barem data to tier format for display
   const availableTiers = useMemo(() => {
@@ -418,6 +493,10 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
           setValue('stock', '');
           setValue('bonus', '');
           
+          // 🆕 Autocomplete'i HEMEN kapat (barem fetch'i beklemeden)
+          setIsAutocompleteOpen(false);
+          setSuggestions([]);
+          
           // Update state after form values are set
           setProductSearchTerm(suggestion.name);
           setSelectedInventoryItem(null);
@@ -457,10 +536,9 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
       } else {
           setValue('productName', suggestion.name, { shouldValidate: true });
           setProductSearchTerm(suggestion.name);
+          setIsAutocompleteOpen(false);
+          setSuggestions([]);
       }
-      
-      setIsAutocompleteOpen(false); // 🆕 Seçim sonrası kapat
-      setSuggestions([]);
   };
 
   const onSubmit = (data: any) => {
@@ -525,21 +603,67 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
       }
       
       if (baremTotal > 0) {
-        if (offerType === 'jointOrder' && stockValue > baremTotal) {
-          alert(`Ortak Sipariş için stok miktarı (${stockValue} adet), barem limitini (${baremTotal} adet) aşamaz.`);
-          return;
+        // 🆕 Barem katına göre stok aralığı kontrolü
+        const minStockForMultiple = baremMultiple === 1 ? 1 : (baremMultiple - 1) * baremTotal + 1;
+        const maxStockForMultiple = baremMultiple * baremTotal;
+        
+        if (offerType === 'jointOrder') {
+          if (stockValue < minStockForMultiple || stockValue > maxStockForMultiple) {
+            setWarningToast(`⚠️ ${baremMultiple} barem katı için stok ${minStockForMultiple}-${maxStockForMultiple} adet arasında olmalı!`);
+            setTimeout(() => setWarningToast(null), 4000);
+            return;
+          }
         }
         
-        if (offerType === 'purchaseRequest' && stockValue >= baremTotal) {
-          alert(`Alım Talebi için stok miktarı (${stockValue} adet), barem toplamından (${baremTotal} adet) küçük olmalıdır. En fazla ${baremTotal - 1} adet girebilirsiniz.`);
-          return;
+        // 🆕 Alım Talebi için barem katına göre stok aralığı kontrolü
+        if (offerType === 'purchaseRequest') {
+          const maxStockForPurchase = (baremTotal * baremMultiple) - 1;
+          // Minimum: önceki katın üstünde olmalı (2 kat seçilince, 1 katın toplamından fazla olmalı)
+          if (stockValue < minStockForMultiple) {
+            setWarningToast(`⚠️ ${baremMultiple} barem katı için minimum ${minStockForMultiple} adet girmelisiniz!`);
+            setTimeout(() => setWarningToast(null), 4000);
+            return;
+          }
+          if (stockValue > maxStockForPurchase) {
+            setWarningToast(`⚠️ ${baremMultiple} kat için maksimum ${maxStockForPurchase} adet girebilirsiniz!`);
+            setTimeout(() => setWarningToast(null), 4000);
+            return;
+          }
+        }
+        
+        // 🆕 Mevcut tekliflere göre kalan stok kontrolü ve uyarı
+        if (remainingStockForBarem && remainingStockForBarem.existingOfferCount > 0) {
+          // Mevcut tekliflerin türünü kontrol et
+          const existingHasJointOrder = remainingStockForBarem.hasJointOrder; // Backend'den gelecek
+          
+          // Her iki taraf da alım talebi ise uyarı gösterme
+          // Yani: kullanıcı alım talebi açıyor VE mevcut teklif de sadece alım taleplerinden oluşuyorsa → devam et
+          const skipWarning = offerType === 'purchaseRequest' && !existingHasJointOrder;
+          
+          if (!skipWarning) {
+            // Girilen miktar kalan stoktan az veya eşitse uyarı göster
+            if (stockValue <= remainingStockForBarem.remaining) {
+              const proceed = window.confirm(
+                `⚠️ Bu ilaç ve barem için ${remainingStockForBarem.existingOfferCount} mevcut teklif bulundu.\n\n` +
+                `Toplam talep: ${remainingStockForBarem.totalRequested} adet\n` +
+                `Barem toplamı: ${remainingStockForBarem.baremTotal} adet\n` +
+                `Kalan: ${remainingStockForBarem.remaining} adet\n` +
+                `Sizin talebiniz: ${stockValue} adet\n\n` +
+                `Mevcut teklife katılmak yerine yeni teklif oluşturmak istediğinizden emin misiniz?`
+              );
+              if (!proceed) {
+                return;
+              }
+            }
+          }
         }
       }
     }
 
     // Fiyat limit kontrolü - seçilen baremin birim fiyatından fazla olmamalı
     if (selectedTier && priceValue > selectedTier.unitPrice) {
-      alert(`Birim fiyat, seçilen baremin maksimum fiyatından (${selectedTier.unitPrice.toFixed(2)} TL) fazla olamaz.`);
+      setWarningToast(`⚠️ Birim fiyat max ${selectedTier.unitPrice.toFixed(2)} TL olabilir!`);
+      setTimeout(() => setWarningToast(null), 4000);
       return;
     }
 
@@ -646,26 +770,66 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   };
 
   const renderTabs = () => (
-    <div className={formStyles.tabContainer}>
-      <button type="button" 
-        className={`${formStyles.tabButton} ${offerType === 'stockSale' ? formStyles.active : ''}`}
-        onClick={() => setOfferType('stockSale')}
-        disabled={isEditMode} >
-        Stok Satışı
-      </button>
-      <button type="button" 
-        className={`${formStyles.tabButton} ${offerType === 'jointOrder' ? formStyles.active : ''}`}
-        onClick={() => setOfferType('jointOrder')}
-        disabled={isEditMode} >
-        Ortak Sipariş
-      </button>
-      <button type="button" 
-        className={`${formStyles.tabButton} ${offerType === 'purchaseRequest' ? formStyles.active : ''}`}
-        onClick={() => setOfferType('purchaseRequest')}
-        disabled={isEditMode} >
-        Alım Talebi
-      </button>
-    </div>
+    <>
+      <div className={formStyles.tabContainer}>
+        <button type="button" 
+          className={`${formStyles.tabButton} ${offerType === 'stockSale' ? formStyles.active : ''}`}
+          onClick={() => setOfferType('stockSale')}
+          disabled={isEditMode} >
+          Stok Satışı
+        </button>
+        <button type="button" 
+          className={`${formStyles.tabButton} ${offerType === 'jointOrder' ? formStyles.active : ''}`}
+          onClick={() => setOfferType('jointOrder')}
+          disabled={isEditMode} >
+          Ortak Sipariş
+        </button>
+        <button type="button" 
+          className={`${formStyles.tabButton} ${offerType === 'purchaseRequest' ? formStyles.active : ''}`}
+          onClick={() => setOfferType('purchaseRequest')}
+          disabled={isEditMode} >
+          Alım Talebi
+        </button>
+      </div>
+      
+      {/* 🆕 Ortak Sipariş Açıklaması */}
+      {offerType === 'jointOrder' && (
+        <div style={{
+          backgroundColor: '#fff7ed',
+          border: '1px solid #fed7aa',
+          borderRadius: '12px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          fontSize: '13px',
+          color: '#c2410c',
+          lineHeight: '1.6'
+        }}>
+          <strong>🏪 Ortak Sipariş Nedir?</strong><br/>
+          Depodan ilaç almak istiyorsunuz ve baremin tamamına ihtiyacınız yok. 
+          İhtiyacınız olan miktarı girerek teklif oluşturun, diğer eczacılar kalan 
+          kısmı alarak baremin tamamlanmasına katkı sağlayabilir.
+        </div>
+      )}
+      
+      {/* 🆕 Alım Talebi Açıklaması */}
+      {offerType === 'purchaseRequest' && (
+        <div style={{
+          backgroundColor: '#faf5ff',
+          border: '1px solid #e9d5ff',
+          borderRadius: '12px',
+          padding: '12px 16px',
+          marginBottom: '16px',
+          fontSize: '13px',
+          color: '#7e22ce',
+          lineHeight: '1.6'
+        }}>
+          <strong>📋 Alım Talebi Nedir?</strong><br/>
+          Depodan ilaç almak istiyorsunuz fakat kendiniz depodan geçmek istemiyorsunuz. 
+          Depodan geçmek isteyen başka bir eczacının siparişinden bu ilacı talep 
+          edebilirsiniz. İstediğiniz miktarı girin ve bekleyin.
+        </div>
+      )}
+    </>
   );
 
   const renderCalculationBadge = () => {
@@ -971,17 +1135,107 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
             )}
           </div>
 
+          {/* 🆕 Barem Katı - Sadece barem seçildiğinde ve jointOrder/purchaseRequest için */}
+          {selectedTier && (offerType === 'jointOrder' || offerType === 'purchaseRequest') && (
+            <div className={formStyles.formGroup}>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Barem Katı *
+              </label>
+              {(() => {
+                const mfValue = selectedTier.mf?.includes('+') 
+                  ? parseInt(selectedTier.mf.split('+')[1]) || 0 
+                  : parseInt(selectedTier.mf) || 0;
+                const baremTotal = selectedTier.minQuantity + mfValue;
+                const minStock = baremMultiple === 1 ? 1 : (baremMultiple - 1) * baremTotal + 1;
+                const maxStock = baremMultiple * baremTotal;
+                
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <input
+                        type="number"
+                        min="1"
+                        max="99"
+                        value={baremMultiple}
+                        onChange={(e) => setBaremMultiple(parseInt(e.target.value) || 1)}
+                        style={{
+                          width: '80px',
+                          height: '44px',
+                          padding: '0 12px',
+                          borderRadius: '8px',
+                          border: '2px solid #f97316',
+                          backgroundColor: '#fff7ed',
+                          color: '#c2410c',
+                          fontWeight: '700',
+                          fontSize: '16px',
+                          textAlign: 'center'
+                        }}
+                      />
+                      <span style={{ 
+                        fontSize: '13px', 
+                        color: '#64748b',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        × <strong style={{ color: '#334155' }}>{baremTotal} adet</strong> (barem)
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+
           {/* Stok Miktarı */}
           <div className={formStyles.formGroup}>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Stok Miktarı *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {(offerType === 'jointOrder' || offerType === 'purchaseRequest') && selectedTier 
+                ? 'Bu Baremden Kaç Adet Alacaksınız? *' 
+                : 'Stok Miktarı *'}
+            </label>
+            
+            {/* 🆕 Ortak Sipariş için mevcut tekliflere göre kalan stok uyarısı */}
+            {selectedTier && offerType === 'jointOrder' && remainingStockForBarem && remainingStockForBarem.existingOfferCount > 0 && (
+              <div style={{ 
+                fontSize: '12px', 
+                marginBottom: '8px',
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '8px',
+                backgroundColor: remainingStockForBarem.remaining > 0 ? '#fff7ed' : '#fef2f2',
+                padding: '10px 12px',
+                borderRadius: '8px',
+                border: remainingStockForBarem.remaining > 0 ? '2px solid #f97316' : '2px solid #ef4444',
+                color: remainingStockForBarem.remaining > 0 ? '#c2410c' : '#b91c1c'
+              }}>
+                <span style={{ fontSize: '16px' }}>{remainingStockForBarem.remaining > 0 ? '⚠️' : '🚫'}</span>
+                <div>
+                  <div style={{ fontWeight: '600', marginBottom: '2px' }}>
+                    Bu barem için {remainingStockForBarem.existingOfferCount} mevcut teklif var
+                  </div>
+                  <div>
+                    Toplam talep: <strong>{remainingStockForBarem.totalRequested}</strong> adet | 
+                    Barem: <strong>{remainingStockForBarem.baremTotal}</strong> adet | 
+                    {remainingStockForBarem.remaining > 0 ? (
+                      <span> Kalan: <strong>{remainingStockForBarem.remaining}</strong> adet</span>
+                    ) : (
+                      <span style={{ fontWeight: '700' }}> Barem dolmuş!</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="relative">
               <input
                 {...register('stock')}
                 type="number"
                 placeholder="0"
                 min="1"
+                max={remainingStockForBarem && remainingStockForBarem.remaining > 0 ? remainingStockForBarem.remaining : undefined}
                 className={`w-full h-11 px-4 pr-12 border rounded-lg transition-colors focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                  errors.stock ? 'border-red-500 bg-red-50' : 'border-gray-300'
+                  errors.stock || isStockOverLimit ? 'border-red-500 bg-red-50' : 'border-gray-300'
                 }`}
               />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">adet</span>
@@ -989,7 +1243,20 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
             {errors.stock && (
               <span className="text-xs text-red-500 mt-1">{errors.stock.message as string}</span>
             )}
-            {/* Stok limiti uyarıları kaldırıldı - sadece Kaydet'e basınca alert çıkacak */}
+            {/* Stok limiti uyarısı - jointOrder ve purchaseRequest için */}
+            {isStockOverLimit && (jointOrderMaxStock || purchaseRequestMaxStock) && (
+              <div style={{
+                marginTop: '8px',
+                padding: '8px 12px',
+                backgroundColor: '#fef2f2',
+                border: '1px solid #fecaca',
+                borderRadius: '8px',
+                fontSize: '12px',
+                color: '#b91c1c'
+              }}>
+                ⚠️ Maksimum stok: <strong>{jointOrderMaxStock || (purchaseRequestMaxStock !== null ? purchaseRequestMaxStock : 0)}</strong> adet ({baremMultiple} kat x barem)
+              </div>
+            )}
           </div>
 
           {/* Son Kullanma Tarihi - Sadece Stok Satışı için (Ortak Sipariş depodan, Alım Talebi ise talep olduğu için SKT yok) */}
@@ -1147,6 +1414,35 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   );
 
   return (
+    <>
+      {/* 🆕 Toast Notification - Sağ üst köşe */}
+      {warningToast && (
+        <div style={{
+          position: 'fixed',
+          top: '20px',
+          right: '20px',
+          zIndex: 9999,
+          padding: '14px 20px',
+          backgroundColor: '#fef2f2',
+          border: '2px solid #ef4444',
+          borderRadius: '12px',
+          boxShadow: '0 10px 25px rgba(0,0,0,0.15)',
+          fontSize: '14px',
+          fontWeight: '600',
+          color: '#b91c1c',
+          animation: 'slideIn 0.3s ease-out',
+          maxWidth: '400px'
+        }}>
+          {warningToast}
+          <style>{`
+            @keyframes slideIn {
+              from { transform: translateX(100%); opacity: 0; }
+              to { transform: translateX(0); opacity: 1; }
+            }
+          `}</style>
+        </div>
+      )}
+      
     <form onSubmit={handleSubmit(onSubmit, (errors) => console.error("FORM ERRORS:", errors))}>
       <SettingsCard
         title={isEditMode ? "Teklifi Düzenle" : "Yeni Teklif Oluştur"}
@@ -1165,6 +1461,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
         </div>
       </SettingsCard>
     </form>
+    </>
   );
 };
 

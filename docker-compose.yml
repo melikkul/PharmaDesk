@@ -52,6 +52,8 @@ services:
       - pharmanet
     volumes:
       - ./packages/api:/app
+      - ./ilac_arsivi_with_images.csv:/app/ilac_arsivi_with_images.csv
+      - ./images:/app/wwwroot/images
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
@@ -63,6 +65,12 @@ services:
         condition: service_healthy
       scrapper-service:
         condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/health"]
+      interval: 10s
+      timeout: 5s
+      start_period: 180s
+      retries: 10
 
   frontend-web:
     build:
@@ -73,7 +81,8 @@ services:
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - pharmanet
     # DEVELOPMENT MODE: Volume mapping for hot reload
@@ -93,7 +102,8 @@ services:
     ports:
       - "3001:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - pharmanet
     environment:

@@ -82,10 +82,10 @@ namespace Backend.Controllers
             return Ok(settings ?? updatedSettings);
         }
 
-        private int? GetPharmacyIdFromToken()
+        private long? GetPharmacyIdFromToken()
         {
             var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
-            if (int.TryParse(pharmacyIdClaim, out var pharmacyId))
+            if (long.TryParse(pharmacyIdClaim, out var pharmacyId))
                 return pharmacyId;
             return null;
         }

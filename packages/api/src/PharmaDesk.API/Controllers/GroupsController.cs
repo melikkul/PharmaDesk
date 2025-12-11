@@ -178,6 +178,9 @@ namespace Backend.Controllers
                     }
                 }
 
+                // 🆕 Toplam kar: Order itemlardan ProfitAmount toplamı
+                var totalProfit = orders.SelectMany(o => o.OrderItems).Sum(oi => oi.ProfitAmount);
+
                 // Get offers count
                 var offerCount = await _context.Offers
                     .Where(o => o.PharmacyProfileId == member.PharmacyId
@@ -198,7 +201,7 @@ namespace Backend.Controllers
 
                 statistics.Add(new PharmaDesk.Application.DTOs.GroupMemberStatisticsDto
                 {
-                    GroupName =member.GroupName,
+                    GroupName = member.GroupName,
                     District = member.District ?? "N/A",
                     PharmacyName = member.PharmacyName,
                     Balance = member.Balance,
@@ -209,7 +212,8 @@ namespace Backend.Controllers
                     OfferCount = offerCount,
                     ShipmentCount = shipmentCount,
                     ShipmentAmount = 0, // Shipment doesn't have amount field
-                    GroupContribution = groupContribution
+                    GroupContribution = groupContribution,
+                    TotalProfit = totalProfit // 🆕 Toplam kar
                 });
             }
 

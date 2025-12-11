@@ -10,6 +10,7 @@ export interface ShowroomMedication {
   name: string;
   manufacturer: string;
   imageUrl: string;
+  imageCount?: number; // Number of images for this medication
   price: number; // Sadece TEK bir ana fiyat var
   expirationDate: string;
   initialStock: number;
@@ -18,6 +19,7 @@ export interface ShowroomMedication {
   remainingStock?: number; // Kalan stok (currentStock - soldQuantity)
   bonus: number;
   sellers: SellerInfo[]; // Satıcılar sadece isim bilgisi içeriyor
+  offerId?: number; // Backend offer ID - sepete ekleme için gerekli
 }
 
 
@@ -89,6 +91,8 @@ export interface BalanceItem {
   description: string;
   amount: number;
   type: 'positive' | 'negative';
+  productName?: string; // İlaç adı
+  orderId?: number; // Sipariş ID (link için)
 }
 export interface TransferItem {
   id: number;

@@ -121,6 +121,7 @@ namespace Backend.Services
                 PublicId = profile.PublicId,
                 City = profile.City,
                 District = profile.District,
+                Address = profile.Address ?? "", // 🆕 Açık adres
                 PharmacyId = user.PharmacyId.ToString() // Convert to string for JSON serialization
             };
 
@@ -220,6 +221,7 @@ namespace Backend.Services
                 PublicId = profile.PublicId,
                 City = profile.City ?? "",
                 District = profile.District ?? "",
+                Address = profile.Address ?? "", // 🆕 Açık adres
                 PharmacyId = user.PharmacyId.ToString() // Convert to string for JSON serialization
             };
 

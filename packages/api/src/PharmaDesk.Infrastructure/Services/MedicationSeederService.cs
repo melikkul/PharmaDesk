@@ -8,13 +8,13 @@ namespace Backend.Services
 {
     /// <summary>
     /// İlaç verilerini CSV'den yükleyen seeder servisi.
-    /// Yeni CSV formatı: Sira_ID, API_ID, Urun_Ismi, Urun_Barkodu, Muadil_Barkodlari
+    /// Yeni CSV formatı: Sira_ID, API_ID, Urun_Ismi, Urun_Barkodu, Muadil_Barkodlari, Gorsel_Path
     /// </summary>
     public static class MedicationSeederService
     {
         /// <summary>
-        /// Yeni ilac_arsivi.csv formatından veri yükler
-        /// CSV Columns: Sira_ID, API_ID, Urun_Ismi, Urun_Barkodu, Muadil_Barkodlari
+        /// Yeni ilac_arsivi_with_images.csv formatından veri yükler
+        /// CSV Columns: Sira_ID, API_ID, Urun_Ismi, Urun_Barkodu, Muadil_Barkodlari, Gorsel_Path
         /// </summary>
         public static async Task<int> SeedFromCsvAsync(AppDbContext context, string csvPath, ILogger logger)
         {
@@ -41,7 +41,7 @@ namespace Backend.Services
                         logger.LogInformation($"CSV Header: {header}");
                         
                         // Validate header format
-                        var expectedHeader = "Sira_ID,API_ID,Urun_Ismi,Urun_Barkodu,Muadil_Barkodlari";
+                        var expectedHeader = "Sira_ID,API_ID,Urun_Ismi,Urun_Barkodu,Muadil_Barkodlari,Gorsel_Path";
                         if (!header.StartsWith("Sira_ID"))
                         {
                             logger.LogWarning($"Unexpected CSV header format. Expected: {expectedHeader}");
@@ -63,6 +63,7 @@ namespace Backend.Services
                             // Column 2: Urun_Ismi (Name)
                             // Column 3: Urun_Barkodu (Barcode) - optional
                             // Column 4: Muadil_Barkodlari (Alternatives JSON) - optional
+                            // Column 5: Gorsel_Path (Image paths JSON array) - optional
                             
                             if (!int.TryParse(record[0].Trim(), out int siraId))
                             {
@@ -91,6 +92,15 @@ namespace Backend.Services
                             var alternatives = record.Count > 4 && !string.IsNullOrWhiteSpace(record[4]) 
                                 ? TruncateString(record[4].Trim(), 2000) 
                                 : null;
+                            
+                            // Parse Gorsel_Path JSON array and extract first image
+                            var gorselPath = record.Count > 5 && !string.IsNullOrWhiteSpace(record[5])
+                                ? record[5].Trim()
+                                : null;
+                            var imagePath = gorselPath != null ? ParseFirstImagePath(gorselPath) : null;
+                            var imageCount = gorselPath != null ? ParseImageCount(gorselPath) : 1;
+                            // Store the complete JSON array for AllImagePaths (cleaned)
+                            var allImagePaths = gorselPath != null ? CleanImagePathsJson(gorselPath) : null;
 
                             // Use auto-generated ID, store CSV's Sira_ID in Description for reference
                             var medication = new Medication
@@ -100,6 +110,9 @@ namespace Backend.Services
                                 Name = TruncateString(name, 255),
                                 Barcode = barcode,
                                 Alternatives = alternatives,
+                                ImagePath = imagePath, // Store first image path from JSON array
+                                AllImagePaths = allImagePaths, // Store complete JSON array of image paths
+                                ImageCount = imageCount, // Store number of images
                                 ATC = $"ATC{successfulRecords + 1:D6}", // Use sequential ATC codes
                                 PackageType = TruncateString(ExtractPackageType(name), 100),
                                 Description = $"CSV_REF:{siraId}", // Store original Sira_ID for reference
@@ -233,6 +246,155 @@ namespace Backend.Services
         {
             if (string.IsNullOrEmpty(value)) return value;
             return value.Length <= maxLength ? value : value.Substring(0, maxLength);
+        }
+
+        /// <summary>
+        /// JSON array formatındaki görsel yollarından ilk görseli parse eder
+        /// Örnek: ["images/24/1.png", "images/24/2.png"] -> "images/24/1.png"
+        /// </summary>
+        private static string? ParseFirstImagePath(string jsonPath)
+        {
+            try
+            {
+                // Remove whitespace and check format
+                var trimmed = jsonPath.Trim();
+                
+                // Handle empty or "NOT_FOUND" cases
+                if (string.IsNullOrWhiteSpace(trimmed) || trimmed == "NOT_FOUND" || trimmed == "[]")
+                {
+                    return null;
+                }
+                
+                // Simple JSON array parsing - extract first path
+                // Format: ["images/24/1.png", "images/24/2.png"]
+                if (trimmed.StartsWith("[") && trimmed.Contains("\""))
+                {
+                    var startIndex = trimmed.IndexOf("\"") + 1;
+                    var endIndex = trimmed.IndexOf("\"", startIndex);
+                    
+                    if (startIndex > 0 && endIndex > startIndex)
+                    {
+                        var firstPath = trimmed.Substring(startIndex, endIndex - startIndex);
+                        return string.IsNullOrWhiteSpace(firstPath) ? null : firstPath;
+                    }
+                }
+                
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// JSON array formatındaki görsel yollarından görsel sayısını parse eder
+        /// Örnek: ["images/24/1.png", "images/24/2.png"] -> 2
+        /// </summary>
+        private static int ParseImageCount(string jsonPath)
+        {
+            try
+            {
+                var trimmed = jsonPath.Trim();
+                
+                if (string.IsNullOrWhiteSpace(trimmed) || trimmed == "NOT_FOUND" || trimmed == "[]")
+                {
+                    return 1;
+                }
+                
+                // Count commas + 1 = number of items (simple JSON array count)
+                if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                {
+                    // Count occurrences of "images/" which indicates image entries
+                    var count = trimmed.Split(new[] { "\"images/" }, StringSplitOptions.None).Length - 1;
+                    return count > 0 ? Math.Min(count, 4) : 1; // Max 4 images
+                }
+                
+                return 1;
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+
+        /// <summary>
+        /// JSON array formatındaki görsel yollarını temizler ve standart formata çevirir
+        /// Örnek: ["images/24/1.png", "images/24/2.png"] -> ["images/24/1.png","images/24/2.png"]
+        /// Max 4 görsel döndürür
+        /// </summary>
+        private static string? CleanImagePathsJson(string jsonPath)
+        {
+            try
+            {
+                var trimmed = jsonPath.Trim();
+                
+                if (string.IsNullOrWhiteSpace(trimmed) || trimmed == "NOT_FOUND" || trimmed == "[]")
+                {
+                    return null;
+                }
+                
+                // Extract image paths from JSON array
+                if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                {
+                    var paths = new List<string>();
+                    var content = trimmed.Substring(1, trimmed.Length - 2); // Remove [ ]
+                    
+                    // Simple parsing: split by ", " considering quotes
+                    int start = 0;
+                    bool inQuote = false;
+                    
+                    for (int i = 0; i < content.Length; i++)
+                    {
+                        char c = content[i];
+                        if (c == '"' && (i == 0 || content[i - 1] != '\\'))
+                        {
+                            inQuote = !inQuote;
+                        }
+                        else if (c == ',' && !inQuote)
+                        {
+                            var path = ExtractPath(content.Substring(start, i - start));
+                            if (!string.IsNullOrEmpty(path) && paths.Count < 4)
+                            {
+                                paths.Add(path);
+                            }
+                            start = i + 1;
+                        }
+                    }
+                    
+                    // Last item
+                    var lastPath = ExtractPath(content.Substring(start));
+                    if (!string.IsNullOrEmpty(lastPath) && paths.Count < 4)
+                    {
+                        paths.Add(lastPath);
+                    }
+                    
+                    if (paths.Count > 0)
+                    {
+                        // Return as JSON array
+                        return "[" + string.Join(",", paths.Select(p => $"\"{p}\"")) + "]";
+                    }
+                }
+                
+                return null;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// Tırnak içindeki path'i çıkarır
+        /// </summary>
+        private static string? ExtractPath(string segment)
+        {
+            var trimmed = segment.Trim();
+            if (trimmed.StartsWith("\"") && trimmed.EndsWith("\""))
+            {
+                return trimmed.Substring(1, trimmed.Length - 2).Trim();
+            }
+            return trimmed.Length > 0 ? trimmed : null;
         }
     }
 }

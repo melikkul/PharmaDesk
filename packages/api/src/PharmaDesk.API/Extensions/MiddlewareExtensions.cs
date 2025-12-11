@@ -78,12 +78,22 @@ namespace PharmaDesk.API.Extensions
             // CORS must be first to handle preflight OPTIONS requests
             app.UseCors("frontend");
 
+            // Static files for serving images from /app/wwwroot
+            var wwwrootPath = "/app/wwwroot";
+            if (Directory.Exists(wwwrootPath))
+            {
+                app.UseStaticFiles(new StaticFileOptions
+                {
+                    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(wwwrootPath),
+                    RequestPath = ""
+                });
+            }
+
             // Swagger in development
             if (app.Environment.IsDevelopment())
             {
                 app.UseSwagger();
                 app.UseSwaggerUI();
-                app.UseStaticFiles();
             }
 
             // Health check endpoints

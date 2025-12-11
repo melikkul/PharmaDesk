@@ -19,10 +19,15 @@ const DateDisplay: React.FC<DateDisplayProps> = ({
   format = 'date',
   className = '',
 }) => {
+  // Handle null/undefined date
+  if (!date) {
+    return <span className={className}>-</span>;
+  }
+
   const dateObj = typeof date === 'string' ? new Date(date) : date;
 
   // Check for invalid date
-  if (isNaN(dateObj.getTime())) {
+  if (!dateObj || isNaN(dateObj.getTime())) {
     return <span className={className}>-</span>;
   }
 

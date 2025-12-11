@@ -27,7 +27,25 @@ export const orderService = {
       throw new Error('Siparişler yüklenemedi');
     }
 
-    return response.json();
+    const data = await response.json();
+    
+    // Transform backend flat response to frontend nested format
+    return data.map((order: any) => ({
+      ...order,
+      // Map flat fields to nested objects expected by frontend
+      sellerPharmacy: {
+        id: order.sellerPharmacyId,
+        pharmacyName: order.sellerPharmacyName || 'Bilinmiyor'
+      },
+      buyerPharmacy: {
+        id: order.buyerPharmacyId,
+        pharmacyName: order.buyerPharmacyName || 'Bilinmiyor'
+      },
+      // Map other fields
+      orderDate: order.createdAt || order.orderDate,
+      paymentStatus: order.paymentStatus || 'Pending',
+      orderItems: order.items || order.orderItems || []
+    }));
   },
 
   getOrderById: async (token: string, orderId: string): Promise<Order> => {
@@ -42,6 +60,22 @@ export const orderService = {
       throw new Error('Sipariş yüklenemedi');
     }
 
-    return response.json();
+    const order = await response.json();
+    
+    // Transform backend flat response to frontend nested format
+    return {
+      ...order,
+      sellerPharmacy: {
+        id: order.sellerPharmacyId,
+        pharmacyName: order.sellerPharmacyName || 'Bilinmiyor'
+      },
+      buyerPharmacy: {
+        id: order.buyerPharmacyId,
+        pharmacyName: order.buyerPharmacyName || 'Bilinmiyor'
+      },
+      orderDate: order.orderDate || order.createdAt,
+      paymentStatus: order.paymentStatus || 'Pending',
+      orderItems: order.items || order.orderItems || []
+    };
   }
 };

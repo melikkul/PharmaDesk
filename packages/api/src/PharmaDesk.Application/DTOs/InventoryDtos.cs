@@ -10,6 +10,8 @@ namespace Backend.Dtos
         public string Name { get; set; } = string.Empty;
         public string? Manufacturer { get; set; }
         public decimal Price { get; set; }
+        public string? ImagePath { get; set; }
+        public int ImageCount { get; set; } = 1;
     }
         public class InventoryItemResponse
     {

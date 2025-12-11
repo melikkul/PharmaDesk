@@ -30,6 +30,29 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "Carriers",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Email = table.Column<string>(type: "text", nullable: false),
+                    PasswordHash = table.Column<string>(type: "text", nullable: false),
+                    FirstName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    LastName = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    PhoneNumber = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
+                    CompanyName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
+                    VehicleInfo = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: true),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    LastLoginDate = table.Column<DateTime>(type: "timestamp with time zone", nullable: true),
+                    Role = table.Column<string>(type: "text", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Carriers", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Cities",
                 columns: table => new
                 {
@@ -55,11 +78,30 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                     Barcode = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
                     Description = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
                     PackageType = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    BasePrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false)
+                    BasePrice = table.Column<decimal>(type: "numeric(18,2)", nullable: false),
+                    ExternalApiId = table.Column<int>(type: "integer", nullable: true),
+                    Alternatives = table.Column<string>(type: "character varying(2000)", maxLength: 2000, nullable: true)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Medications", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Messages",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    SenderId = table.Column<string>(type: "text", nullable: false),
+                    ReceiverId = table.Column<string>(type: "text", nullable: false),
+                    Content = table.Column<string>(type: "text", nullable: false),
+                    SentAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsRead = table.Column<bool>(type: "boolean", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Messages", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -89,6 +131,31 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_PharmacyProfiles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "CarrierRegistrationTokens",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    Token = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    Email = table.Column<string>(type: "text", nullable: false),
+                    CreatedById = table.Column<int>(type: "integer", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: false),
+                    IsUsed = table.Column<bool>(type: "boolean", nullable: false),
+                    UsedAt = table.Column<DateTime>(type: "timestamp with time zone", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_CarrierRegistrationTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_CarrierRegistrationTokens_Admins_CreatedById",
+                        column: x => x.CreatedById,
+                        principalTable: "Admins",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -577,6 +644,28 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_CarrierRegistrationTokens_CreatedById",
+                table: "CarrierRegistrationTokens",
+                column: "CreatedById");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CarrierRegistrationTokens_IsUsed_ExpiresAt",
+                table: "CarrierRegistrationTokens",
+                columns: new[] { "IsUsed", "ExpiresAt" });
+
+            migrationBuilder.CreateIndex(
+                name: "IX_CarrierRegistrationTokens_Token",
+                table: "CarrierRegistrationTokens",
+                column: "Token",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Carriers_Email",
+                table: "Carriers",
+                column: "Email",
+                unique: true);
+
+            migrationBuilder.CreateIndex(
                 name: "IX_CartItems_CartId_OfferId",
                 table: "CartItems",
                 columns: new[] { "CartId", "OfferId" });
@@ -633,6 +722,11 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
                 table: "Medications",
                 column: "ATC",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Messages_SenderId_ReceiverId",
+                table: "Messages",
+                columns: new[] { "SenderId", "ReceiverId" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_Notifications_PharmacyProfileId",
@@ -748,7 +842,10 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Admins");
+                name: "CarrierRegistrationTokens");
+
+            migrationBuilder.DropTable(
+                name: "Carriers");
 
             migrationBuilder.DropTable(
                 name: "CartItems");
@@ -761,6 +858,9 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "MarketDemands");
+
+            migrationBuilder.DropTable(
+                name: "Messages");
 
             migrationBuilder.DropTable(
                 name: "Notifications");
@@ -785,6 +885,9 @@ namespace PharmaDesk.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropTable(
                 name: "WarehouseBarems");
+
+            migrationBuilder.DropTable(
+                name: "Admins");
 
             migrationBuilder.DropTable(
                 name: "Carts");

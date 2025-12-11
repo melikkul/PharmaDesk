@@ -5,11 +5,14 @@ namespace Backend.Models
 {
     public enum TransactionType
     {
-        Sale,       // Satış
-        Purchase,   // Alış
-        Deposit,    // Bakiye Yükleme
-        Withdraw,   // Para Çekme
-        Refund      // İade
+        Sale,           // Satış
+        Purchase,       // Alış
+        Deposit,        // Bakiye Yükleme
+        Withdraw,       // Para Çekme
+        Refund,         // İade
+        OfferCreated,   // Teklif Oluşturuldu
+        OfferUpdated,   // Teklif Güncellendi
+        OfferDeleted    // Teklif Silindi
     }
 
     public enum TransactionStatus

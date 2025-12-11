@@ -1,18 +1,23 @@
 .container {
   padding: 2rem;
-  max-width: 1000px;
+  max-width: 1100px;
   margin: 0 auto;
 }
 
 .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .header h1 {
-  font-size: 2rem;
+  font-size: 1.75rem;
   font-weight: 600;
   color: #1a1a1a;
-  margin-top: 1rem;
+  margin: 0;
 }
 
 .backButton {
@@ -26,160 +31,122 @@
   transition: background 0.2s;
 }
 
-.backButton:hover {
-  background: #e5e7eb;
+.backButton:hover { background: #e5e7eb; }
+
+.downloadButton {
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
 }
 
-.loading,
-.error {
-  text-align: center;
-  padding: 3rem;
-  font-size: 1.1rem;
-  color: #6b7280;
-}
+.downloadButton:hover:not(:disabled) { transform: translateY(-2px); }
+.downloadButton:disabled { opacity: 0.7; cursor: not-allowed; }
 
-.error {
-  color: #ef4444;
-}
+.loading, .error { text-align: center; padding: 3rem; font-size: 1.1rem; color: #6b7280; }
+.error { color: #ef4444; }
 
-.content {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
-.card {
+/* Normal View */
+.invoiceContainer {
   background: white;
   border: 1px solid #e5e7eb;
   border-radius: 12px;
   padding: 2rem;
 }
 
-.card h2 {
-  font-size: 1.3rem;
-  font-weight: 600;
-  color: #1a1a1a;
+.card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
 }
 
-.infoGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1.5rem;
+.card h2 { font-size: 1.2rem; font-weight: 600; color: #1a1a1a; margin-bottom: 1rem; }
+
+.infoGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+.infoItem { display: flex; flex-direction: column; gap: 0.25rem; }
+.label { font-size: 0.85rem; color: #6b7280; }
+.value { font-size: 1rem; color: #1a1a1a; font-weight: 500; }
+.status { padding: 0.25rem 0.75rem; background: #dbeafe; color: #1e40af; border-radius: 12px; display: inline-block; width: fit-content; font-size: 0.85rem; }
+
+.partiesSection { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.5rem; margin-bottom: 1.5rem; }
+.partyCard { border: 1px solid #e5e7eb; border-radius: 10px; padding: 1.25rem; background: #fafafa; }
+.partyTitle { font-size: 0.85rem; font-weight: 600; color: #374151; margin: 0 0 0.5rem 0; }
+.partyName { font-size: 1.1rem; font-weight: 600; color: #1a1a1a; margin: 0; }
+
+.productsSection { margin-bottom: 1.5rem; }
+.sectionTitle { font-size: 1rem; font-weight: 600; color: #374151; margin: 0 0 1rem 0; }
+
+.invoiceTable { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.invoiceTable thead { background: #f8fafc; }
+.invoiceTable th { padding: 0.75rem 0.5rem; text-align: left; font-size: 0.8rem; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; }
+.invoiceTable tbody tr { border-bottom: 1px solid #e5e7eb; }
+.invoiceTable tbody tr:hover { background: #f8fafc; }
+.invoiceTable td { padding: 0.75rem 0.5rem; color: #1a1a1a; }
+.numericCol { text-align: right !important; }
+.productLink { color: #2563eb; text-decoration: none; font-weight: 500; }
+.productLink:hover { text-decoration: underline; }
+.invoiceTable tfoot tr { background: #f8fafc; font-weight: 600; }
+.invoiceTable tfoot td { padding: 1rem 0.5rem; border-top: 2px solid #e5e7eb; }
+.totalLabel { text-align: right; color: #374151; }
+.totalValue { text-align: right; font-size: 1.1rem; color: #3b82f6; font-weight: 700; }
+
+/* ========== PDF FATURA STİLLERİ ========== */
+.pdfInvoice {
+  background: white;
+  padding: 12px;
+  font-family: Arial, sans-serif;
+  font-size: 10pt;
+  color: #1a1a1a;
+  max-width: 210mm;
 }
 
-.infoItem {
+.pdfHeader {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid #1e40af;
+  padding-bottom: 8px;
+  margin-bottom: 12px;
 }
 
-.label {
-  font-size: 0.85rem;
-  color: #6b7280;
-  font-weight: 500;
-}
+.pdfLogo { height: 35px; width: auto; }
 
-.value {
-  font-size: 1rem;
-  color: #1a1a1a;
-}
+.pdfTitle { text-align: center; flex: 1; }
+.pdfTitle h1 { font-size: 22pt; font-weight: bold; color: #1e40af; margin: 0; letter-spacing: 2px; }
+.pdfTitle span { font-size: 8pt; color: #6b7280; }
 
-.status {
-  padding: 0.25rem 0.75rem;
-  background: #dbeafe;
-  color: #1e40af;
-  border-radius: 12px;
-  display: inline-block;
-  width: fit-content;
-  font-size: 0.9rem;
-}
+.pdfMeta { text-align: right; font-size: 9pt; }
+.pdfMeta div { margin-bottom: 2px; }
 
-.partiesGrid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 2rem;
-}
+.pdfParties { display: flex; gap: 12px; margin-bottom: 12px; }
+.pdfParty { flex: 1; border: 1px solid #e5e7eb; padding: 8px; border-radius: 4px; background: #f9fafb; }
+.pdfPartyTitle { font-size: 8pt; font-weight: bold; color: #1e40af; text-transform: uppercase; margin-bottom: 4px; border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
+.pdfPartyName { font-size: 11pt; font-weight: bold; margin-bottom: 4px; }
+.pdfPartyInfo { font-size: 8pt; color: #374151; line-height: 1.4; }
 
-.party h3 {
-  font-size: 0.9rem;
-  color: #6b7280;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
+.pdfTable { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 12px; }
+.pdfTable th { background: #1e40af; color: white; padding: 5px 4px; text-align: left; font-weight: 600; font-size: 8pt; }
+.pdfTable th:nth-child(n+3) { text-align: right; }
+.pdfTable td { padding: 5px 4px; border-bottom: 1px solid #e5e7eb; }
+.pdfTable td:nth-child(n+3) { text-align: right; }
 
-.party p {
-  font-size: 1.1rem;
-  color: #1a1a1a;
-  font-weight: 600;
-}
+.pdfTotals { display: flex; flex-direction: column; align-items: flex-end; margin-bottom: 12px; }
+.pdfTotalRow { display: flex; justify-content: space-between; width: 200px; padding: 4px 0; font-size: 9pt; border-bottom: 1px dashed #e5e7eb; }
+.pdfGrandTotal { display: flex; justify-content: space-between; width: 200px; padding: 8px 10px; background: #1e40af; color: white; font-weight: bold; font-size: 10pt; border-radius: 4px; margin-top: 4px; }
 
-.itemsTable {
-  width: 100%;
-  border-collapse: collapse;
-}
+.pdfFooter { display: flex; justify-content: space-between; font-size: 8pt; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
 
-.itemsTable thead {
-  background: #f9fafb;
-}
-
-.itemsTable th {
-  padding: 0.75rem 1rem;
-  text-align: left;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #374151;
-  border-bottom: 2px solid #e5e7eb;
-}
-
-.itemsTable tbody tr {
-  border-bottom: 1px solid #f3f4f6;
-}
-
-.itemsTable tbody tr:hover {
-  background: #f9fafb;
-}
-
-.itemsTable td {
-  padding: 1rem;
-  font-size: 0.95rem;
-  color: #1a1a1a;
-}
-
-.itemsTable tfoot tr {
-  background: #f9fafb;
-  font-weight: 600;
-}
-
-.itemsTable tfoot td {
-  padding: 1rem;
-  border-top: 2px solid #e5e7eb;
-}
-
-.totalLabel {
-  text-align: right;
-  font-size: 1rem;
-  color: #374151;
-}
-
-.totalValue {
-  font-size: 1.2rem;
-  color: #3b82f6;
-  font-weight: 700;
-}
-
+/* Responsive */
 @media (max-width: 768px) {
-  .infoGrid,
-  .partiesGrid {
-    grid-template-columns: 1fr;
-  }
-  
-  .itemsTable {
-    font-size: 0.85rem;
-  }
-  
-  .itemsTable th,
-  .itemsTable td {
-    padding: 0.5rem;
-  }
+  .container { padding: 1rem; }
+  .header { flex-direction: column; align-items: stretch; }
+  .header h1 { order: -1; text-align: center; }
+  .infoGrid, .partiesSection { grid-template-columns: 1fr; }
 }

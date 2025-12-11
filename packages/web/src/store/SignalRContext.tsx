@@ -128,31 +128,32 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       type: string;
       timestamp: string;
       senderId?: string;
+      targetUserId?: string; // 🆕 Hedef kullanıcı ID'si
     }) => {
       if (!isMounted) return;
 
       console.log("[SignalR] Received notification:", notification);
 
-      // Display toast based on notification type
-      switch (notification.type) {
-        case "success":
-          toast.success(notification.message);
-          break;
-        case "error":
-          toast.error(notification.message);
-          break;
-        case "warning":
-          toast.warning(notification.message);
-          break;
-        case "entityUpdated":
-          toast.info(notification.message);
-          // Invalidate queries to refresh data
-          console.log("[SignalR] Entity updated, invalidating queries...");
-          queryClient.invalidateQueries();
-          break;
-        default:
-          toast.info(notification.message);
+      // 🆕 entityUpdated için: tüm kullanıcılarda verileri yenile ama toast gösterme
+      if (notification.type === "entityUpdated") {
+        console.log("[SignalR] Entity updated, refreshing data silently...");
+        queryClient.invalidateQueries();
+        return; // Toast gösterme
       }
+
+      // 🆕 Hedef kullanıcı kontrolü - targetUserId varsa sadece o kullanıcıda göster
+      const currentUserId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+      if (notification.targetUserId && notification.targetUserId !== currentUserId) {
+        console.log("[SignalR] Notification not for this user, skipping toast");
+        return; // Bu kullanıcı için değil, toast gösterme
+      }
+
+      // 🆕 SignalR bildirimleri sadece veri yenileme için kullanılıyor
+      // Toast bildirimleri lokal olarak component'lerde gösteriliyor (OfferForm vb.)
+      console.log("[SignalR] Received notification:", notification.type, notification.message);
+      
+      // Sessiz veri yenileme - toast gösterme
+      queryClient.invalidateQueries();
     });
 
     // Listen for online users updates

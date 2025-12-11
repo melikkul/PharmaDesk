@@ -1,6 +1,7 @@
 // components/dashboard/BalanceHistoryCard.tsx
 
 import React from 'react';
+import Link from 'next/link';
 import DashboardCard from '../DashboardCard';
 import type { BalanceItem } from '../../lib/dashboardData';
 import tableStyles from './Table.module.css';
@@ -17,15 +18,26 @@ const BalanceHistoryCard: React.FC<BalanceHistoryCardProps> = ({ data, limit }) 
         <thead>
           <tr>
             <th>Tarih</th>
-            <th>Açıklama</th>
+            <th>İlaç Adı</th>
             <th className={tableStyles.textRight}>Ödeme Miktarı</th>
           </tr>
         </thead>
         <tbody>
-          {data.slice(0, limit).map(item => (
-             <tr key={item.id}>
+          {data.slice(0, limit).map((item, index) => (
+             <tr key={item.id ?? `balance-${index}`}>
                 <td>{item.date}</td>
-                <td>{item.description}</td>
+                <td>
+                  {item.orderId ? (
+                    <Link 
+                      href={`/siparisler/${item.orderId}`}
+                      style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}
+                    >
+                      {item.productName || item.description}
+                    </Link>
+                  ) : (
+                    item.productName || item.description
+                  )}
+                </td>
                 <td className={`${tableStyles.textRight} ${tableStyles.fontBold} ${item.type === 'positive' ? tableStyles.textGreen : tableStyles.textRed}`}>
                    {item.type === 'positive' ? '+' : ''}{item.amount.toFixed(2)} ₺
                 </td>
@@ -38,4 +50,3 @@ const BalanceHistoryCard: React.FC<BalanceHistoryCardProps> = ({ data, limit }) 
 };
 
 export default BalanceHistoryCard;
-

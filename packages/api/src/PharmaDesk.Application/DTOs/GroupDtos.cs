@@ -14,6 +14,7 @@ namespace PharmaDesk.Application.DTOs
         public int ShipmentCount { get; set; }
         public decimal ShipmentAmount { get; set; }
         public decimal GroupContribution { get; set; }
+        public decimal TotalProfit { get; set; } // 🆕 Toplam kar
     }
 
     public class GroupStatisticsRequest

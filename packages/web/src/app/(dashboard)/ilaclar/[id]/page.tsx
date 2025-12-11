@@ -5,6 +5,7 @@ import { useParams, useSearchParams } from 'next/navigation';
 import { useMedicationOffers } from '@/hooks/useOffers';
 import { Offer } from '@/types';
 import { useCart } from '@/store/CartContext';
+import { useSignalR } from '@/store/SignalRContext';
 import Link from 'next/link';
 import ProductCard from '@/components/ilaclar/ProductCard';
 import PriceChart from '@/components/ilaclar/PriceChart';
@@ -110,9 +111,10 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
         // Map to ShowroomMedication for Cart
         const medicationForCart: ShowroomMedication = {
             id: offer.medicationId,
+            offerId: offer.id, // Backend offer ID for cart API
             name: offer.productName || 'Bilinmiyor',
             manufacturer: offer.manufacturer || 'Bilinmiyor',
-            imageUrl: offer.imageUrl || '/placeholder-med.png',
+            imageUrl: offer.imageUrl?.startsWith('/images/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${offer.imageUrl}` : (offer.imageUrl || '/logoYesil.png'),
             price: offer.price,
             expirationDate: offer.expirationDate || '',
             initialStock: currentStock + bonus,
@@ -146,7 +148,10 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
     const hasBarem = baremBonus > 0;
 
     return (
-        <div className={styles.offerItem}>
+        <div className={styles.offerItem} style={isJointOrder ? {
+            backgroundColor: '#ecfdf5',
+            border: '2px solid #10b981'
+        } : undefined}>
             <span className={styles.offerPrice}>{offer.price.toFixed(2).replace('.', ',')} ₺</span>
             <div className={styles.offerSellerInfo}>
                 <Link href={`/profile/${offer.pharmacyId}`} className={styles.sellerLink}>
@@ -238,11 +243,60 @@ function IlacDetayPage() {
     // 🆕 Offer ID from URL - specific offer selection
     const offerId = searchParams.get('offerId'); // URL'den offerId parametresi
     
-    const { offers: allOffers, loading, error } = useMedicationOffers(id);
-    const { addToCart } = useCart();
+    const { offers: allOffers, loading, error, refetch } = useMedicationOffers(id);
+    const { connection } = useSignalR();
+
+    // Real-time updates listener
+    React.useEffect(() => {
+        if (!connection) return;
+
+        const handleUpdate = () => {
+            // Refetch offers when notification received
+            refetch();
+        };
+
+        // Listen for general notifications and specific stock updates
+        connection.on("ReceiveNotification", handleUpdate);
+        connection.on("ReceiveStockUpdate", handleUpdate); // In case backend uses this specific event
+        connection.on("ReceiveOfferUpdate", handleUpdate);
+
+        return () => {
+            connection.off("ReceiveNotification", handleUpdate);
+            connection.off("ReceiveStockUpdate", handleUpdate);
+            connection.off("ReceiveOfferUpdate", handleUpdate);
+        };
+    }, [connection, refetch]);
+    
+    const { addToCart, cartItems } = useCart();
 
     const [mainQuantity, setMainQuantity] = useState<number | string>(1);
     const [isMainAdding, setIsMainAdding] = useState(false);
+    const [cartWarning, setCartWarning] = useState<string | null>(null);
+    const [isDepotSelfOrder, setIsDepotSelfOrder] = useState(false); // Depodan ben söyleyeceğim
+    const [selectedImageIndex, setSelectedImageIndex] = useState(0); // Gallery için seçili görsel index
+
+    // Helper function: Generate possible image paths from first image path
+    // e.g., "images/24/1.png" -> ["images/24/1.png", "images/24/2.png", ...]
+    const generateImagePaths = (imagePath: string | null | undefined): string[] => {
+        if (!imagePath) return [];
+        
+        // Extract base path and extension
+        const match = imagePath.match(/^(.*\/)(\d+)(\.[a-z]+)$/i);
+        if (!match) return [imagePath];
+        
+        const [, basePath, , ext] = match;
+        const paths: string[] = [];
+        
+        // Generate paths for 1-4 images
+        for (let i = 1; i <= 4; i++) {
+            paths.push(`${basePath}${i}${ext}`);
+        }
+        
+        return paths;
+    };
+
+    // Get all possible image paths for current medication - moved after mainOffer declaration
+    // const allImagePaths = useMemo(...) - defined below after mainOffer
 
     // Barem, type ve offerId'ye göre filtrele
     const offers = useMemo(() => {
@@ -278,6 +332,22 @@ function IlacDetayPage() {
     // Use the first offer (cheapest) as the main display
     const mainOffer = useMemo(() => offers.length > 0 ? offers[0] : null, [offers]);
 
+    // Get all possible image paths for current medication
+    const allImagePaths = useMemo(() => {
+        if (!mainOffer?.imageUrl) return [];
+        // Extract base path and extension, generate 1-4
+        const imagePath = mainOffer.imageUrl.replace(/^\/?/, '');
+        const match = imagePath.match(/^(.*\/)(\d+)(\.[a-z]+)$/i);
+        if (!match) return [imagePath];
+        
+        const [, basePath, , ext] = match;
+        const paths: string[] = [];
+        for (let i = 1; i <= 4; i++) {
+            paths.push(`${basePath}${i}${ext}`);
+        }
+        return paths;
+    }, [mainOffer?.imageUrl]);
+
     if (loading) return <div className={styles.pageContainer}>Yükleniyor...</div>;
     if (error) return <div className={styles.pageContainer}>Hata: {error}</div>;
     if (!mainOffer) return <div className={styles.pageContainer}>İlaç bulunamadı veya aktif teklif yok.</div>;
@@ -287,21 +357,29 @@ function IlacDetayPage() {
     const currentStock = stockParts[0];
     const bonus = stockParts[1] || 0;
     
-    // Joint Order için kalan barem stoğunu hesapla
+    // Joint Order ve PurchaseRequest için kalan barem stoğunu hesapla
     let baremRemainingStock = 0;
-    if (typeFilter === 'jointorder' && baremFilter) {
+    if ((typeFilter === 'jointorder' || typeFilter === 'purchaserequest') && baremFilter) {
         const baremParts = baremFilter.split('+').map((s: string) => parseInt(s.trim()) || 0);
-        const totalBaremStock = (baremParts[0] || 0) + (baremParts[1] || 0);
+        const singleBaremTotal = (baremParts[0] || 0) + (baremParts[1] || 0);
         const totalRequestedStock = offers.reduce((sum, o) => {
             const sParts = o.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
             return sum + (sParts[0] || 0);
         }, 0);
-        baremRemainingStock = Math.max(0, totalBaremStock - totalRequestedStock);
+        
+        // 🆕 Barem katını hesapla: toplam talep / tek barem = kaç kat gerekli
+        const baremMultiple = Math.max(1, Math.ceil(totalRequestedStock / singleBaremTotal));
+        const effectiveBaremTotal = singleBaremTotal * baremMultiple;
+        
+        // 🆕 Kalan stok: efektif barem toplamı - toplam talep (asla negatif olmaz)
+        baremRemainingStock = Math.max(0, effectiveBaremTotal - totalRequestedStock);
     }
     
-    // Joint Order'da max = kalan barem stoğu, diğerlerinde = mevcut stok
-    const canBuy = typeFilter === 'jointorder' ? baremRemainingStock > 0 : currentStock > 0;
-    const effectiveMaxStock = typeFilter === 'jointorder' 
+    // Joint Order ve PurchaseRequest'de max = kalan barem stoğu, diğerlerinde = mevcut stok
+    const canBuy = (typeFilter === 'jointorder' || typeFilter === 'purchaserequest') 
+        ? baremRemainingStock > 0 
+        : currentStock > 0;
+    const effectiveMaxStock = (typeFilter === 'jointorder' || typeFilter === 'purchaserequest') 
         ? Math.min(baremRemainingStock, MAX_ALLOWED_QUANTITY)
         : Math.min(currentStock, MAX_ALLOWED_QUANTITY);
 
@@ -344,17 +422,44 @@ function IlacDetayPage() {
     const handleMainAddToCart = () => {
         if (!canBuy || isMainAdding) return;
         
-        const quantityToAdd = Math.max(1, Math.min(Number(mainQuantity), effectiveMaxStock));
+        // PurchaseRequest ve JointOrder için currentStock = kalan barem stoğu (effectiveMaxStock)
+        // Böylece CartContext'teki limit kontrolü doğru çalışır
+        const stockForCart = (typeFilter === 'jointorder' || typeFilter === 'purchaserequest') 
+            ? effectiveMaxStock 
+            : currentStock;
+
+        // Sepetteki mevcut miktarı kontrol et
+        const existingCartItem = cartItems.find(
+            item => item.product.id === mainOffer.medicationId && 
+                    item.sellerName === (mainOffer.pharmacyName || 'Bilinmiyor')
+        );
+        const currentCartQuantity = existingCartItem?.quantity || 0;
+        const remainingAddable = stockForCart - currentCartQuantity;
+
+        // Tüm stok zaten sepetteyse uyarı göster
+        if (remainingAddable <= 0) {
+            const warningMsg = typeFilter === 'purchaserequest' 
+                ? '⚠️ Tüm talep zaten sepetinizde!' 
+                : typeFilter === 'jointorder'
+                    ? '⚠️ Tüm sipariş zaten sepetinizde!'
+                    : '⚠️ Tüm stok zaten sepetinizde!';
+            setCartWarning(warningMsg);
+            setTimeout(() => setCartWarning(null), 3000);
+            return;
+        }
+
+        const quantityToAdd = Math.max(1, Math.min(Number(mainQuantity), remainingAddable));
 
         const medicationForCart: ShowroomMedication = {
             id: mainOffer.medicationId,
+            offerId: mainOffer.id, // Backend offer ID for cart API
             name: mainOffer.productName || 'Bilinmiyor',
             manufacturer: mainOffer.manufacturer || 'Bilinmiyor',
-            imageUrl: mainOffer.imageUrl || '/placeholder-med.png',
+            imageUrl: mainOffer.imageUrl?.startsWith('/images/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${mainOffer.imageUrl}` : (mainOffer.imageUrl || '/logoYesil.png'),
             price: mainOffer.price,
             expirationDate: mainOffer.expirationDate || '',
-            initialStock: currentStock + bonus,
-            currentStock: currentStock,
+            initialStock: stockForCart + bonus,
+            currentStock: stockForCart,
             bonus: bonus,
             sellers: [{
                 pharmacyId: String(mainOffer.pharmacyId),
@@ -364,18 +469,111 @@ function IlacDetayPage() {
         };
 
         setIsMainAdding(true);
-        addToCart(medicationForCart, quantityToAdd, mainOffer.pharmacyName || 'Bilinmiyor');
+        setCartWarning(null);
+        
+        // PurchaseRequest için isDepotSelfOrder bayrağını gönder
+        const depotFlag = typeFilter === 'purchaserequest' ? isDepotSelfOrder : undefined;
+        // Teklif türünü de gönder (stocksale varsayılan)
+        const offerType = typeFilter || 'stocksale';
+        addToCart(medicationForCart, quantityToAdd, mainOffer.pharmacyName || 'Bilinmiyor', depotFlag, offerType);
+
+        // Eklenen miktarı ve depo bilgisini göster
+        let successMsg = typeFilter === 'purchaserequest' 
+            ? `✅ ${quantityToAdd} adet talep sepete eklendi!` 
+            : `✅ ${quantityToAdd} adet sepete eklendi!`;
+        
+        if (typeFilter === 'purchaserequest' && isDepotSelfOrder) {
+            successMsg += ' 📦 Depodan siz söyleyeceksiniz.';
+        }
+        setCartWarning(successMsg);
 
         setTimeout(() => {
             setIsMainAdding(false);
-        }, 1000);
+            setCartWarning(null);
+        }, 2500);
     };
 
     return (
         <div className={styles.pageContainer}>
+            {/* Toast Bildirimi - Sağ Üst Köşe */}
+            {cartWarning && (
+                <div style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    zIndex: 9999,
+                    padding: '14px 24px',
+                    borderRadius: '12px',
+                    fontSize: '15px',
+                    fontWeight: '600',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                    backgroundColor: cartWarning.startsWith('⚠️') ? '#fef3c7' : '#dcfce7',
+                    color: cartWarning.startsWith('⚠️') ? '#b45309' : '#166534',
+                    border: cartWarning.startsWith('⚠️') ? '2px solid #f59e0b' : '2px solid #22c55e',
+                    animation: 'slideInRight 0.4s ease-out',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    maxWidth: '350px'
+                }}>
+                    {cartWarning}
+                </div>
+            )}
+            {/* Slide Animation Keyframes */}
+            <style jsx>{`
+                @keyframes slideInRight {
+                    0% {
+                        transform: translateX(120%);
+                        opacity: 0;
+                    }
+                    100% {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+            `}</style>
             <div className={styles.productDetailGrid}>
                 <div className={styles.productImageContainer}>
-                    <img src={mainOffer.imageUrl || '/dolorex_placeholder.png'} alt={mainOffer.productName} />
+                    {/* Ana Görsel */}
+                    <img 
+                        src={allImagePaths.length > 0 
+                            ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/${allImagePaths[selectedImageIndex] || allImagePaths[0]}`
+                            : (mainOffer.imageUrl?.startsWith('/images/') 
+                                ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${mainOffer.imageUrl}`
+                                : '/logoYesil.png')
+                        }
+                        alt={mainOffer.productName}
+                        onError={(e) => {
+                            // If image fails, try next one or fallback
+                            const img = e.currentTarget;
+                            if (selectedImageIndex < allImagePaths.length - 1) {
+                                setSelectedImageIndex(prev => prev + 1);
+                            } else {
+                                img.src = '/logoYesil.png';
+                            }
+                        }}
+                    />
+                    {/* Thumbnail Görseller */}
+                    {allImagePaths.length > 1 && (
+                        <div className={styles.imageThumbnails}>
+                            {allImagePaths.map((path, index) => (
+                                <div 
+                                    key={index}
+                                    className={`${styles.thumb} ${selectedImageIndex === index ? styles.activeThumb : ''}`}
+                                    onClick={() => setSelectedImageIndex(index)}
+                                >
+                                    <img 
+                                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/${path}`}
+                                        alt={`${mainOffer.productName} - ${index + 1}`}
+                                        onError={(e) => {
+                                            // Hide broken thumbnail
+                                            e.currentTarget.parentElement!.style.display = 'none';
+                                        }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className={styles.productInfoContainer}>
@@ -480,10 +678,10 @@ function IlacDetayPage() {
                                         <button
                                             className={styles.buyButtonMain}
                                             style={{ backgroundColor: '#8b5cf6' }}
-                                            disabled={isMainAdding}
+                                            disabled={!canBuy || isMainAdding}
                                             onClick={handleMainAddToCart}
                                         >
-                                            {isMainAdding ? 'Talep Edildi!' : '📦 Talep Et'}
+                                            {isMainAdding ? 'Talep Edildi!' : (canBuy ? '📦 Talep Et' : 'Barem Doldu')}
                                         </button>
                                     </div>
                                     {/* Depo sorumlusu checkbox */}
@@ -492,15 +690,19 @@ function IlacDetayPage() {
                                         alignItems: 'center',
                                         gap: '8px',
                                         padding: '8px 12px',
-                                        backgroundColor: '#ede9fe',
+                                        backgroundColor: isDepotSelfOrder ? '#ddd6fe' : '#ede9fe',
                                         borderRadius: '8px',
                                         cursor: 'pointer',
                                         fontSize: '14px',
                                         fontWeight: '500',
-                                        color: '#5b21b6'
+                                        color: '#5b21b6',
+                                        border: isDepotSelfOrder ? '2px solid #8b5cf6' : '2px solid transparent',
+                                        transition: 'all 0.2s ease'
                                     }}>
                                         <input 
                                             type="checkbox" 
+                                            checked={isDepotSelfOrder}
+                                            onChange={(e) => setIsDepotSelfOrder(e.target.checked)}
                                             style={{ width: '18px', height: '18px', accentColor: '#8b5cf6' }}
                                         />
                                         📦 Depodan ben söyleyeceğim
@@ -547,7 +749,7 @@ function IlacDetayPage() {
                 const parts = baremFilter.split('+').map((s: string) => parseInt(s.trim()) || 0);
                 const baremMin = parts[0] || 0;
                 const baremBonus = parts[1] || 0;
-                const totalBaremStock = baremMin + baremBonus;
+                const singleBaremTotal = baremMin + baremBonus;
                 
                 // Tüm tekliflerdeki talep edilen stokları topla
                 const totalRequestedStock = offers.reduce((sum, o) => {
@@ -555,8 +757,29 @@ function IlacDetayPage() {
                     return sum + (stockParts[0] || 0);
                 }, 0);
                 
-                const remainingStock = Math.max(0, totalBaremStock - totalRequestedStock);
-                const usagePercent = (totalRequestedStock / totalBaremStock) * 100;
+                // 🆕 Tüm siparişleri (buyers) topla
+                const totalOrderedStock = offers.reduce((sum, o) => {
+                    if (o.buyers && o.buyers.length > 0) {
+                        return sum + o.buyers.reduce((bSum, b) => bSum + b.quantity, 0);
+                    }
+                    return sum;
+                }, 0);
+                
+                // Toplam doluluk = talepler + siparişler
+                const totalUsedStock = totalRequestedStock + totalOrderedStock;
+                
+                // 🆕 Barem katını hesapla: toplam kullanım / tek barem = kaç kat gerekli
+                const baremMultiple = Math.max(1, Math.ceil(totalUsedStock / singleBaremTotal));
+                const effectiveBaremTotal = singleBaremTotal * baremMultiple;
+                
+                // 🆕 Kalan ve doluluk oranı efektif baremine göre hesaplanıyor (siparişler de dahil)
+                const remainingStock = Math.max(0, effectiveBaremTotal - totalUsedStock);
+                const usagePercent = (totalUsedStock / effectiveBaremTotal) * 100;
+                
+                // 🆕 Display için barem bilgisi
+                const displayBaremInfo = baremMultiple > 1 
+                    ? `${baremMin}+${baremBonus} × ${baremMultiple} = ${effectiveBaremTotal}` 
+                    : `${baremMin}+${baremBonus} = ${singleBaremTotal}`;
                 
                 return (
                     <div style={{
@@ -590,9 +813,9 @@ function IlacDetayPage() {
                                 textAlign: 'center',
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                             }}>
-                                <div style={{ fontSize: '12px', color: '#78716c', marginBottom: '4px' }}>Barem</div>
+                            <div style={{ fontSize: '12px', color: '#78716c', marginBottom: '4px' }}>Barem</div>
                                 <div style={{ fontSize: '22px', fontWeight: '700', color: '#ea580c' }}>
-                                    {baremMin}+{baremBonus} = {totalBaremStock}
+                                    {displayBaremInfo}
                                 </div>
                             </div>
                             {/* Talep Edilen */}
@@ -604,7 +827,7 @@ function IlacDetayPage() {
                                 boxShadow: '0 1px 3px rgba(0,0,0,0.1)'
                             }}>
                                 <div style={{ fontSize: '12px', color: '#78716c', marginBottom: '4px' }}>Talep Edilen</div>
-                                <div style={{ fontSize: '22px', fontWeight: '700', color: '#dc2626' }}>{totalRequestedStock} Adet</div>
+                                <div style={{ fontSize: '22px', fontWeight: '700', color: '#dc2626' }}>{totalUsedStock} Adet</div>
                             </div>
                             {/* Kalan Adet */}
                             <div style={{
@@ -711,16 +934,53 @@ function IlacDetayPage() {
                             baremRemainingStock = Math.max(0, totalBaremStock - totalRequestedStock);
                         }
                         
-                        return offers.map(offer => (
-                            <OfferItemComponent
-                                key={offer.id}
-                                offer={offer}
-                                showBarem={!baremFilter}
-                                baremRemainingStock={baremRemainingStock}
-                                isJointOrder={typeFilter === 'jointorder'}
-                                isPurchaseRequest={typeFilter === 'purchaserequest'}
-                            />
-                        ));
+                        // Render each offer and its buyers as separate cards
+                        const items: React.ReactNode[] = [];
+                        
+                        offers.forEach(offer => {
+                            // Add the offer card
+                            items.push(
+                                <OfferItemComponent
+                                    key={`offer-${offer.id}`}
+                                    offer={offer}
+                                    showBarem={!baremFilter}
+                                    baremRemainingStock={baremRemainingStock}
+                                    isJointOrder={typeFilter === 'jointorder'}
+                                    isPurchaseRequest={typeFilter === 'purchaserequest'}
+                                />
+                            );
+                            
+                            // Add buyer cards separately (for JointOrder and PurchaseRequest)
+                            if ((typeFilter === 'jointorder' || typeFilter === 'purchaserequest') && offer.buyers && offer.buyers.length > 0) {
+                                offer.buyers.forEach((buyer, idx) => {
+                                    items.push(
+                                        <div key={`buyer-${offer.id}-${idx}`} className={styles.offerItem}>
+                                            <span className={styles.offerPrice} style={{ color: '#059669' }}>
+                                                Talep
+                                            </span>
+                                            <div className={styles.offerSellerInfo}>
+                                                <Link href={`/profile/${buyer.pharmacyId}`} className={styles.sellerLink} style={{ color: '#047857' }}>
+                                                    {buyer.pharmacyName}
+                                                </Link>
+                                                {buyer.orderDate && (
+                                                    <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginTop: '2px' }}>
+                                                        {buyer.orderDate}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className={styles.offerStock}>
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669' }}>{buyer.quantity} Adet</div>
+                                                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#6b7280' }}>talep edildi</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                            }
+                        });
+                        
+                        return items;
                     })()}
                 </div>
             </div>

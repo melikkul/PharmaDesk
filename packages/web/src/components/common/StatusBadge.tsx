@@ -17,7 +17,8 @@ export interface StatusBadgeProps {
  */
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type, className = '' }) => {
   const getStatusConfig = (): { label: string; variant: BadgeVariant } => {
-    const statusLower = status.toLowerCase();
+    // Güvenli string dönüşümü
+    const statusLower = (typeof status === 'string' ? status : String(status ?? '')).toLowerCase();
 
     if (type === 'order') {
       switch (statusLower) {
