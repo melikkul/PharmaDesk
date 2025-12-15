@@ -24,6 +24,7 @@ interface AuthContextType {
 // Docker ortamında backend servisine erişmek için servis adını kullanabiliriz.
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081',
+  withCredentials: true, // HttpOnly cookie desteği için gerekli
 });
 
 // AuthContext'i oluşturuyoruz. Başlangıç değeri undefined olacak.

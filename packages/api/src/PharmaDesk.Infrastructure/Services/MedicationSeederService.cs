@@ -89,9 +89,10 @@ namespace Backend.Services
                                 : null;
                             
                             // Muadil_Barkodlari is already in JSON array format from Python scrapper
+                            // Parse to List<string> for JSONB storage
                             var alternatives = record.Count > 4 && !string.IsNullOrWhiteSpace(record[4]) 
-                                ? TruncateString(record[4].Trim(), 2000) 
-                                : null;
+                                ? ParseJsonToList(record[4].Trim()) 
+                                : new List<string>();
                             
                             // Parse Gorsel_Path JSON array and extract first image
                             var gorselPath = record.Count > 5 && !string.IsNullOrWhiteSpace(record[5])
@@ -99,8 +100,8 @@ namespace Backend.Services
                                 : null;
                             var imagePath = gorselPath != null ? ParseFirstImagePath(gorselPath) : null;
                             var imageCount = gorselPath != null ? ParseImageCount(gorselPath) : 1;
-                            // Store the complete JSON array for AllImagePaths (cleaned)
-                            var allImagePaths = gorselPath != null ? CleanImagePathsJson(gorselPath) : null;
+                            // Parse JSON array to List<string> for AllImagePaths
+                            var allImagePaths = gorselPath != null ? ParseJsonToList(gorselPath) : new List<string>();
 
                             // Use auto-generated ID, store CSV's Sira_ID in Description for reference
                             var medication = new Medication
@@ -319,28 +320,29 @@ namespace Backend.Services
         }
 
         /// <summary>
-        /// JSON array formatındaki görsel yollarını temizler ve standart formata çevirir
-        /// Örnek: ["images/24/1.png", "images/24/2.png"] -> ["images/24/1.png","images/24/2.png"]
-        /// Max 4 görsel döndürür
+        /// JSON array formatını List<string>'e parse eder
+        /// Örnek: ["images/24/1.png", "images/24/2.png"] -> List { "images/24/1.png", "images/24/2.png" }
+        /// Muadil barkodları ve görsel yolları için kullanılır
         /// </summary>
-        private static string? CleanImagePathsJson(string jsonPath)
+        private static List<string> ParseJsonToList(string jsonArray)
         {
+            var result = new List<string>();
+            
             try
             {
-                var trimmed = jsonPath.Trim();
+                var trimmed = jsonArray.Trim();
                 
                 if (string.IsNullOrWhiteSpace(trimmed) || trimmed == "NOT_FOUND" || trimmed == "[]")
                 {
-                    return null;
+                    return result;
                 }
                 
-                // Extract image paths from JSON array
+                // Extract items from JSON array
                 if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
                 {
-                    var paths = new List<string>();
                     var content = trimmed.Substring(1, trimmed.Length - 2); // Remove [ ]
                     
-                    // Simple parsing: split by ", " considering quotes
+                    // Simple parsing: split by "," considering quotes
                     int start = 0;
                     bool inQuote = false;
                     
@@ -353,36 +355,32 @@ namespace Backend.Services
                         }
                         else if (c == ',' && !inQuote)
                         {
-                            var path = ExtractPath(content.Substring(start, i - start));
-                            if (!string.IsNullOrEmpty(path) && paths.Count < 4)
+                            var item = ExtractPath(content.Substring(start, i - start));
+                            if (!string.IsNullOrEmpty(item) && result.Count < 10) // Max 10 items
                             {
-                                paths.Add(path);
+                                result.Add(item);
                             }
                             start = i + 1;
                         }
                     }
                     
                     // Last item
-                    var lastPath = ExtractPath(content.Substring(start));
-                    if (!string.IsNullOrEmpty(lastPath) && paths.Count < 4)
+                    var lastItem = ExtractPath(content.Substring(start));
+                    if (!string.IsNullOrEmpty(lastItem) && result.Count < 10)
                     {
-                        paths.Add(lastPath);
-                    }
-                    
-                    if (paths.Count > 0)
-                    {
-                        // Return as JSON array
-                        return "[" + string.Join(",", paths.Select(p => $"\"{p}\"")) + "]";
+                        result.Add(lastItem);
                     }
                 }
-                
-                return null;
             }
             catch
             {
-                return null;
+                // Return empty list on parse error
             }
+            
+            return result;
         }
+
+        // CleanImagePathsJson is replaced by ParseJsonToList above
 
         /// <summary>
         /// Tırnak içindeki path'i çıkarır

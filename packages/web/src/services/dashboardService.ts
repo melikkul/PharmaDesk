@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 import { DashboardStats } from '../types';
 
@@ -13,9 +13,10 @@ export const dashboardService = {
     }
 
     const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
+      credentials: 'include',
+      headers: token && token !== 'cookie-managed' 
+        ? { 'Authorization': `Bearer ${token}` }
+        : {}
     });
 
     if (!response.ok) {

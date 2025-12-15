@@ -18,6 +18,10 @@
     "mongoose": "^8.19.2",
     "multer": "^2.0.2"
   },
+  "overrides": {
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
+  },
   "pnpm": {
     "overrides": {
       "react": "19.1.0",

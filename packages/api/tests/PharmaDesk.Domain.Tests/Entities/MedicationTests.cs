@@ -13,14 +13,14 @@ namespace PharmaDesk.Domain.Tests.Entities
             {
                 Name = "Dolorex 500 mg",
                 Barcode = "8699514010019",
-                ActiveIngredient = "Paracetamol",
+                ATC = "N02BE01", // Using ATC instead of ActiveIngredient
                 Manufacturer = "Abdi İbrahim"
             };
 
             // Assert
             medication.Name.Should().Be("Dolorex 500 mg");
             medication.Barcode.Should().Be("8699514010019");
-            medication.ActiveIngredient.Should().Be("Paracetamol");
+            medication.ATC.Should().Be("N02BE01");
             medication.Manufacturer.Should().Be("Abdi İbrahim");
         }
 

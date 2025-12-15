@@ -1,23 +1,23 @@
-using Backend.Data;
 using Backend.Dtos;
-using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// REFACTORED: Thin Controller - delegating all business logic to IShipmentService
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "User,Admin,Carrier")]  // Carrier added for scan endpoint access
     public class ShipmentsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IShipmentService _shipmentService;
 
-        public ShipmentsController(AppDbContext context)
+        public ShipmentsController(IShipmentService shipmentService)
         {
-            _context = context;
+            _shipmentService = shipmentService;
         }
 
         // GET /api/shipments?type=inbound|outbound&groupId=123 - Sevkiyatları listele
@@ -32,61 +32,10 @@ namespace Backend.Controllers
             if (pharmacyId == null)
                 return Unauthorized(new { message = "Pharmacy not found" });
 
-            var query = _context.Shipments
-                .Include(s => s.SenderPharmacy)
-                .Include(s => s.ReceiverPharmacy)
-                .Include(s => s.Medication)
-                .AsQueryable();
+            var shipments = await _shipmentService.GetShipmentsAsync(
+                pharmacyId.Value, type, page, pageSize, groupId);
 
-            // Filter by transfer type
-            if (type == "inbound")
-            {
-                query = query.Where(s => s.ReceiverPharmacyId == pharmacyId.Value);
-            }
-            else if (type == "outbound")
-            {
-                query = query.Where(s => s.SenderPharmacyId == pharmacyId.Value);
-            }
-            else
-            {
-                // Show both inbound and outbound
-                query = query.Where(s => s.SenderPharmacyId == pharmacyId.Value || s.ReceiverPharmacyId == pharmacyId.Value);
-            }
-
-            // Filter by group if groupId is provided
-            if (groupId.HasValue)
-            {
-                query = query.Where(s =>
-                    _context.PharmacyGroups.Any(pg =>
-                        pg.GroupId == groupId.Value &&
-                        pg.IsActive &&
-                        (pg.PharmacyProfileId == s.SenderPharmacyId || pg.PharmacyProfileId == s.ReceiverPharmacyId)));
-            }
-
-            var shipments = await query
-                .OrderByDescending(s => s.UpdatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .ToListAsync();
-
-            var response = shipments.Select(s => new ShipmentDto
-            {
-                Id = s.Id,
-                OrderNumber = s.OrderNumber,
-                ProductName = s.Medication.Name,
-                Quantity = s.Quantity,
-                TrackingNumber = s.TrackingNumber,
-                Date = s.UpdatedAt.ToString("yyyy-MM-dd"),
-                TransferType = s.SenderPharmacyId == pharmacyId.Value ? "outbound" : "inbound",
-                Counterparty = s.SenderPharmacyId == pharmacyId.Value 
-                    ? s.ReceiverPharmacy.PharmacyName 
-                    : s.SenderPharmacy.PharmacyName,
-                ShippingProvider = s.Carrier,
-                Status = TranslateShipmentStatus(s.Status),
-                TrackingHistory = new List<TrackingEventDto>() // Will be loaded separately if needed
-            });
-
-            return Ok(response);
+            return Ok(shipments);
         }
 
         // GET /api/shipments/{id} - Sevkiyat detayı
@@ -97,34 +46,19 @@ namespace Backend.Controllers
             if (pharmacyId == null)
                 return Unauthorized(new { message = "Pharmacy not found" });
 
-            var shipment = await _context.Shipments
-                .Include(s => s.SenderPharmacy)
-                .Include(s => s.ReceiverPharmacy)
-                .Include(s => s.Medication)
-                .FirstOrDefaultAsync(s => s.Id == id && 
-                    (s.SenderPharmacyId == pharmacyId.Value || s.ReceiverPharmacyId == pharmacyId.Value));
+            var result = await _shipmentService.GetShipmentByIdAsync(id, pharmacyId.Value);
 
-            if (shipment == null)
-                return NotFound(new { message = "Shipment not found" });
-
-            var response = new ShipmentDto
+            if (!result.Success)
             {
-                Id = shipment.Id,
-                OrderNumber = shipment.OrderNumber,
-                ProductName = shipment.Medication.Name,
-                Quantity = shipment.Quantity,
-                TrackingNumber = shipment.TrackingNumber,
-                Date = shipment.UpdatedAt.ToString("yyyy-MM-dd"),
-                TransferType = shipment.SenderPharmacyId == pharmacyId.Value ? "outbound" : "inbound",
-                Counterparty = shipment.SenderPharmacyId == pharmacyId.Value 
-                    ? shipment.ReceiverPharmacy.PharmacyName 
-                    : shipment.SenderPharmacy.PharmacyName,
-                ShippingProvider = shipment.Carrier,
-                Status = TranslateShipmentStatus(shipment.Status),
-                TrackingHistory = await GetShipmentEvents(shipment.Id)
-            };
+                return result.ErrorCode switch
+                {
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    401 => Unauthorized(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
+            }
 
-            return Ok(response);
+            return Ok(result.Data);
         }
 
         // POST /api/shipments - Yeni sevkiyat oluştur
@@ -135,128 +69,89 @@ namespace Backend.Controllers
             if (pharmacyId == null)
                 return Unauthorized(new { message = "Pharmacy not found" });
 
-            // Verify medication exists
-            var medication = await _context.Medications.FindAsync(request.MedicationId);
-            if (medication == null)
-                return NotFound(new { message = "Medication not found" });
+            var result = await _shipmentService.CreateShipmentAsync(request, pharmacyId.Value);
 
-            // Verify receiver pharmacy exists
-            var receiverPharmacy = await _context.PharmacyProfiles.FindAsync(request.ReceiverPharmacyId);
-            if (receiverPharmacy == null)
-                return NotFound(new { message = "Receiver pharmacy not found" });
-
-            // Create initial tracking history
-            var trackingHistory = new List<TrackingEventDto>
+            if (!result.Success)
             {
-                new TrackingEventDto
+                return result.ErrorCode switch
                 {
-                    Date = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                    Status = "Sipariş Alındı",
-                    Location = "Merkez Depo"
-                }
-            };
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    401 => Unauthorized(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
+            }
 
-            var shipment = new Shipment
+            return CreatedAtAction(nameof(GetShipment), new { id = result.Data!.Id }, result.Data);
+        }
+
+        /// <summary>
+        /// POST /api/shipments/scan - QR kod okutarak kargo durumunu güncelle
+        /// State Machine: Pending -> InTransit -> Delivered
+        /// AllowAnonymous: Kurye uygulaması için özel erişim
+        /// </summary>
+        /// <summary>
+        /// POST /api/shipments/scan - QR kod okutarak kargo durumunu güncelle
+        /// State Machine: Pending -> InTransit -> Delivered
+        /// Authorize: Sadece Kuryeler erişebilir
+        /// </summary>
+        [HttpPost("scan")]
+        [Authorize(Roles = "Carrier")] // 🔒 Şimdi sadece giriş yapmış kuryeler erişebilir
+        public async Task<ActionResult<ScanResult>> ScanShipment([FromBody] ScanShipmentRequest request)
+        {
+            if (string.IsNullOrWhiteSpace(request?.Token))
             {
-                OrderNumber = request.OrderNumber,
-                SenderPharmacyId = pharmacyId.Value,
-                ReceiverPharmacyId = request.ReceiverPharmacyId,
-                MedicationId = request.MedicationId,
-                Quantity = request.Quantity,
-                TrackingNumber = request.TrackingNumber,
-                Status = ShipmentStatus.Pending,
-                Carrier = request.Carrier,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
+                return BadRequest(new ScanResult 
+                { 
+                    Success = false, 
+                    Message = "QR token gereklidir.",
+                    ErrorCode = 400
+                });
+            }
 
-            _context.Shipments.Add(shipment);
-            await _context.SaveChangesAsync();
-            
-            // Create initial tracking event
-            var initialEvent = new ShipmentEvent
+            // Extract Carrier ID from JWT
+            var carrierIdClaim = User.FindFirst("id")?.Value;
+            if (!int.TryParse(carrierIdClaim, out int carrierId))
             {
-                ShipmentId = shipment.Id,
-                Status = "Sipariş Alındı",
-                Location = "Merkez Depo",
-                EventDate = DateTime.UtcNow
-            };
-            _context.ShipmentEvents.Add(initialEvent);
-            await _context.SaveChangesAsync();
+                 return Unauthorized(new ScanResult 
+                 { 
+                     Success = false, 
+                     Message = "Kurye kimliği doğrulanamadı.",
+                     ErrorCode = 401
+                 });
+            }
 
-            // Load navigation properties
-            await _context.Entry(shipment).Reference(s => s.SenderPharmacy).LoadAsync();
-            await _context.Entry(shipment).Reference(s => s.ReceiverPharmacy).LoadAsync();
-            await _context.Entry(shipment).Reference(s => s.Medication).LoadAsync();
+            // Pass carrierId to service for GBAC Validation
+            var result = await _shipmentService.ScanShipmentAsync(request.Token, carrierId);
 
-            var response = new ShipmentDto
+            if (!result.Success)
             {
-                Id = shipment.Id,
-                OrderNumber = shipment.OrderNumber,
-                ProductName = shipment.Medication.Name,
-                Quantity = shipment.Quantity,
-                TrackingNumber = shipment.TrackingNumber,
-                Date = shipment.UpdatedAt.ToString("yyyy-MM-dd"),
-                TransferType = "outbound",
-                Counterparty = shipment.ReceiverPharmacy.PharmacyName,
-                ShippingProvider = shipment.Carrier,
-                Status = TranslateShipmentStatus(shipment.Status),
-                TrackingHistory = new List<TrackingEventDto> 
+                return result.ErrorCode switch
                 {
-                    new TrackingEventDto
-                    {
-                        Date = initialEvent.EventDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                        Status = initialEvent.Status,
-                        Location = initialEvent.Location
-                    }
-                }
-            };
-
-            return CreatedAtAction(nameof(GetShipment), new { id = shipment.Id }, response);
-        }
-
-        // Helper methods
-        private string TranslateShipmentStatus(ShipmentStatus status)
-        {
-            return status switch
-            {
-                ShipmentStatus.Pending => "pending",
-                ShipmentStatus.Shipped => "shipped",
-                ShipmentStatus.InTransit => "in_transit",
-                ShipmentStatus.Delivered => "delivered",
-                ShipmentStatus.Cancelled => "cancelled",
-                _ => status.ToString().ToLower()
-            };
-        }
-
-        private List<TrackingEventDto>? ParseTrackingHistory(string? trackingHistoryJson)
-        {
-            if (string.IsNullOrEmpty(trackingHistoryJson))
-                return null;
-
-            try
-            {
-                return JsonSerializer.Deserialize<List<TrackingEventDto>>(trackingHistoryJson);
+                    404 => NotFound(result),
+                    403 => StatusCode(403, result), // Forbidden
+                    401 => Unauthorized(result),
+                    _ => BadRequest(result)
+                };
             }
-            catch
-            {
-                return null;
-            }
+
+            return Ok(result);
         }
 
-        private async Task<List<TrackingEventDto>> GetShipmentEvents(int shipmentId)
+        /// <summary>
+        /// GET /api/shipments/{id}/qr-token - Test için QR token üret
+        /// Only for development/testing purposes
+        /// </summary>
+        [HttpGet("{id}/qr-token")]
+        [AllowAnonymous]
+        public ActionResult<object> GetQRToken(int id, [FromServices] ICryptoService cryptoService)
         {
-            var events = await _context.ShipmentEvents
-                .Where(e => e.ShipmentId == shipmentId)
-                .OrderBy(e => e.EventDate)
-                .ToListAsync();
-
-            return events.Select(e => new TrackingEventDto
-            {
-                Date = e.EventDate.ToString("yyyy-MM-ddTHH:mm:ssZ"),
-                Status = e.Status,
-                Location = e.Location ?? ""
-            }).ToList();
+            var token = cryptoService.GenerateShipmentToken(id);
+            return Ok(new 
+            { 
+                shipmentId = id, 
+                qrToken = token,
+                message = "Bu token'ı Cargo App'te manuel giriş alanına yapıştırın."
+            });
         }
 
         private long? GetPharmacyIdFromToken()
@@ -266,5 +161,16 @@ namespace Backend.Controllers
                 return pharmacyId;
             return null;
         }
+    }
+
+    /// <summary>
+    /// Request DTO for QR code scanning
+    /// </summary>
+    public class ScanShipmentRequest
+    {
+        /// <summary>
+        /// The encrypted QR token from the shipment label
+        /// </summary>
+        public string Token { get; set; } = string.Empty;
     }
 }

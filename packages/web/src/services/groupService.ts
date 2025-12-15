@@ -1,6 +1,6 @@
 import Cookies from 'js-cookie';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 export interface GroupMemberStatistics {
   groupName: string;
@@ -45,7 +45,7 @@ export const groupService = {
     const token = Cookies.get('token');
     const response = await fetch(`${API_BASE_URL}/api/groups/my-groups/statistics?${params}`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
         'Content-Type': 'application/json'
       },
       credentials: 'include'
@@ -62,7 +62,7 @@ export const groupService = {
     const token = Cookies.get('token');
     const response = await fetch(`${API_BASE_URL}/api/groups/my-groups`, {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
         'Content-Type': 'application/json'
       },
       credentials: 'include'

@@ -3,9 +3,30 @@
 @tailwind utilities;
 
 @layer base {
+  /* Mobile-first responsive design */
+  html {
+    /* Smooth scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
+    /* Prevent text size adjustment on orientation change */
+    -webkit-text-size-adjust: 100%;
+  }
+  
   body {
-    @apply bg-gradient-to-br from-cargo-dark via-cargo to-cargo-light text-white font-sans;
+    @apply bg-gray-900 text-white font-sans;
     min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    /* Safe area padding for notched phones (iPhone X+) */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    /* Prevent overscroll bounce on mobile */
+    overscroll-behavior: none;
+  }
+
+  /* Better tap targets for mobile */
+  button, a, input, textarea, select {
+    -webkit-tap-highlight-color: transparent;
   }
 }
 
@@ -15,23 +36,64 @@
   }
 
   .btn-primary {
-    @apply bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+    @apply bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-3 px-6 rounded-lg shadow-lg transform transition-all duration-200 active:scale-95;
+    /* Minimum touch target size for mobile (44x44 recommended by Apple) */
+    min-height: 44px;
   }
 
   .btn-secondary {
-    @apply glass hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-lg transform transition-all duration-200 hover:scale-105 active:scale-95;
+    @apply glass hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-lg transform transition-all duration-200 active:scale-95;
+    min-height: 44px;
   }
 
   .input-field {
     @apply glass w-full px-4 py-3 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all duration-200;
+    /* Larger font on mobile to prevent zoom on focus */
+    font-size: 16px;
+    min-height: 48px;
   }
 
   .card {
-    @apply glass rounded-2xl p-6 shadow-2xl animate-fade-in;
+    @apply glass rounded-2xl p-4 sm:p-6 shadow-2xl animate-fade-in;
+    /* Slightly less padding on small screens */
   }
 
   .scan-frame {
     @apply absolute inset-0 border-4 border-primary-500 rounded-2xl animate-pulse-slow;
+  }
+
+  /* Mobile-optimized text sizes */
+  .text-responsive-sm {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .text-responsive-base {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-lg {
+    @apply text-base sm:text-lg;
+  }
+
+  /* Full-width container with padding on mobile */
+  .mobile-container {
+    @apply w-full px-3 sm:px-4 md:px-6;
+  }
+
+  /* Better spacing for mobile lists */
+  .mobile-list {
+    @apply space-y-2 sm:space-y-3;
+  }
+
+  /* Sticky header for mobile */
+  .mobile-header {
+    @apply sticky top-0 z-50 bg-gray-900/95 backdrop-blur-sm py-3 px-4;
+    padding-top: max(env(safe-area-inset-top), 12px);
+  }
+
+  /* Bottom navigation safe area */
+  .bottom-safe {
+    padding-bottom: max(env(safe-area-inset-bottom), 16px);
   }
 }
 
@@ -54,5 +116,27 @@
   to {
     transform: translateY(0);
     opacity: 1;
+  }
+}
+
+/* Responsive font sizes */
+@media (max-width: 380px) {
+  /* Small phones like iPhone SE */
+  html {
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 381px) and (max-width: 768px) {
+  /* Standard phones */
+  html {
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 769px) {
+  /* Tablets and larger */
+  html {
+    font-size: 16px;
   }
 }

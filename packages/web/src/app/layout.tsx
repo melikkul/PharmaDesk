@@ -1,7 +1,5 @@
 import React from 'react';
-import { AuthProvider } from '../store/AuthContext';
-import { CartProvider } from '../store/CartContext';
-import { QueryProvider } from '../components/providers/QueryProvider';
+import { Providers } from '../components/providers/Providers';
 import './globals.css';
 
 export const metadata = {
@@ -25,13 +23,9 @@ export default function RootLayout({
         <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body suppressHydrationWarning={true}>
-        <QueryProvider>
-          <AuthProvider>
-            <CartProvider>
-              {children}
-            </CartProvider>
-          </AuthProvider>
-        </QueryProvider>
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );

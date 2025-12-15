@@ -45,6 +45,7 @@ export default function OfferDetailPage() {
 
         const medicationForCart = {
             id: offer.id,
+            offerId: offer.id, // 🆕 Add offerId for backend cart API
             name: offer.productName || 'Bilinmiyor',
             manufacturer: offer.manufacturer || 'Bilinmiyor',
             imageUrl: offer.imageUrl || '/placeholder-med.png',
@@ -61,7 +62,8 @@ export default function OfferDetailPage() {
         };
 
         setIsAdding(true);
-        addToCart(medicationForCart, quantity, offer.pharmacyName || 'Bilinmiyor');
+        // 🆕 Pass offerType as 5th argument to correctly display badge in cart
+        addToCart(medicationForCart, quantity, offer.pharmacyName || 'Bilinmiyor', undefined, offer.type || 'stocksale');
 
         setTimeout(() => {
             setIsAdding(false);

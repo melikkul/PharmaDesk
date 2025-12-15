@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../store/AuthContext';
-import { cartService } from '../services/cartService';
-import { Cart } from '../types';
+import { cartService, BackendCart } from '../services/cartService';
 
 export const useCart = () => {
-  const [cart, setCart] = useState<Cart | null>(null);
+  const [cart, setCart] = useState<BackendCart | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { token } = useAuth();
@@ -94,7 +93,7 @@ export const useCart = () => {
     }
   }, [token]);
 
-  const cartItemCount = cart?.items?.length || 0;
+  const cartItemCount = cart?.cartItems?.length || 0;
 
   return {
     cart,

@@ -10,7 +10,7 @@ import { useAuth } from '@/store/AuthContext';
 
 import { TransactionHistoryItem } from '@/lib/dashboardData';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 export default function IslemGecmisiPage() {
   const [history, setHistory] = useState<TransactionHistoryItem[]>([]);
@@ -27,9 +27,10 @@ export default function IslemGecmisiPage() {
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/transactions`, {
+          credentials: 'include',
           headers: {
-            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
+            ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
           },
         });
 

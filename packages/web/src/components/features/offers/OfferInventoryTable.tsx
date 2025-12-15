@@ -8,7 +8,7 @@ import { PriceDisplay, StatusBadge, DateDisplay } from '@/components/common';
 import { 
   Edit2, Trash2, PauseCircle, PlayCircle, Filter, 
   ArrowUp, ArrowDown, ArrowUpDown, MoreVertical, CheckSquare, Square,
-  Lock, Globe, X
+  Lock, Globe, X, Settings
 } from 'lucide-react';
 import { offerService } from '@/services/offerService';
 import Toast from '@/components/ui/Toast';
@@ -499,7 +499,7 @@ const OffersTable: React.FC<OffersTableProps> = ({
                                         <img 
                                             src={
                                                 (item as any).imageUrl?.startsWith('/images/') 
-                                                    ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${(item as any).imageUrl}`
+                                                    ? `${''}${(item as any).imageUrl}`
                                                     : ((item as any).imageUrl || '/logoYesil.png')
                                             }
                                             alt={item.productName}
@@ -508,7 +508,7 @@ const OffersTable: React.FC<OffersTableProps> = ({
                                         <div className="flex flex-col">
                                             {/* 🆕 İlaç ismine tıklayınca ilaç detay sayfasına yönlendir */}
                                             <Link 
-                                                href={`/ilaclar/${(item as any).medicationId || item.id}?type=${((item as any).type || 'stocksale').toLowerCase()}&offerId=${item.id}`}
+                                                href={`/ilaclar/${(item as any).medicationId || item.id}?barem=${encodeURIComponent((item as any).malFazlasi || '1+0')}&type=${((item as any).type || 'stocksale').toLowerCase()}&offerId=${item.id}`}
                                                 className="font-medium text-gray-900 hover:text-blue-600 hover:underline transition-colors cursor-pointer"
                                             >
                                                 {item.productName}
@@ -647,6 +647,15 @@ const OffersTable: React.FC<OffersTableProps> = ({
           >
             <Edit2 className="w-4 h-4 text-blue-500" />
             <span>Düzenle</span>
+          </Link>
+          
+          <Link 
+            href={`/tekliflerim/${activeItem.id}`}
+            className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-purple-50 transition-colors"
+            onClick={() => { setActiveMenuId(null); setMenuPosition(null); }}
+          >
+            <Settings className="w-4 h-4 text-purple-500" />
+            <span>Teklif Yönetimi</span>
           </Link>
           
           {activeItem.status !== 'expired' && activeItem.status !== 'out_of_stock' && (

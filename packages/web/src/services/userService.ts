@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 import { PharmacyProfile, PharmacySettings } from '../types';
 
@@ -7,8 +7,9 @@ export const userService = {
   getProfile: async (token: string, userId?: string): Promise<PharmacyProfile> => {
     const endpoint = userId ? `/api/users/${userId}` : '/api/users/me';
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
         'Content-Type': 'application/json',
       },
     });
@@ -23,8 +24,9 @@ export const userService = {
   updateProfile: async (token: string, data: Partial<PharmacyProfile>): Promise<PharmacyProfile> => {
     const response = await fetch(`${API_BASE_URL}/api/users/me`, {
       method: 'PUT',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(data),
@@ -39,8 +41,9 @@ export const userService = {
 
   getSettings: async (token: string): Promise<PharmacySettings> => {
     const response = await fetch(`${API_BASE_URL}/api/settings`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
         'Content-Type': 'application/json',
       },
     });
@@ -55,8 +58,9 @@ export const userService = {
   updateSettings: async (token: string, settings: Partial<PharmacySettings>): Promise<PharmacySettings> => {
     const response = await fetch(`${API_BASE_URL}/api/settings`, {
       method: 'PUT',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(settings),

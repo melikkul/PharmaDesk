@@ -9,7 +9,7 @@ namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "User,Admin")]
     public class TransactionsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -37,6 +37,9 @@ namespace Backend.Controllers
 
             var transactions = await _context.Transactions
                 .Include(t => t.CounterpartyPharmacy)
+                .Include(t => t.Order) // 🆕 Order navigation için Include
+                .Include(t => t.Offer) // 🆕 Offer navigation için Include
+                    .ThenInclude(o => o != null ? o.Medication : null)
                 .Where(t => t.PharmacyProfileId == pharmacyId)
                 .OrderByDescending(t => t.Date)
                 .Select(t => new TransactionDto
@@ -44,10 +47,20 @@ namespace Backend.Controllers
                     Id = t.Id,
                     Date = t.Date.ToString("dd.MM.yyyy HH:mm"),
                     Type = MapTransactionType(t.Type),
-                    ProductName = t.Description,
+                    // 🆕 Order veya Offer'dan ürün adı çek
+                    ProductName = t.Order != null 
+                        ? t.Order.OrderItems.FirstOrDefault() != null 
+                            ? t.Order.OrderItems.First().Medication.Name 
+                            : t.Description
+                        : t.Offer != null && t.Offer.Medication != null
+                            ? t.Offer.Medication.Name
+                            : t.Description,
                     Counterparty = t.CounterpartyPharmacy != null ? t.CounterpartyPharmacy.PharmacyName : null,
                     Amount = t.Amount,
-                    Status = MapTransactionStatus(t.Status)
+                    Status = MapTransactionStatus(t.Status),
+                    // 🆕 FK references
+                    OrderId = t.OrderId,
+                    OfferId = t.OfferId
                 })
                 .ToListAsync();
 
@@ -100,11 +113,13 @@ namespace Backend.Controllers
                 TransactionType.Sale => "Satış",
                 TransactionType.Purchase => "Alış",
                 TransactionType.Deposit => "Bakiye Yükleme",
-                TransactionType.Withdraw => "Para Çekme",
+                TransactionType.Withdrawal => "Para Çekme",
                 TransactionType.Refund => "İade",
                 TransactionType.OfferCreated => "Teklif Oluşturuldu",
                 TransactionType.OfferUpdated => "Teklif Güncellendi",
                 TransactionType.OfferDeleted => "Teklif Silindi",
+                TransactionType.OrderCreated => "Sipariş Oluşturuldu",
+                TransactionType.OrderCompleted => "Sipariş Tamamlandı",
                 _ => "Diğer"
             };
         }
@@ -114,8 +129,9 @@ namespace Backend.Controllers
             return status switch
             {
                 TransactionStatus.Completed => "Tamamlandı",
-                TransactionStatus.Processing => "İşlemde",
+                TransactionStatus.Pending => "İşlemde",
                 TransactionStatus.Cancelled => "İptal",
+                TransactionStatus.Failed => "Başarısız",
                 _ => "Bilinmiyor"
             };
         }
@@ -130,5 +146,9 @@ namespace Backend.Controllers
         public string? Counterparty { get; set; }
         public decimal Amount { get; set; }
         public string Status { get; set; } = string.Empty;
+        
+        // 🆕 FK references for data integrity
+        public int? OrderId { get; set; }
+        public int? OfferId { get; set; }
     }
 }

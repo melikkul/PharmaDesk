@@ -23,13 +23,16 @@ const BalanceHistoryCard: React.FC<BalanceHistoryCardProps> = ({ data, limit }) 
           </tr>
         </thead>
         <tbody>
-          {data.slice(0, limit).map((item, index) => (
+          {data
+            .filter(item => item.amount !== 0) // Bakiyesi 0 olanları gösterme
+            .slice(0, limit)
+            .map((item, index) => (
              <tr key={item.id ?? `balance-${index}`}>
                 <td>{item.date}</td>
                 <td>
-                  {item.orderId ? (
+                  {item.medicationId ? (
                     <Link 
-                      href={`/siparisler/${item.orderId}`}
+                      href={`/ilaclar/${item.medicationId}`}
                       style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}
                     >
                       {item.productName || item.description}

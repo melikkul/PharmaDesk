@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 import { Shipment } from '../types';
 
@@ -13,8 +13,10 @@ export const shipmentService = {
     }
 
     const response = await fetch(url, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 

@@ -10,7 +10,7 @@ namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "User,Admin,Pharmacy")]
     public class CartsController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -41,6 +41,13 @@ namespace Backend.Controllers
 
             if (cart == null)
             {
+                // Verify PharmacyProfile exists before creating cart
+                var profileExists = await _context.PharmacyProfiles.AnyAsync(p => p.Id == pharmacyId.Value);
+                if (!profileExists)
+                {
+                    return BadRequest(new { message = "PharmacyProfile not found. Please contact support.", pharmacyId = pharmacyId.Value });
+                }
+                
                 // Create empty cart
                 cart = new Cart
                 {
@@ -97,8 +104,44 @@ namespace Backend.Controllers
                 availableStock = offer.Stock - offer.SoldQuantity;
             }
 
-            if (request.Quantity > availableStock)
-                return BadRequest(new { message = $"Yetersiz stok. Mevcut stok: {availableStock}" });
+            // 🆕 Deduct locked quantities from ALL users (including current user's own locks)
+            // This prevents adding more items when already in payment process
+            var allLockedQuantity = await _context.StockLocks
+                .Where(sl => sl.OfferId == request.OfferId 
+                    && sl.ExpiresAt > DateTime.UtcNow)
+                .SumAsync(sl => sl.LockedQuantity);
+            
+            availableStock -= allLockedQuantity;
+
+            // 🆕 Check if user already has this item in cart (not locked yet)
+            var existingCart = await _context.Carts
+                .Include(c => c.CartItems)
+                .FirstOrDefaultAsync(c => c.PharmacyProfileId == pharmacyId.Value);
+            
+            var existingCartQuantity = existingCart?.CartItems
+                .Where(ci => ci.OfferId == request.OfferId)
+                .Sum(ci => ci.Quantity) ?? 0;
+
+            // 🆕 Check if this user has locked this item (in payment process)
+            var myLockedQuantity = await _context.StockLocks
+                .Where(sl => sl.OfferId == request.OfferId 
+                    && sl.PharmacyProfileId == pharmacyId.Value
+                    && sl.ExpiresAt > DateTime.UtcNow)
+                .SumAsync(sl => sl.LockedQuantity);
+
+            // If user has locked items, they cannot add more - redirect to complete payment
+            if (myLockedQuantity > 0)
+            {
+                return BadRequest(new { message = $"Bu ürün için ödeme işleminiz devam ediyor. Lütfen önce ödemeyi tamamlayın veya iptal edin." });
+            }
+
+            // Calculate how much more the user can add
+            // Note: existingCartQuantity is what they have in cart (not locked yet)
+            // availableStock already has allLockedQuantity deducted
+            var canAddMore = availableStock - existingCartQuantity;
+            
+            if (request.Quantity > canAddMore)
+                return BadRequest(new { message = $"Yetersiz stok. Ekleyebileceğiniz maksimum: {Math.Max(0, canAddMore)}, Sepetinizde: {existingCartQuantity}" });
 
             // Get or create cart
             var cart = await _context.Carts
@@ -190,8 +233,30 @@ namespace Backend.Controllers
                 availableStock = offer.Stock - offer.SoldQuantity;
             }
 
+            // 🆕 Deduct locked quantities from ALL users (including current user's own locks)
+            // This prevents increasing quantity when already in payment process
+            var allLockedQuantity = await _context.StockLocks
+                .Where(sl => sl.OfferId == cartItem.OfferId 
+                    && sl.ExpiresAt > DateTime.UtcNow)
+                .SumAsync(sl => sl.LockedQuantity);
+            
+            availableStock -= allLockedQuantity;
+
+            // 🆕 Check if this user has locked this item (in payment process)
+            var myLockedQuantity = await _context.StockLocks
+                .Where(sl => sl.OfferId == cartItem.OfferId 
+                    && sl.PharmacyProfileId == pharmacyId.Value
+                    && sl.ExpiresAt > DateTime.UtcNow)
+                .SumAsync(sl => sl.LockedQuantity);
+
+            // If user has locked items, they cannot update quantity - redirect to complete payment
+            if (myLockedQuantity > 0)
+            {
+                return BadRequest(new { message = $"Bu ürün için ödeme işleminiz devam ediyor. Lütfen önce ödemeyi tamamlayın veya iptal edin." });
+            }
+
             if (request.Quantity > availableStock)
-                return BadRequest(new { message = $"Yetersiz stok. Mevcut stok: {availableStock}" });
+                return BadRequest(new { message = $"Yetersiz stok. Mevcut stok: {Math.Max(0, availableStock)}" });
 
             cartItem.Quantity = request.Quantity;
             cartItem.Cart.UpdatedAt = DateTime.UtcNow;
@@ -293,6 +358,33 @@ namespace Backend.Controllers
                 return pharmacyId;
             return null;
         }
+
+        // PUT /api/carts/items/{id}/depot-fulfillment - Set depot fulfillment flag
+        [HttpPut("items/{id}/depot-fulfillment")]
+        public async Task<ActionResult> SetDepotFulfillment(int id, [FromBody] SetDepotFulfillmentRequest request)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (pharmacyId == null)
+                return Unauthorized(new { message = "Pharmacy not found" });
+
+            var cartItem = await _context.CartItems
+                .Include(ci => ci.Cart)
+                .Include(ci => ci.Offer)
+                .FirstOrDefaultAsync(ci => ci.Id == id && ci.Cart.PharmacyProfileId == pharmacyId.Value);
+
+            if (cartItem == null)
+                return NotFound(new { message = "Cart item not found" });
+
+            // Sadece PurchaseRequest için geçerli
+            if (cartItem.Offer.Type != OfferType.PurchaseRequest)
+                return BadRequest(new { message = "Bu ayar sadece Alım Talebi türündeki ilanlar için geçerlidir." });
+
+            cartItem.IsDepotFulfillment = request.IsDepotFulfillment;
+            cartItem.Cart.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            return Ok(new { message = "Depo sorumluluğu güncellendi.", isDepotFulfillment = request.IsDepotFulfillment });
+        }
     }
 
     public class AddCartItemRequest
@@ -304,5 +396,10 @@ namespace Backend.Controllers
     public class UpdateQuantityRequest
     {
         public int Quantity { get; set; }
+    }
+
+    public class SetDepotFulfillmentRequest
+    {
+        public bool IsDepotFulfillment { get; set; }
     }
 }

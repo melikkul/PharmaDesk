@@ -79,3 +79,23 @@
 .clearCartButton:hover {
     background-color: rgba(231, 76, 60, 0.1);
 }
+
+/* RESPONSIVE STYLES */
+@media (max-width: 768px) {
+    .cartPanelContainer {
+        width: 100%;
+    }
+    
+    .cartFooter {
+        padding: 15px;
+    }
+    
+    .checkoutButton, .clearCartButton {
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    .totalPrice strong {
+        font-size: 18px;
+    }
+}

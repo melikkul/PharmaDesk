@@ -1,30 +1,34 @@
-using Backend.Data;
 using Backend.Dtos;
-using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR;
-using Microsoft.EntityFrameworkCore;
-using PharmaDesk.API.Hubs;
 using System.Security.Claims;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// REFACTORED: Thin Controller - delegating all business logic to IOfferService
+    /// Only handles HTTP request/response mapping
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize]
+    [Authorize(Roles = "User,Admin")]
     public class OffersController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly IOfferService _offerService;
 
-        public OffersController(AppDbContext context, IHubContext<NotificationHub> hubContext)
+        public OffersController(IOfferService offerService)
         {
-            _context = context;
-            _hubContext = hubContext;
+            _offerService = offerService;
         }
 
-        // GET /api/offers - Tüm aktif teklifleri listele (Pazaryeri)
+        // ═══════════════════════════════════════════════════════════════
+        // GET Endpoints
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// GET /api/offers - Tüm aktif teklifleri listele (Pazaryeri)
+        /// </summary>
         [HttpGet]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<OfferDto>>> GetAllOffers(
@@ -32,1009 +36,306 @@ namespace Backend.Controllers
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 50)
         {
-            var query = _context.Offers
-                .Include(o => o.Medication)
-                .Include(o => o.PharmacyProfile)
-                .AsQueryable();
-
-            // Filter by status
-            if (!string.IsNullOrEmpty(status))
-            {
-                if (Enum.TryParse<OfferStatus>(status, true, out var offerStatus))
-                {
-                    query = query.Where(o => o.Status == offerStatus);
-                }
-            }
-
-            var offers = await query
-                .OrderByDescending(o => o.CreatedAt)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(o => new OfferDto
-                {
-                    Id = o.Id,
-                    MedicationId = o.MedicationId,
-                    ProductName = o.Medication.Name,
-                    Barcode = o.Medication.Barcode,
-                    Type = o.Type.ToString().ToLower(),
-                    Stock = $"{o.Stock} + {o.BonusQuantity}",
-                    Price = o.Price,
-                    Status = o.Status.ToString().ToLower(),
-                    PharmacyId = o.PharmacyProfile.Id.ToString(),
-                    PharmacyName = o.PharmacyProfile.PharmacyName,
-                    PharmacyUsername = o.PharmacyProfile.Username,
-                    Description = o.Medication.Description,
-                    Manufacturer = o.Medication.Manufacturer,
-                    ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
-                    ImageCount = o.Medication.ImageCount,
-                    ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
-                    CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
-                    CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
-                    BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null,
-                    
-                    // New fields
-                    DepotPrice = o.DepotPrice,
-                    MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
-                    DiscountPercentage = o.DiscountPercentage,
-                    NetPrice = o.NetPrice,
-                    MaxSaleQuantity = o.MaxSaleQuantity,
-                    OfferDescription = o.Description,
-                    SoldQuantity = o.SoldQuantity
-                })
-                .ToListAsync();
-
-            // Calculate total ordered quantity per (MedicationId, SellerPharmacyId) - no OfferId needed
-            var orderQuantitiesByMedicationAndSeller = await _context.OrderItems
-                .Include(oi => oi.Order)
-                .ThenInclude(o => o.BuyerPharmacy)
-                .GroupBy(oi => new { oi.MedicationId, oi.Order.SellerPharmacyId })
-                .Select(g => new { 
-                    g.Key.MedicationId, 
-                    g.Key.SellerPharmacyId, 
-                    TotalQuantity = g.Sum(x => x.Quantity),
-                    Buyers = g.Select(x => new {
-                        x.Order.BuyerPharmacyId,
-                        BuyerName = x.Order.BuyerPharmacy != null ? x.Order.BuyerPharmacy.PharmacyName : "Bilinmiyor",
-                        x.Quantity,
-                        OrderDate = x.Order.CreatedAt
-                    }).ToList()
-                })
-                .ToListAsync();
-            
-            // Update SoldQuantity and Buyers for each offer based on MedicationId and PharmacyId
-            foreach (var offer in offers)
-            {
-                var orderData = orderQuantitiesByMedicationAndSeller
-                    .FirstOrDefault(x => x.MedicationId == offer.MedicationId && x.SellerPharmacyId.ToString() == offer.PharmacyId);
-                if (orderData != null)
-                {
-                    offer.SoldQuantity += orderData.TotalQuantity;
-                    offer.Buyers = orderData.Buyers.Select(b => new BuyerInfo
-                    {
-                        PharmacyId = b.BuyerPharmacyId,
-                        PharmacyName = b.BuyerName,
-                        Quantity = b.Quantity,
-                        OrderDate = b.OrderDate.ToString("dd/MM/yyyy")
-                    }).ToList();
-                }
-            }
-
+            var offers = await _offerService.GetAllOffersAsync(status, page, pageSize);
             return Ok(offers);
         }
 
+        /// <summary>
+        /// GET /api/offers/my-offers - Kendi tekliflerimi getir
+        /// </summary>
         [HttpGet("my-offers")]
         public async Task<ActionResult<IEnumerable<OfferDto>>> GetMyOffers()
         {
             var pharmacyId = GetPharmacyIdFromToken();
-            
-            // Throw detailed exception for debugging
             if (pharmacyId == null)
             {
                 var allClaims = User.Claims.Select(c => $"{c.Type}={c.Value}").ToList();
-                var claimsString = string.Join(", ", allClaims);
-                throw new Exception($"GetPharmacyIdFromToken returned null. All claims: [{claimsString}]");
+                return BadRequest(new { message = $"PharmacyId bulunamadı. Claims: [{string.Join(", ", allClaims)}]" });
             }
 
-            var offers = await _context.Offers
-                .Include(o => o.Medication)
-                .Include(o => o.PharmacyProfile)
-                .Where(o => o.PharmacyProfileId == pharmacyId.Value)
-                .OrderByDescending(o => o.CreatedAt)
-                .Select(o => new OfferDto
-                {
-                    Id = o.Id,
-                    MedicationId = o.MedicationId,
-                    ProductName = o.Medication.Name,
-                    Barcode = o.Medication.Barcode,
-                    Type = o.Type.ToString().ToLower(),
-                    Stock = $"{o.Stock} + {o.BonusQuantity}",
-                    Price = o.Price,
-                    Status = o.Status.ToString().ToLower(),
-                    PharmacyId = o.PharmacyProfile.Id.ToString(),
-                    PharmacyName = o.PharmacyProfile.PharmacyName,
-                    PharmacyUsername = o.PharmacyProfile.Username,
-                    Description = o.Medication.Description,
-                    Manufacturer = o.Medication.Manufacturer,
-                    ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
-                    ImageCount = o.Medication.ImageCount,
-                    ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
-                    CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
-                    CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
-                    BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null,
-                    
-                    // Financial fields
-                    DepotPrice = o.DepotPrice,
-                    MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
-                    DiscountPercentage = o.DiscountPercentage,
-                    NetPrice = o.NetPrice,
-                    MaxSaleQuantity = o.MaxSaleQuantity,
-                    OfferDescription = o.Description,
-                    
-                    // Barem and stock tracking
-                    WarehouseBaremId = o.WarehouseBaremId,
-                    MaxPriceLimit = o.MaxPriceLimit,
-                    IsPrivate = o.IsPrivate,
-                    TargetPharmacyIds = o.TargetPharmacyIds,
-                    SoldQuantity = o.SoldQuantity,
-                    RemainingStock = o.Stock - o.SoldQuantity
-                })
-                .ToListAsync();
-
+            var offers = await _offerService.GetMyOffersAsync(pharmacyId.Value);
             return Ok(offers);
         }
 
-        // GET /api/offers/{id} - Teklif detayını getir (Owner check)
+        /// <summary>
+        /// GET /api/offers/{id} - Teklif detayını getir
+        /// </summary>
         [HttpGet("{id}")]
         public async Task<ActionResult<OfferDto>> GetOfferById(int id)
         {
             var pharmacyId = GetPharmacyIdFromToken();
-            
-            var offer = await _context.Offers
-                .Include(o => o.Medication)
-                .Include(o => o.PharmacyProfile)
-                .FirstOrDefaultAsync(o => o.Id == id);
+            var offer = await _offerService.GetOfferByIdAsync(id, pharmacyId);
 
             if (offer == null)
-                return NotFound(new { message = "Offer not found" });
+                return NotFound(new { message = "Teklif bulunamadı veya erişim yetkiniz yok." });
 
-            // Authorization: Only owner can view their offers in edit mode
-            // Non-owners can only view active public offers
-            if (offer.PharmacyProfileId != pharmacyId)
-            {
-                // Allow viewing active public offers (marketplace)
-                if (offer.Status != OfferStatus.Active || offer.IsPrivate)
-                {
-                    return Forbid();
-                }
-            }
-
-            var response = new OfferDto
-            {
-                Id = offer.Id,
-                MedicationId = offer.MedicationId,
-                ProductName = offer.Medication.Name,
-                Barcode = offer.Medication.Barcode,
-                Type = offer.Type.ToString().ToLower(),
-                Stock = $"{offer.Stock} + {offer.BonusQuantity}",
-                Price = offer.Price,
-                Status = offer.Status.ToString().ToLower(),
-                PharmacyId = offer.PharmacyProfile.Id.ToString(),
-                PharmacyName = offer.PharmacyProfile.PharmacyName,
-                PharmacyUsername = offer.PharmacyProfile.Username,
-                Description = offer.Medication.Description,
-                Manufacturer = offer.Medication.Manufacturer,
-                ImageUrl = !string.IsNullOrEmpty(offer.Medication.ImagePath) ? $"/{offer.Medication.ImagePath}" : "/logoYesil.png",
-                ImageCount = offer.Medication.ImageCount,
-                ExpirationDate = offer.ExpirationDate.HasValue ? offer.ExpirationDate.Value.ToString("MM/yyyy") : null,
-                CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
-                CampaignBonusMultiplier = offer.Type == OfferType.JointOrder ? offer.CampaignBonusMultiplier : null,
-                BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd"),
-                // Financial fields
-                DepotPrice = offer.DepotPrice,
-                MalFazlasi = offer.MalFazlasi ?? $"{offer.MinSaleQuantity}+{offer.BonusQuantity}",
-                DiscountPercentage = offer.DiscountPercentage,
-                NetPrice = offer.NetPrice,
-                MaxSaleQuantity = offer.MaxSaleQuantity,
-                OfferDescription = offer.Description,
-                // Barem and stock tracking
-                WarehouseBaremId = offer.WarehouseBaremId,
-                MaxPriceLimit = offer.MaxPriceLimit,
-                IsPrivate = offer.IsPrivate,
-                TargetPharmacyIds = offer.TargetPharmacyIds,
-                SoldQuantity = offer.SoldQuantity,
-                RemainingStock = offer.Stock - offer.SoldQuantity
-            };
-
-            return Ok(response);
+            return Ok(offer);
         }
 
-        // GET /api/offers/medication/{medicationId} - İlacın tüm tekliflerini getir
+        /// <summary>
+        /// GET /api/offers/medication/{medicationId} - İlacın tüm tekliflerini getir
+        /// Finalized offers are only visible to participants
+        /// </summary>
         [HttpGet("medication/{medicationId}")]
         [AllowAnonymous]
         public async Task<ActionResult<IEnumerable<OfferDto>>> GetOffersByMedicationId(int medicationId)
         {
-            var offers = await _context.Offers
-                .Include(o => o.Medication)
-                .Include(o => o.PharmacyProfile)
-                .Where(o => o.MedicationId == medicationId && o.Status == OfferStatus.Active)
-                .OrderBy(o => o.Price) // En ucuzdan pahalıya
-                .ToListAsync();
-
-            // Her offer için alıcıları çek - SellerPharmacyId ve MedicationId ile eşleştir
-            // Aynı satıcı + aynı ilaç = bu offer'dan sipariş edilmiş
-            // var medicationId = offers.FirstOrDefault()?.MedicationId ?? 0; // Removed: Use parameter instead
-            var sellerIds = offers.Select(o => o.PharmacyProfileId).Distinct().ToList();
+            // Get pharmacy ID if user is authenticated (optional for this endpoint)
+            var pharmacyId = GetPharmacyIdFromToken();
             
-            // Order'lardan buyer bilgilerini çek
-            var allOrders = await _context.Orders
-                .Include(o => o.BuyerPharmacy)
-                .Include(o => o.OrderItems)
-                    .ThenInclude(oi => oi.Medication)
-                .Where(o => sellerIds.Contains(o.SellerPharmacyId) && 
-                           o.OrderItems.Any(oi => oi.MedicationId == medicationId))
-                .ToListAsync();
-            
-            // Offer bazında grupla (seller + medication)
-            var buyersByOffer = offers.ToDictionary(
-                o => o.Id,
-                o => allOrders
-                    .Where(order => order.SellerPharmacyId == o.PharmacyProfileId)
-                    .Select(order => new
-                    {
-                        PharmacyId = order.BuyerPharmacyId,
-                        PharmacyName = order.BuyerPharmacy.PharmacyName,
-                        Quantity = order.OrderItems.Where(oi => oi.MedicationId == medicationId).Sum(oi => oi.Quantity),
-                        OrderDate = order.OrderDate
-                    })
-                    .Where(b => b.Quantity > 0)
-                    .ToList()
-            );
-
-            var dtos = offers.Select(o => new OfferDto
-            {
-                Id = o.Id,
-                MedicationId = o.MedicationId,
-                ProductName = o.Medication.Name,
-                Barcode = o.Medication.Barcode,
-                Type = o.Type.ToString().ToLower(),
-                Stock = $"{o.Stock} + {o.BonusQuantity}",
-                Price = o.Price,
-                Status = o.Status.ToString().ToLower(),
-                PharmacyId = o.PharmacyProfile.Id.ToString(),
-                PharmacyName = o.PharmacyProfile.PharmacyName,
-                PharmacyUsername = o.PharmacyProfile.Username,
-                Description = o.Medication.Description,
-                Manufacturer = o.Medication.Manufacturer,
-                ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
-                ExpirationDate = o.ExpirationDate.HasValue ? o.ExpirationDate.Value.ToString("MM/yyyy") : null,
-                CampaignEndDate = o.CampaignEndDate.HasValue ? o.CampaignEndDate.Value.ToString("yyyy-MM-dd") : null,
-                CampaignBonusMultiplier = o.Type == OfferType.JointOrder ? o.CampaignBonusMultiplier : null,
-                BiddingDeadline = o.BiddingDeadline.HasValue ? o.BiddingDeadline.Value.ToString("yyyy-MM-dd") : null,
-                
-                // Barem bilgisi
-                MalFazlasi = o.MalFazlasi ?? $"{o.MinSaleQuantity}+{o.BonusQuantity}",
-                SoldQuantity = o.SoldQuantity,
-                RemainingStock = o.Stock - o.SoldQuantity,
-                
-                // 🆕 Sipariş veren alıcılar
-                Buyers = buyersByOffer.TryGetValue(o.Id, out var buyers) 
-                    ? buyers.Select(b => new BuyerInfo
-                    {
-                        PharmacyId = b.PharmacyId,
-                        PharmacyName = b.PharmacyName,
-                        Quantity = b.Quantity,
-                        OrderDate = b.OrderDate.ToString("dd/MM/yyyy")
-                    }).ToList()
-                    : new List<BuyerInfo>()
-            }).ToList();
-
-            return Ok(dtos);
+            var offers = await _offerService.GetOffersByMedicationIdAsync(medicationId, pharmacyId);
+            return Ok(offers);
         }
 
-        // POST /api/offers - Yeni teklif oluştur
+        // ═══════════════════════════════════════════════════════════════
+        // POST/PUT/PATCH/DELETE Endpoints
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// POST /api/offers - Yeni teklif oluştur
+        /// </summary>
         [HttpPost]
         public async Task<ActionResult<OfferDto>> CreateOffer([FromBody] CreateOfferRequest request)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (pharmacyId == null)
-                return Unauthorized(new { message = "Pharmacy not found" });
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
 
-            // Parse offer type
-            if (!Enum.TryParse<OfferType>(request.Type, true, out var offerType))
-                return BadRequest(new { message = "Invalid offer type. Use: stockSale, jointOrder, purchaseRequest" });
+            var result = await _offerService.CreateOfferAsync(request, pharmacyId.Value);
 
-            // Validation: If private, must have target pharmacies
-            if (request.IsPrivate && string.IsNullOrEmpty(request.TargetPharmacyIds))
-                return BadRequest(new { message = "Özel teklifler için hedef eczane seçilmelidir." });
-
-            // Validation: StockSale type price cannot exceed MaxPriceLimit (Barem price)
-            if (offerType == OfferType.StockSale && request.MaxPriceLimit > 0 && request.Price > request.MaxPriceLimit)
-                return BadRequest(new { message = $"Fiyat, seçilen barem fiyatından ({request.MaxPriceLimit:N2} TL) yüksek olamaz." });
-
-            // Verify medication exists - support MedicationId, Barcode, or ProductName
-            Medication? medication = null;
-
-            if (request.MedicationId.HasValue)
+            if (!result.Success)
             {
-                medication = await _context.Medications.FindAsync(request.MedicationId.Value);
-            }
-            else if (!string.IsNullOrEmpty(request.Barcode))
-            {
-                medication = await _context.Medications
-                    .FirstOrDefaultAsync(m => m.Barcode == request.Barcode);
-            }
-            else if (!string.IsNullOrEmpty(request.ProductName))
-            {
-                medication = await _context.Medications
-                    .FirstOrDefaultAsync(m => m.Name == request.ProductName);
-            }
-
-            if (medication == null)
-                return NotFound(new { message = "Medication not found" });
-
-            // 🆕 SMART MATCHING: JointOrder veya PurchaseRequest için mevcut ilan kontrolü
-            if (offerType == OfferType.JointOrder || offerType == OfferType.PurchaseRequest)
-            {
-                Console.WriteLine($"[SMART MATCHING] Checking for existing offers. MedicationId: {medication.Id}, PharmacyId: {pharmacyId.Value}, RequestedStock: {request.Stock}");
-                
-                // Aynı ilaç için TÜM aktif JointOrder veya PurchaseRequest'leri bul (kendinki dahil)
-                var matchingOffers = await _context.Offers
-                    .Include(o => o.PharmacyProfile)
-                    .Where(o => o.MedicationId == medication.Id 
-                             && (o.Type == OfferType.JointOrder || o.Type == OfferType.PurchaseRequest)
-                             && o.Status == OfferStatus.Active)
-                    .ToListAsync();
-
-                Console.WriteLine($"[SMART MATCHING] Found {matchingOffers.Count} matching offers");
-
-                // Kalan stok yeterli olan ilk teklifi bul
-                var suitableOffer = matchingOffers.FirstOrDefault(o => 
+                if (result.HasSuggestion)
                 {
-                    // Barem varsa: toplam barem stoku - mevcut talepler = kalan
-                    if (!string.IsNullOrEmpty(o.MalFazlasi))
+                    return Conflict(new
                     {
-                        var baremParts = o.MalFazlasi.Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
-                        var totalBaremStock = baremParts.Sum();
-                        
-                        // Bu teklifin kalan stoğu
-                        var remainingStock = totalBaremStock - o.SoldQuantity;
-                        Console.WriteLine($"[SMART MATCHING] Offer {o.Id}: Barem={o.MalFazlasi}, TotalBarem={totalBaremStock}, SoldQty={o.SoldQuantity}, Remaining={remainingStock}, Requested={request.Stock}");
-                        return remainingStock >= request.Stock;
-                    }
-                    
-                    // Barem yoksa: normal stok kontrolü
-                    var stockRemaining = o.Stock - o.SoldQuantity;
-                    Console.WriteLine($"[SMART MATCHING] Offer {o.Id}: Stock={o.Stock}, SoldQty={o.SoldQuantity}, Remaining={stockRemaining}, Requested={request.Stock}");
-                    return stockRemaining >= request.Stock;
-                });
-
-                if (suitableOffer != null)
-                {
-                    Console.WriteLine($"[SMART MATCHING] Found suitable offer! OfferId: {suitableOffer.Id}, OfferType: {suitableOffer.Type}, NewOfferType: {offerType}");
-                    
-                    // 🆕 Mantık:
-                    // - JointOrder açılıyorsa: Mevcut JointOrder veya PurchaseRequest varsa → engelle
-                    // - PurchaseRequest açılıyorsa: Mevcut JointOrder varsa → engelle, mevcut PurchaseRequest varsa → izin ver
-                    
-                    bool shouldBlock = false;
-                    string message = "";
-                    
-                    if (offerType == OfferType.JointOrder)
-                    {
-                        // JointOrder açılıyorsa her durumda engelle
-                        shouldBlock = true;
-                        message = suitableOffer.Type == OfferType.JointOrder
-                            ? "Bu ilaç için yeterli stoklu bir ortak sipariş bulundu. Yeni teklif açmak yerine mevcut gruba katılabilirsiniz."
-                            : "Bu ilaç için aynı ilacı talep eden bir alım talebi var. Mevcut talebe katılabilirsiniz.";
-                    }
-                    else if (offerType == OfferType.PurchaseRequest)
-                    {
-                        // PurchaseRequest açılıyorsa sadece mevcut JointOrder varsa engelle
-                        if (suitableOffer.Type == OfferType.JointOrder)
-                        {
-                            shouldBlock = true;
-                            message = "Bu ilaç için yeterli stoklu bir ortak sipariş bulundu. Yeni alım talebi açmak yerine mevcut siparişe katılabilirsiniz.";
-                        }
-                        else
-                        {
-                            // Mevcut de PurchaseRequest ise izin ver
-                            Console.WriteLine("[SMART MATCHING] Both are PurchaseRequest - allowing save");
-                            shouldBlock = false;
-                        }
-                    }
-                    
-                    if (shouldBlock)
-                    {
-                        // Kalan stok hesapla - tüm tekliflerin taleplerini topla
-                        int remainingStockValue;
-                        if (!string.IsNullOrEmpty(suitableOffer.MalFazlasi))
-                        {
-                            var baremParts = suitableOffer.MalFazlasi.Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
-                            var baremTotal = baremParts.Sum();
-                            
-                            // Tüm tekliflerin talep ettiği toplam stok
-                            var totalRequested = matchingOffers.Sum(o => o.Stock);
-                            remainingStockValue = Math.Max(0, baremTotal - totalRequested);
-                            
-                            Console.WriteLine($"[SMART MATCHING] BaremTotal: {baremTotal}, TotalRequested: {totalRequested}, Remaining: {remainingStockValue}");
-                        }
-                        else
-                        {
-                            remainingStockValue = suitableOffer.Stock - suitableOffer.SoldQuantity;
-                        }
-                        
-                        return Conflict(new 
-                        { 
-                            hasSuggestion = true,
-                            suggestedOfferId = suitableOffer.Id,
-                            suggestedMedicationId = suitableOffer.MedicationId,
-                            suggestedOfferType = suitableOffer.Type.ToString().ToLower(),
-                            barem = suitableOffer.MalFazlasi,
-                            message = message,
-                            remainingStock = remainingStockValue,
-                            pharmacyName = suitableOffer.PharmacyProfile?.PharmacyName ?? "Bilinmiyor"
-                        });
-                    }
+                        hasSuggestion = true,
+                        suggestedOfferId = result.SuggestedOfferId,
+                        suggestedMedicationId = result.SuggestedMedicationId,
+                        suggestedOfferType = result.SuggestedOfferType,
+                        barem = result.Barem,
+                        message = result.ErrorMessage,
+                        remainingStock = result.RemainingStock,
+                        pharmacyName = result.PharmacyName
+                    });
                 }
-                else
+
+                return result.ErrorCode switch
                 {
-                    Console.WriteLine("[SMART MATCHING] No suitable offer found - proceeding with creation");
-                }
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
             }
 
-            // For StockSale offers, ensure inventory exists
-            if (offerType == OfferType.StockSale)
-            {
-                var inventory = await _context.InventoryItems
-                    .Where(i => i.PharmacyProfileId == pharmacyId.Value && i.MedicationId == medication.Id)
-                    .FirstOrDefaultAsync();
-
-                if (inventory == null)
-                {
-                    // Auto-create inventory item from offer data
-                    DateTime expiryDate;
-                    
-                    // Parse expiration date (expected format: "MM/YYYY" or "MM / YYYY")
-                    if (!string.IsNullOrEmpty(request.ExpirationDate))
-                    {
-                        var parts = request.ExpirationDate.Replace(" ", "").Split('/');
-                        if (parts.Length == 2 && int.TryParse(parts[0], out int month) && int.TryParse(parts[1], out int year))
-                        {
-                            // Set to last day of the month
-                            expiryDate = new DateTime(year, month, DateTime.DaysInMonth(year, month));
-                        }
-                        else
-                        {
-                            // Default to 1 year from now if parsing fails
-                            expiryDate = DateTime.UtcNow.AddYears(1);
-                        }
-                    }
-                    else
-                    {
-                        expiryDate = DateTime.UtcNow.AddYears(1);
-                    }
-
-                    // Create new inventory item
-                    inventory = new InventoryItem
-                    {
-                        PharmacyProfileId = pharmacyId.Value,
-                        MedicationId = medication.Id,
-                        Quantity = request.Stock,
-                        BonusQuantity = request.BonusQuantity,
-                        CostPrice = request.Price,
-                        SalePrice = request.Price,
-                        ExpiryDate = DateTime.SpecifyKind(expiryDate, DateTimeKind.Utc),
-                        BatchNumber = $"AUTO-{DateTime.UtcNow:yyyyMMddHHmmss}",
-                        IsAlarmSet = false,
-                        MinStockLevel = 0
-                    };
-
-                    _context.InventoryItems.Add(inventory);
-                    await _context.SaveChangesAsync();
-                }
-                else if (inventory.Quantity < request.Stock)
-                {
-                    // Update inventory quantity if needed
-                    inventory.Quantity = request.Stock;
-                    inventory.BonusQuantity = request.BonusQuantity;
-                    await _context.SaveChangesAsync();
-                }
-            }
-
-            // 🆕 JointOrder ve PurchaseRequest için barem limit kontrolü frontend'de yapılıyor (baremMultiple destekli)
-            // Backend'de bu kontrol kaldırılmıştır çünkü frontend daha doğru hesaplama yapıyor
-
-            // Parse expiration date
-            DateTime? expirationDate = null;
-            if (!string.IsNullOrEmpty(request.ExpirationDate))
-            {
-                var parts = request.ExpirationDate.Replace(" ", "").Split('/');
-                if (parts.Length == 2 && int.TryParse(parts[0], out int month) && int.TryParse(parts[1], out int year))
-                {
-                    expirationDate = DateTime.SpecifyKind(new DateTime(year, month, DateTime.DaysInMonth(year, month)), DateTimeKind.Utc);
-                }
-            }
-
-            // Calculate NetPrice
-            decimal netPrice = request.Price; // Default to Price if no calculation possible
-
-            if (!string.IsNullOrEmpty(request.MalFazlasi))
-            {
-                // Parse MF "X+Y"
-                var parts = request.MalFazlasi.Split('+');
-                if (parts.Length == 2 && 
-                    int.TryParse(parts[0], out int paidQty) && 
-                    int.TryParse(parts[1], out int freeQty))
-                {
-                    // Formula: (DepotPrice * PaidQty) / (PaidQty + FreeQty)
-                    // But usually DepotPrice is the base. If user entered DepotPrice, use it.
-                    // If not, use Price as base?
-                    // Requirement: "Formula if MF (X+Y) exists: NetPrice = (DepotPrice * X) / (X + Y)"
-                    
-                    decimal basePrice = request.DepotPrice > 0 ? request.DepotPrice : request.Price;
-                    
-                    if (paidQty + freeQty > 0)
-                    {
-                        netPrice = (basePrice * paidQty) / (paidQty + freeQty);
-                    }
-                }
-            }
-            else if (request.DiscountPercentage > 0)
-            {
-                // Formula: DepotPrice * (1 - (DiscountPercentage/100))
-                decimal basePrice = request.DepotPrice > 0 ? request.DepotPrice : request.Price;
-                netPrice = basePrice * (1 - (request.DiscountPercentage / 100));
-            }
-
-            var offer = new Offer
-            {
-                PharmacyProfileId = pharmacyId.Value,
-                MedicationId = medication.Id,
-                Type = offerType,
-                Price = request.Price, // This is the "OfferPrice" (Unit Price)
-                Stock = request.Stock,
-                BonusQuantity = request.BonusQuantity,
-                MinSaleQuantity = request.MinSaleQuantity,
-                Status = OfferStatus.Active,
-                ExpirationDate = expirationDate,
-                
-                // New Fields
-                DepotPrice = request.DepotPrice,
-                MalFazlasi = request.MalFazlasi,
-                DiscountPercentage = request.DiscountPercentage,
-                NetPrice = netPrice,
-                MaxSaleQuantity = request.MaxSaleQuantity,
-                Description = request.Description,
-
-                // Private offer fields
-                IsPrivate = request.IsPrivate,
-                TargetPharmacyIds = request.TargetPharmacyIds,
-                WarehouseBaremId = request.WarehouseBaremId,
-                MaxPriceLimit = request.MaxPriceLimit,
-
-                // Legacy fields (kept for backwards compatibility)
-                CampaignStartDate = request.CampaignStartDate,
-                CampaignEndDate = request.CampaignEndDate,
-                CampaignBonusMultiplier = request.CampaignBonusMultiplier,
-                MinimumOrderQuantity = request.MinimumOrderQuantity,
-                BiddingDeadline = request.BiddingDeadline,
-                AcceptingCounterOffers = request.AcceptingCounterOffers,
-                TargetPharmacyId = request.TargetPharmacyId,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            };
-
-            _context.Offers.Add(offer);
-            await _context.SaveChangesAsync();
-
-            // 🆕 Teklif oluşturma işlem kaydı
-            var offerTransaction = new Transaction
-            {
-                PharmacyProfileId = pharmacyId.Value,
-                Type = TransactionType.OfferCreated,
-                Amount = 0, // Para işlemi yok
-                Description = $"Teklif oluşturuldu: {medication.Name} ({offer.Stock} adet, {offer.Price:N2} TL)",
-                Date = DateTime.UtcNow,
-                RelatedReferenceId = offer.Id.ToString()
-            };
-            _context.Transactions.Add(offerTransaction);
-            await _context.SaveChangesAsync();
-
-            // Load navigation properties for response
-            await _context.Entry(offer).Reference(o => o.Medication).LoadAsync();
-            await _context.Entry(offer).Reference(o => o.PharmacyProfile).LoadAsync();
-
-            var response = new OfferDto
-            {
-                Id = offer.Id,
-                MedicationId = offer.MedicationId,
-                ProductName = offer.Medication.Name,
-                Barcode = offer.Medication.Barcode,
-                Type = offer.Type.ToString().ToLower(),
-                Stock = offer.Stock.ToString(),
-                Price = offer.Price,
-                Status = offer.Status.ToString().ToLower(),
-                PharmacyId = offer.PharmacyProfile.Id.ToString(),
-                PharmacyName = offer.PharmacyProfile.PharmacyName,
-                PharmacyUsername = offer.PharmacyProfile.Username,
-                Description = offer.Medication.Description,
-                Manufacturer = offer.Medication.Manufacturer,
-                ImageUrl = !string.IsNullOrEmpty(offer.Medication.ImagePath) ? $"/{offer.Medication.ImagePath}" : "/logoYesil.png",
-                ImageCount = offer.Medication.ImageCount,
-                ExpirationDate = offer.ExpirationDate?.ToString("MM/yyyy"),
-                CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
-                BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd"),
-                
-                // New fields
-                DepotPrice = offer.DepotPrice,
-                NetPrice = offer.NetPrice,
-                IsPrivate = offer.IsPrivate,
-                TargetPharmacyIds = offer.TargetPharmacyIds,
-                WarehouseBaremId = offer.WarehouseBaremId,
-                MaxPriceLimit = offer.MaxPriceLimit
-            };
-
-            // 🆕 SignalR ile tüm bağlı clientlara sessiz veri yenileme bildirimi
-            // Toast'lar lokal olarak frontend component'lerinde gösteriliyor
-            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
-            {
-                message = $"Yeni teklif oluşturuldu: {offer.Medication.Name}",
-                type = "entityUpdated", // Frontend'de toast göstermiyor, sadece veri yenileme
-                timestamp = DateTime.UtcNow,
-                senderId = (string?)null
-            });
-
-            return CreatedAtAction(nameof(GetAllOffers), new { id = offer.Id }, response);
+            return CreatedAtAction(nameof(GetOfferById), new { id = result.Offer!.Id }, result.Offer);
         }
 
-        // PATCH /api/offers/{id}/status - Teklif durumunu güncelle
-        [HttpPatch("{id}/status")]
-        public async Task<ActionResult> UpdateOfferStatus(int id, [FromBody] UpdateOfferStatusRequest request)
-        {
-            var pharmacyId = GetPharmacyIdFromToken();
-            if (pharmacyId == null)
-                return Unauthorized(new { message = "Pharmacy not found" });
-
-            var offer = await _context.Offers
-                .Include(o => o.Medication) // 🆕 Medication bilgisi için
-                .FirstOrDefaultAsync(o => o.Id == id && o.PharmacyProfileId == pharmacyId.Value);
-
-            if (offer == null)
-                return NotFound(new { message = "Offer not found" });
-
-            if (Enum.TryParse<OfferStatus>(request.Status, true, out var newStatus))
-            {
-                offer.Status = newStatus;
-                offer.UpdatedAt = DateTime.UtcNow;
-                await _context.SaveChangesAsync();
-                
-                // 🆕 SignalR ile tüm bağlı clientlara bildir
-                await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
-                {
-                    message = $"Teklif durumu güncellendi: {offer.Medication?.Name ?? "Bilinmeyen"}",
-                    type = "entityUpdated",
-                    timestamp = DateTime.UtcNow,
-                    senderId = (string?)null
-                });
-                
-                return Ok(new { message = "Offer status updated successfully" });
-            }
-
-            return BadRequest(new { message = "Invalid status value" });
-        }
-
-        // PUT /api/offers/{id} - Teklif düzenle
+        /// <summary>
+        /// PUT /api/offers/{id} - Teklif güncelle
+        /// </summary>
         [HttpPut("{id}")]
         public async Task<ActionResult<OfferDto>> UpdateOffer(int id, [FromBody] UpdateOfferRequest request)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (pharmacyId == null)
-                return Unauthorized(new { message = "Pharmacy not found" });
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
 
-            var offer = await _context.Offers
-                .Include(o => o.Medication)
-                .Include(o => o.PharmacyProfile)
-                .FirstOrDefaultAsync(o => o.Id == id && o.PharmacyProfileId == pharmacyId.Value);
+            var result = await _offerService.UpdateOfferAsync(id, request, pharmacyId.Value);
 
-            if (offer == null)
-                return NotFound(new { message = "Offer not found" });
-
-            // Update common fields
-            offer.Price = request.Price;
-            offer.Stock = request.Stock;
-            offer.BonusQuantity = request.BonusQuantity;
-            offer.MinSaleQuantity = request.MinSaleQuantity;
-
-            // Update new fields
-            offer.DepotPrice = request.DepotPrice.GetValueOrDefault();
-            offer.MalFazlasi = request.MalFazlasi;
-            offer.DiscountPercentage = request.DiscountPercentage.GetValueOrDefault();
-            offer.MaxSaleQuantity = request.MaxSaleQuantity;
-            offer.Description = request.Description;
-
-            // Recalculate NetPrice
-            decimal netPrice = request.Price;
-            if (!string.IsNullOrEmpty(request.MalFazlasi))
+            if (!result.Success)
             {
-                var parts = request.MalFazlasi.Split('+');
-                if (parts.Length == 2 && 
-                    int.TryParse(parts[0], out int paidQty) && 
-                    int.TryParse(parts[1], out int freeQty))
+                return result.ErrorCode switch
                 {
-                    decimal basePrice = request.DepotPrice.GetValueOrDefault() > 0 ? request.DepotPrice.GetValueOrDefault() : request.Price;
-                    if (paidQty + freeQty > 0)
-                        netPrice = (basePrice * paidQty) / (paidQty + freeQty);
-                }
-            }
-            else if (request.DiscountPercentage.GetValueOrDefault() > 0)
-            {
-                decimal basePrice = request.DepotPrice.GetValueOrDefault() > 0 ? request.DepotPrice.GetValueOrDefault() : request.Price;
-                netPrice = basePrice * (1 - (request.DiscountPercentage.GetValueOrDefault() / 100));
-            }
-            offer.NetPrice = netPrice;
-
-            // Update type-specific fields based on offer type
-            if (offer.Type == OfferType.JointOrder)
-            {
-                if (request.CampaignEndDate.HasValue)
-                    offer.CampaignEndDate = request.CampaignEndDate;
-                if (request.CampaignStartDate.HasValue)
-                    offer.CampaignStartDate = request.CampaignStartDate;
-                if (request.CampaignBonusMultiplier.HasValue)
-                    offer.CampaignBonusMultiplier = request.CampaignBonusMultiplier.Value;
-            }
-            else if (offer.Type == OfferType.PurchaseRequest)
-            {
-                if (request.MinimumOrderQuantity.HasValue)
-                    offer.MinimumOrderQuantity = request.MinimumOrderQuantity;
-                if (request.BiddingDeadline.HasValue)
-                    offer.BiddingDeadline = request.BiddingDeadline;
-                if (request.AcceptingCounterOffers.HasValue)
-                    offer.AcceptingCounterOffers = request.AcceptingCounterOffers.Value;
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
             }
 
-            // Update barem fields
-            if (request.WarehouseBaremId.HasValue)
-                offer.WarehouseBaremId = request.WarehouseBaremId;
-            if (request.MaxPriceLimit.HasValue)
-                offer.MaxPriceLimit = request.MaxPriceLimit.Value;
-
-            offer.UpdatedAt = DateTime.UtcNow;
-            await _context.SaveChangesAsync();
-
-            // 🆕 Teklif güncelleme işlem kaydı
-            var updateTransaction = new Transaction
-            {
-                PharmacyProfileId = pharmacyId.Value,
-                Type = TransactionType.OfferUpdated,
-                Amount = 0,
-                Description = $"Teklif güncellendi: {offer.Medication.Name} ({offer.Stock} adet, {offer.Price:N2} TL)",
-                Date = DateTime.UtcNow,
-                RelatedReferenceId = offer.Id.ToString()
-            };
-            _context.Transactions.Add(updateTransaction);
-            await _context.SaveChangesAsync();
-
-            // 🆕 SignalR ile tüm bağlı clientlara bildir
-            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
-            {
-                message = $"Teklif güncellendi: {offer.Medication.Name}",
-                type = "entityUpdated",
-                timestamp = DateTime.UtcNow,
-                senderId = (string?)null
-            });
-
-            var response = new OfferDto
-            {
-                Id = offer.Id,
-                MedicationId = offer.MedicationId,
-                ProductName = offer.Medication.Name,
-                Type = offer.Type.ToString().ToLower(),
-                Stock = $"{offer.Stock} + {offer.BonusQuantity}",
-                Price = offer.Price,
-                Status = offer.Status.ToString().ToLower(),
-                PharmacyId = offer.PharmacyProfile.Id.ToString(),
-                PharmacyName = offer.PharmacyProfile.PharmacyName,
-                PharmacyUsername = offer.PharmacyProfile.Username,
-                Description = offer.Medication.Description,
-                Manufacturer = offer.Medication.Manufacturer,
-                ImageUrl = !string.IsNullOrEmpty(offer.Medication.ImagePath) ? $"/{offer.Medication.ImagePath}" : "/logoYesil.png",
-                ImageCount = offer.Medication.ImageCount,
-                CampaignEndDate = offer.CampaignEndDate?.ToString("yyyy-MM-dd"),
-                CampaignBonusMultiplier = offer.Type == OfferType.JointOrder ? offer.CampaignBonusMultiplier : null,
-                BiddingDeadline = offer.BiddingDeadline?.ToString("yyyy-MM-dd")
-            };
-
-            return Ok(response);
+            return Ok(result.Offer);
         }
 
-        // DELETE /api/offers/{id} - Teklifi sil
+        /// <summary>
+        /// PATCH /api/offers/{id}/status - Teklif durumunu güncelle
+        /// </summary>
+        [HttpPatch("{id}/status")]
+        public async Task<ActionResult> UpdateOfferStatus(int id, [FromBody] UpdateOfferStatusRequest request)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (pharmacyId == null)
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
+
+            var success = await _offerService.UpdateOfferStatusAsync(id, request.Status, pharmacyId.Value);
+
+            if (!success)
+                return NotFound(new { message = "Teklif bulunamadı veya geçersiz durum değeri." });
+
+            return Ok(new { message = "Teklif durumu başarıyla güncellendi." });
+        }
+
+        /// <summary>
+        /// DELETE /api/offers/{id} - Teklifi sil
+        /// </summary>
         [HttpDelete("{id}")]
         public async Task<ActionResult> DeleteOffer(int id)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (pharmacyId == null)
-                return Unauthorized(new { message = "Pharmacy not found" });
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
 
-            var offer = await _context.Offers
-                .Include(o => o.Medication) // 🆕 Medication bilgisi için
-                .FirstOrDefaultAsync(o => o.Id == id && o.PharmacyProfileId == pharmacyId.Value);
+            var success = await _offerService.DeleteOfferAsync(id, pharmacyId.Value);
 
-            if (offer == null)
-                return NotFound(new { message = "Offer not found" });
+            if (!success)
+                return NotFound(new { message = "Teklif bulunamadı." });
 
-            var medicationName = offer.Medication?.Name ?? "Bilinmeyen İlaç";
-            var offerStock = offer.Stock;
-            var offerPrice = offer.Price;
-            
-            _context.Offers.Remove(offer);
-            await _context.SaveChangesAsync();
-
-            // 🆕 Teklif silme işlem kaydı
-            var deleteTransaction = new Transaction
-            {
-                PharmacyProfileId = pharmacyId.Value,
-                Type = TransactionType.OfferDeleted,
-                Amount = 0,
-                Description = $"Teklif silindi: {medicationName} ({offerStock} adet, {offerPrice:N2} TL)",
-                Date = DateTime.UtcNow
-            };
-            _context.Transactions.Add(deleteTransaction);
-            await _context.SaveChangesAsync();
-
-            // 🆕 SignalR ile tüm bağlı clientlara bildir
-            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
-            {
-                message = $"Teklif silindi: {medicationName}",
-                type = "entityUpdated",
-                timestamp = DateTime.UtcNow,
-                senderId = (string?)null
-            });
-
-            return Ok(new { message = "Offer deleted successfully" });
+            return Ok(new { message = "Teklif başarıyla silindi." });
         }
 
-        // 🆕 POST /api/offers/{id}/claim-depot - Depo sorumluluğunu üstlen
+        // ═══════════════════════════════════════════════════════════════
+        // Depot Operations
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// POST /api/offers/{id}/claim-depot - Depo sorumluluğunu üstlen
+        /// </summary>
         [HttpPost("{id}/claim-depot")]
         public async Task<ActionResult> ClaimDepot(int id)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (!pharmacyId.HasValue)
-                return Unauthorized(new { message = "Pharmacy ID not found in token" });
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
 
-            var offer = await _context.Offers
-                .Include(o => o.Medication)
-                .FirstOrDefaultAsync(o => o.Id == id);
+            var result = await _offerService.ClaimDepotAsync(id, pharmacyId.Value);
 
-            if (offer == null)
-                return NotFound(new { message = "Offer not found" });
-
-            // Zaten birisi claim etmiş mi?
-            if (offer.DepotClaimerUserId.HasValue)
+            if (!result.Success)
             {
-                return Conflict(new { 
-                    message = "Bu teklif için zaten depo sorumlusu belirlenmiş.",
-                    claimerUserId = offer.DepotClaimerUserId 
-                });
+                return result.ErrorCode switch
+                {
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    409 => Conflict(new { message = result.ErrorMessage, claimerUserId = result.ClaimerUserId }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
             }
 
-            // Claim et
-            offer.DepotClaimerUserId = pharmacyId.Value;
-            offer.DepotClaimedAt = DateTime.UtcNow;
-            offer.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            // SignalR ile bildir
-            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
+            return Ok(new
             {
-                message = $"Depo sorumlusu belirlendi: {offer.Medication.Name}",
-                type = "entityUpdated",
-                timestamp = DateTime.UtcNow,
-                senderId = (string?)null
-            });
-
-            return Ok(new { 
                 message = "Depo sorumluluğu başarıyla üstlenildi.",
-                claimerUserId = pharmacyId.Value,
-                claimedAt = offer.DepotClaimedAt
+                claimerUserId = result.ClaimerUserId,
+                claimedAt = result.ClaimedAt
             });
         }
 
-        // 🆕 DELETE /api/offers/{id}/claim-depot - Depo sorumluluğundan çık
+        /// <summary>
+        /// DELETE /api/offers/{id}/claim-depot - Depo sorumluluğundan çık
+        /// </summary>
         [HttpDelete("{id}/claim-depot")]
         public async Task<ActionResult> UnclaimDepot(int id)
         {
             var pharmacyId = GetPharmacyIdFromToken();
             if (!pharmacyId.HasValue)
-                return Unauthorized(new { message = "Pharmacy ID not found in token" });
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
 
-            var offer = await _context.Offers
-                .Include(o => o.Medication)
-                .FirstOrDefaultAsync(o => o.Id == id);
+            var success = await _offerService.UnclaimDepotAsync(id, pharmacyId.Value);
 
-            if (offer == null)
-                return NotFound(new { message = "Offer not found" });
-
-            // Sadece claim eden kişi unclaim edebilir
-            if (offer.DepotClaimerUserId != pharmacyId.Value)
-            {
+            if (!success)
                 return Forbid();
-            }
-
-            // Unclaim
-            offer.DepotClaimerUserId = null;
-            offer.DepotClaimedAt = null;
-            offer.UpdatedAt = DateTime.UtcNow;
-
-            await _context.SaveChangesAsync();
-
-            // SignalR ile bildir
-            await _hubContext.Clients.All.SendAsync("ReceiveNotification", new
-            {
-                message = $"Depo sorumlusu ayrıldı: {offer.Medication.Name}",
-                type = "entityUpdated",
-                timestamp = DateTime.UtcNow,
-                senderId = (string?)null
-            });
 
             return Ok(new { message = "Depo sorumluluğundan ayrıldınız." });
         }
 
-        private long? GetPharmacyIdFromToken()
+        // ═══════════════════════════════════════════════════════════════
+        // Financial Operations (Provision/Capture Pattern)
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// POST /api/offers/{id}/process-balance - Provizyon tahsilatı (Capture)
+        /// Teklif sahibi tarafından çağrılır, bloke edilen parayı satıcıya aktarır
+        /// </summary>
+        [HttpPost("{id}/process-balance")]
+        public async Task<ActionResult> ProcessBalance(int id)
         {
-            var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
-            Console.WriteLine($"[DEBUG] PharmacyId Claim Value: '{pharmacyIdClaim}'");
-            
-            if (long.TryParse(pharmacyIdClaim, out var pharmacyId))
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (!pharmacyId.HasValue)
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
+
+            var result = await _offerService.ProcessBalanceAsync(id, pharmacyId.Value);
+
+            if (!result.Success)
             {
-                Console.WriteLine($"[DEBUG] Parsed PharmacyId: {pharmacyId}");
-                return pharmacyId;
+                return result.ErrorCode switch
+                {
+                    403 => Forbid(),
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    409 => Conflict(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
             }
-            
-            Console.WriteLine($"[DEBUG] Failed to parse PharmacyId from claim: '{pharmacyIdClaim}'");
-            return null;
+
+            return Ok(new
+            {
+                message = "Ödeme başarıyla işlendi.",
+                capturedAmount = result.CapturedAmount,
+                transactionCount = result.TransactionCount
+            });
         }
 
         /// <summary>
-        /// Parse AllImagePaths JSON array into List of URL strings
-        /// Example: ["images/24/1.png","images/24/2.jpg"] -> ["/images/24/1.png", "/images/24/2.jpg"]
-        /// Returns null if no images or parsing fails
+        /// POST /api/offers/{id}/finalize - Teklifi sonlandır
+        /// Satıcı tarafından çağrılır, teklifi Passive durumuna geçirir
         /// </summary>
-        private static List<string>? ParseImageUrls(string? allImagePaths)
+        [HttpPost("{id}/finalize")]
+        public async Task<ActionResult> FinalizeOffer(int id)
         {
-            if (string.IsNullOrWhiteSpace(allImagePaths))
-                return null;
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (!pharmacyId.HasValue)
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
 
-            try
+            var result = await _offerService.FinalizeOfferAsync(id, pharmacyId.Value);
+
+            if (!result.Success)
             {
-                var trimmed = allImagePaths.Trim();
-                if (!trimmed.StartsWith("[") || !trimmed.EndsWith("]"))
-                    return null;
-
-                var content = trimmed.Substring(1, trimmed.Length - 2);
-                if (string.IsNullOrWhiteSpace(content))
-                    return null;
-
-                var paths = new List<string>();
-                var items = content.Split(',');
-                
-                foreach (var item in items)
+                return result.ErrorCode switch
                 {
-                    var cleaned = item.Trim().Trim('"');
-                    if (!string.IsNullOrEmpty(cleaned) && cleaned.StartsWith("images/"))
-                    {
-                        paths.Add($"/{cleaned}");
-                    }
-                }
+                    403 => Forbid(),
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    409 => Conflict(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
+            }
 
-                return paths.Count > 0 ? paths : null;
-            }
-            catch
+            return Ok(new
             {
-                return null;
-            }
+                message = "Teklif başarıyla sonlandırıldı.",
+                offer = result.Offer
+            });
+        }
+
+        /// <summary>
+        /// GET /api/offers/{id}/shipment-labels - Kargo etiketlerini getir (QR kod için)
+        /// Satıcı tarafından çağrılır, ödeme işlendikten sonra kullanılır
+        /// </summary>
+        [HttpGet("{id}/shipment-labels")]
+        public async Task<ActionResult<List<object>>> GetShipmentLabels(int id)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (!pharmacyId.HasValue)
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
+
+            var labels = await _offerService.GetShipmentLabelsAsync(id, pharmacyId.Value);
+
+            if (labels == null || !labels.Any())
+                return NotFound(new { message = "Etiket bulunamadı. Önce siparişler olmalıdır." });
+
+            return Ok(labels);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Private Helper
+        // ═══════════════════════════════════════════════════════════════
+
+        private long? GetPharmacyIdFromToken()
+        {
+            var pharmacyIdClaim = User.FindFirst("PharmacyId")?.Value;
+            return long.TryParse(pharmacyIdClaim, out var pharmacyId) ? pharmacyId : null;
         }
     }
 }
-

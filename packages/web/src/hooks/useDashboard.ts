@@ -44,6 +44,10 @@ export const useDashboard = () => {
           price: offer.price || offer.Price,
           imageUrl: offer.imageUrl || offer.ImageUrl,
           status: (offer.status || offer.Status || '').toLowerCase(),
+          // 🆕 İlaç detay linki için gerekli alanlar
+          medicationId: offer.medicationId || offer.MedicationId,
+          type: offer.type || offer.Type || 'stockSale',
+          malFazlasi: offer.malFazlasi || offer.MalFazlasi || '1+0',
         }));
       }
 

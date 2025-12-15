@@ -3,42 +3,71 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Backend.Models
 {
-    public class InventoryItem
+    /// <summary>
+    /// Refactored InventoryItem entity with:
+    /// - PostgreSQL xmin concurrency token for stock operations
+    /// - ISoftDelete & IAuditable implementation
+    /// Critical for preventing "Lost Update" during concurrent stock deductions
+    /// </summary>
+    public class InventoryItem : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
-
+        // Foreign Keys
         public long PharmacyProfileId { get; set; }
         public int MedicationId { get; set; }
 
-        [Required]
+        // Stock Fields
         public int Quantity { get; set; }
+        public int BonusQuantity { get; set; }
+        public int MinStockLevel { get; set; }
 
-        [StringLength(50)]
-        public string BatchNumber { get; set; } = string.Empty; // parti no
+        // Pricing
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal CostPrice { get; set; }
 
-        public DateTime ExpiryDate { get; set; } // miadi
-        
-        // --- YENİ ALANLAR: Maliyet ve Satış Fiyatı Takibi ---
         [Column(TypeName = "decimal(18,2)")]
-        public decimal CostPrice { get; set; } = 0; // İlacın eczaneye maliyeti (birim fiyat)
-        
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal? SalePrice { get; set; } // Eczanenin satış fiyatı (opsiyonel, teklif için baz)
-        
-        public int BonusQuantity { get; set; } = 0; // Mal fazlası (MF) stok
-        
+        public decimal? SalePrice { get; set; }
+
+        // Product Info
+        [Required, StringLength(50)]
+        public string BatchNumber { get; set; } = string.Empty;
+
         [StringLength(20)]
-        public string? ShelfLocation { get; set; } // Raf konumu (örn: A-12)
-        
-        public bool IsAlarmSet { get; set; } = false; // Stok uyarısı aktif mi?
-        
-        public int MinStockLevel { get; set; } = 0; // Minimum stok seviyesi
+        public string? ShelfLocation { get; set; }
+
+        public DateTime ExpiryDate { get; set; }
+        public bool IsAlarmSet { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
+        // İTS (İlaç Takip Sistemi) Karekod Takibi
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// İTS Karekod - Her ilaç kutusuna özel benzersiz kod
+        /// Data Matrix formatında 2D barkod içeriği
+        /// </summary>
+        [StringLength(100)]
+        public string? QRCode { get; set; }
+
+        /// <summary>
+        /// İTS'de aktive edilmiş mi? (Satış bildirimi yapıldı mı?)
+        /// </summary>
+        public bool IsITSActivated { get; set; } = false;
+
+        /// <summary>
+        /// İTS aktivasyon tarihi
+        /// </summary>
+        public DateTime? ITSActivationDate { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Navigation Properties
+        // ═══════════════════════════════════════════════════════════════
 
         [ForeignKey(nameof(PharmacyProfileId))]
-        public PharmacyProfile PharmacyProfile { get; set; } = null!; // hangi eczanenin 
+        public PharmacyProfile PharmacyProfile { get; set; } = null!;
 
         [ForeignKey(nameof(MedicationId))]
-        public Medication Medication { get; set; } = null!; // hangi ilaca ait
+        public Medication Medication { get; set; } = null!;
+
+        public ICollection<Offer> Offers { get; set; } = new List<Offer>();
     }
 }

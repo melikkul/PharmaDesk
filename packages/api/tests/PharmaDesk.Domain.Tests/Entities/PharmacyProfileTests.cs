@@ -11,33 +11,33 @@ namespace PharmaDesk.Domain.Tests.Entities
             // Arrange & Act
             var pharmacy = new PharmacyProfile
             {
-                Name = "Test Eczanesi",
-                LicenseNumber = "12345",
+                PharmacyName = "Test Eczanesi",
+                GLN = "12345",
                 City = "İstanbul",
                 District = "Kadıköy",
                 Address = "Test Mahallesi No:1"
             };
 
             // Assert
-            pharmacy.Name.Should().Be("Test Eczanesi");
-            pharmacy.LicenseNumber.Should().Be("12345");
+            pharmacy.PharmacyName.Should().Be("Test Eczanesi");
+            pharmacy.GLN.Should().Be("12345");
             pharmacy.City.Should().Be("İstanbul");
             pharmacy.District.Should().Be("Kadıköy");
             pharmacy.Address.Should().Be("Test Mahallesi No:1");
         }
 
         [Fact]
-        public void PharmacyProfile_LicenseNumber_ShouldNotBeNull()
+        public void PharmacyProfile_GLN_ShouldNotBeNull()
         {
             // Arrange
             var pharmacy = new PharmacyProfile
             {
-                Name = "Test Eczanesi",
-                LicenseNumber = "ABC123"
+                PharmacyName = "Test Eczanesi",
+                GLN = "ABC123"
             };
 
             // Act & Assert
-            pharmacy.LicenseNumber.Should().NotBeNullOrEmpty();
+            pharmacy.GLN.Should().NotBeNullOrEmpty();
         }
 
         [Theory]
@@ -49,7 +49,7 @@ namespace PharmaDesk.Domain.Tests.Entities
             // Arrange & Act
             var pharmacy = new PharmacyProfile
             {
-                Name = "Test Eczanesi",
+                PharmacyName = "Test Eczanesi",
                 City = city
             };
 

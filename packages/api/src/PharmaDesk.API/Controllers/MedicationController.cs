@@ -5,6 +5,7 @@ using Backend.Dtos;
 using Backend.DTOs;
 using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,18 +20,32 @@ namespace Backend.Controllers
     {
         private readonly AppDbContext _db;
         private readonly IExternalDrugService? _externalDrugService;
+        private readonly IMemoryCache _cache;
+
+        private const string MedicationsCacheKey = "medications_list";
+        private static readonly TimeSpan MedicationsCacheDuration = TimeSpan.FromHours(1);
 
         public MedicationsController(
             AppDbContext db,
+            IMemoryCache cache,
             IExternalDrugService? externalDrugService = null)
         {
             _db = db;
+            _cache = cache;
             _externalDrugService = externalDrugService;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<MedicationResponse>>> GetMedications()
         {
+            // Try to get from cache first
+            if (_cache.TryGetValue(MedicationsCacheKey, out List<MedicationResponse>? cachedMedications) 
+                && cachedMedications != null)
+            {
+                return Ok(cachedMedications);
+            }
+
+            // Cache miss - fetch from database
             var medications = await _db.Medications
                 .AsNoTracking()
                 .Select(m => new MedicationResponse
@@ -39,9 +54,13 @@ namespace Backend.Controllers
                     ATC = m.ATC,
                     Name = m.Name,
                     Manufacturer = m.Manufacturer,
-                    Price = m.BasePrice
+                    Price = m.BasePrice,
+                    Alternatives = m.Alternatives ?? new List<string>()
                 })
                 .ToListAsync();
+
+            // Store in cache for 1 hour
+            _cache.Set(MedicationsCacheKey, medications, MedicationsCacheDuration);
 
             return Ok(medications);
         }
@@ -58,7 +77,8 @@ namespace Backend.Controllers
                     ATC = m.ATC,
                     Name = m.Name,
                     Manufacturer = m.Manufacturer,
-                    Price = m.BasePrice
+                    Price = m.BasePrice,
+                    Alternatives = m.Alternatives ?? new List<string>()
                 })
                 .SingleOrDefaultAsync();
 
@@ -93,7 +113,7 @@ namespace Backend.Controllers
                 Manufacturer = medication.Manufacturer,
                 BasePrice = medication.BasePrice,
                 PackageType = medication.PackageType,
-                Alternatives = ParseAlternatives(medication.Alternatives)
+                Alternatives = medication.Alternatives // 🆕 Already List<string> from JSONB
             };
 
             // 3. If ExternalApiId exists and service is available, fetch real-time barem
@@ -165,21 +185,6 @@ namespace Backend.Controllers
             return Ok(results);
         }
 
-        /// <summary>
-        /// Parse JSON array of alternative barcodes
-        /// </summary>
-        private List<string>? ParseAlternatives(string? alternativesJson)
-        {
-            if (string.IsNullOrEmpty(alternativesJson)) return null;
-            
-            try
-            {
-                return JsonSerializer.Deserialize<List<string>>(alternativesJson);
-            }
-            catch
-            {
-                return null;
-            }
-        }
+        // ParseAlternatives method removed - Alternatives is now List<string> directly from JSONB column
     }
 }

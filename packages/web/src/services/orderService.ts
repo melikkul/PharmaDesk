@@ -1,13 +1,16 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 import { Order, OrderItem } from '../types';
 
 export const orderService = {
   getOrders: async (token: string, type?: 'buyer' | 'seller', groupId?: number): Promise<Order[]> => {
+    // Fix: Regular users should use 'my-orders' endpoint
+    // Admin 'GetAllOrders' is at /api/orders (protected by Admin role)
+    // 'GetMyOrders' is /api/orders/my-orders (protected by checks inside)
     let url = type 
-      ? `${API_BASE_URL}/api/orders?type=${type}`
-      : `${API_BASE_URL}/api/orders`;
+      ? `${API_BASE_URL}/api/orders/my-orders?role=${type}`
+      : `${API_BASE_URL}/api/orders/my-orders`;
     
     // Add groupId if provided
     if (groupId) {
@@ -15,10 +18,11 @@ export const orderService = {
     }
 
     const response = await fetch(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -50,10 +54,11 @@ export const orderService = {
 
   getOrderById: async (token: string, orderId: string): Promise<Order> => {
     const response = await fetch(`${API_BASE_URL}/api/orders/${orderId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {

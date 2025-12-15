@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 import { Notification } from '../types';
 
@@ -6,8 +6,9 @@ export const notificationService = {
   getNotifications: async (token: string): Promise<Notification[]> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/notifications`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
         },
       });
 
@@ -26,8 +27,9 @@ export const notificationService = {
   getUnreadCount: async (token: string): Promise<number> => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/notifications/unread-count`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
         },
       });
 
@@ -47,8 +49,9 @@ export const notificationService = {
   markAsRead: async (token: string, id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/notifications/${id}/read`, {
       method: 'PUT',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 
@@ -60,8 +63,9 @@ export const notificationService = {
   markAllAsRead: async (token: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/notifications/read-all`, {
       method: 'PUT',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 

@@ -139,7 +139,7 @@ export const useDashboardPanels = () => {
     if (!token) return;
 
     try {
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      const API_BASE_URL = '';
       
       // Parse pharmacy ID to string (prevents JavaScript precision loss with large Long IDs)
       const receiverPharmacyId = String(pharmacy.id);
@@ -159,9 +159,10 @@ export const useDashboardPanels = () => {
       const response = await fetch(`${API_BASE_URL}/api/chat/conversations`, { 
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
         },
+        credentials: 'include',
         // Send as STRING to prevent JavaScript precision loss
         body: JSON.stringify({ receiverPharmacyId: receiverPharmacyId }),
       });

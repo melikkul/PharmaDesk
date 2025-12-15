@@ -11,6 +11,7 @@ import styles from '../tekliflerim.module.css'; // üst bar stilleri için
 // ANA BİLEŞEN
 import OfferForm from '../OfferForm'; // Tamamen yenilenen form bileşeni
 import { offerService } from '@/services/offerService';
+import { useAuth } from '@/store/AuthContext';
 
 
 const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
@@ -32,6 +33,7 @@ interface SuggestionData {
 const NewOfferFormContent = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { token } = useAuth();
   
   // 🆕 Suggestion Modal State
   const [showSuggestionModal, setShowSuggestionModal] = useState(false);
@@ -43,7 +45,6 @@ const NewOfferFormContent = () => {
   // Real API integration
   const handleSave = async (data: any) => {
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       if (!token) {
         alert('Lütfen giriş yapın.');
         router.push('/login');

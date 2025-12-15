@@ -10,7 +10,7 @@ import styles from './anasayfa.module.css';
 // import { FaBoxes, FaSyncAlt, FaChartBar } from 'react-icons/fa';
 
 export default function Anasayfa() {
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, isLoading } = useAuth();
 
     return (
         <div className={styles.pageContainer}>
@@ -28,7 +28,7 @@ export default function Anasayfa() {
                         />
                     </Link>
                     <div className={styles.navLinks}>
-                        {isAuthenticated ? (
+                        {isAuthenticated && !isLoading ? (
                             <Link href="/dashboard" className={styles.btnPrimary}>Dashboard'a Git</Link>
                         ) : (
                             <>

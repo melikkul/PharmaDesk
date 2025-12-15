@@ -212,16 +212,30 @@ export default function IlaclarPage() {
                 ) : (
                     // Her teklif için bireysel kart - offer ID ile benzersiz URL
                     filteredOffers.map((offer) => {
-                        // For Joint Order / PurchaseRequest, stock field contains the barem (e.g. "15+5")
-                        // For Stock Sale, malFazlasi might have it, otherwise default to '1+0'
+                        // 🔧 FIX: Always use malFazlasi for barem display (it contains the real warehouse barem)
+                        // offer.stock contains requested quantity, malFazlasi contains actual barem like "15+5"
+                        const barem = (offer as any).malFazlasi || '1+0';
+                        const baremParam = encodeURIComponent(barem);
+                        
+                        // Parse barem for display
+                        const baremParts = barem.split('+').map((s: string) => parseInt(s.trim()) || 0);
+                        const baremTotal = (baremParts[0] || 0) + (baremParts[1] || 0);
+                        
+                        // 🔧 FIX: Parse offer.stock to get requested quantity
+                        // offer.stock comes as "7 + 5" string, first number is the request
+                        const stockParts = offer.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
+                        const requestedQuantity = stockParts[0] || 0; // Talep edilen miktar
+                        
                         const offerTypeLC = offer.type?.toLowerCase();
                         const isJointType = offerTypeLC === 'jointorder' || offerTypeLC === 'purchaserequest';
-                        const barem = isJointType ? offer.stock : ((offer as any).malFazlasi || '1+0');
-                        const baremParam = encodeURIComponent(barem);
-                        const stockParts = offer.stock.split('+').map(s => parseInt(s.trim()) || 0);
-                        const currentStock = stockParts[0];
+                        
+                        // For JointOrder/PurchaseRequest: currentStock = requested quantity (not barem total)
+                        // For StockSale: currentStock = remaining stock
                         const soldQuantity = (offer as any).soldQuantity || 0;
-                        const remainingStock = Math.max(0, currentStock - soldQuantity);
+                        const currentStock = isJointType ? requestedQuantity : ((offer as any).remainingStock ?? (baremTotal - soldQuantity));
+                        const remainingStock = isJointType 
+                            ? Math.max(0, baremTotal - requestedQuantity - soldQuantity)
+                            : ((offer as any).remainingStock ?? (baremTotal - soldQuantity));
                         
                         return (
                             <ProductCard 
@@ -234,11 +248,11 @@ export default function IlaclarPage() {
                                     imageCount: offer.imageCount || 1,
                                     price: offer.price,
                                     expirationDate: offer.expirationDate || '',
-                                    initialStock: currentStock,
+                                    initialStock: baremTotal,
                                     currentStock: currentStock,
                                     soldQuantity: soldQuantity,
                                     remainingStock: remainingStock,
-                                    bonus: stockParts[1] || 0,
+                                    bonus: baremParts[1] || 0,
                                     sellers: [{
                                         pharmacyId: String(offer.pharmacyId),
                                         pharmacyName: offer.pharmacyName || 'Bilinmiyor',

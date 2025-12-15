@@ -62,9 +62,10 @@ export const ChatProvider = ({ children }: { children: React.ReactNode }) => {
   const loadMessages = async (otherUserId: string) => {
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/api/Messages/${otherUserId}`, {
+      const response = await fetch(`${''}/api/Messages/${otherUserId}`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
 

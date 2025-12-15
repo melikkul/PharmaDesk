@@ -9,7 +9,7 @@ interface CarrierAuthContextType {
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (email: string, password: string, rememberMe?: boolean) => Promise<void>;
-    logout: () => void;
+    logout: () => Promise<void>;
 }
 
 const CarrierAuthContext = createContext<CarrierAuthContextType | undefined>(undefined);
@@ -72,14 +72,26 @@ export const CarrierAuthProvider = ({ children }: { children: ReactNode }) => {
         }
     }, [router]);
 
-    const logout = useCallback(() => {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem('carrier_token');
-        localStorage.removeItem('carrier_user');
-        sessionStorage.removeItem('carrier_token');
-        sessionStorage.removeItem('carrier_user');
-        router.push('/login');
+    const logout = useCallback(async () => {
+        try {
+            // Attempt to check and end active shift before logging out
+            // We do this silently and best-effort
+            const shiftStatus = await carrierApi.getShiftStatus().catch(() => null);
+            if (shiftStatus?.isOnShift) {
+                await carrierApi.endShift().catch(err => console.error('Auto-end shift failed:', err));
+            }
+        } catch (error) {
+            console.error('Logout cleanup error:', error);
+        } finally {
+            // Always clear local state and redirect
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem('carrier_token');
+            localStorage.removeItem('carrier_user');
+            sessionStorage.removeItem('carrier_token');
+            sessionStorage.removeItem('carrier_user');
+            router.push('/login');
+        }
     }, [router]);
 
     const value = {

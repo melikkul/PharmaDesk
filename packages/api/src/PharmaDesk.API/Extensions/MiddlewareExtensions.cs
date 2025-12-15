@@ -10,41 +10,14 @@ namespace PharmaDesk.API.Extensions
     public static class MiddlewareExtensions
     {
         /// <summary>
-        /// Configures global exception handler for production environments
+        /// Configures global exception handler using custom ExceptionMiddleware
+        /// Provides: Serilog logging, consistent JSON responses, TraceId tracking
         /// </summary>
         public static IApplicationBuilder ConfigureExceptionHandler(this WebApplication app)
         {
-            if (!app.Environment.IsDevelopment())
-            {
-                app.UseExceptionHandler(errorApp =>
-                {
-                    errorApp.Run(async context =>
-                    {
-                        var problemDetailsService = context.RequestServices.GetService<IProblemDetailsService>();
-                        var problemDetails = new ProblemDetails
-                        {
-                            Status = (int)HttpStatusCode.InternalServerError,
-                            Title = "An unexpected error occurred.",
-                            Detail = "An unexpected error occurred. Please try again later."
-                        };
-                        
-                        context.Response.ContentType = "application/problem+json";
-                        
-                        if (problemDetailsService != null)
-                        {
-                            await problemDetailsService.WriteAsync(new ProblemDetailsContext 
-                            { 
-                                HttpContext = context, 
-                                ProblemDetails = problemDetails 
-                            });
-                        }
-                        else
-                        {
-                            await context.Response.WriteAsJsonAsync(problemDetails);
-                        }
-                    });
-                });
-            }
+            // Use our custom middleware for all environments
+            // It handles logging and provides consistent error responses
+            app.UseMiddleware<Middleware.ExceptionMiddleware>();
             
             return app;
         }
@@ -78,6 +51,9 @@ namespace PharmaDesk.API.Extensions
             // CORS must be first to handle preflight OPTIONS requests
             app.UseCors("frontend");
 
+            // Rate Limiting - protect against DDoS and brute-force attacks
+            app.UseRateLimiter();
+
             // Static files for serving images from /app/wwwroot
             var wwwrootPath = "/app/wwwroot";
             if (Directory.Exists(wwwrootPath))
@@ -106,6 +82,7 @@ namespace PharmaDesk.API.Extensions
             // Controllers & SignalR Hubs
             app.MapControllers();
             app.MapHub<PharmaDesk.API.Hubs.NotificationHub>("/hubs/notifications");
+            app.MapHub<PharmaDesk.API.Hubs.LocationHub>("/hubs/location");
 
             return app;
         }

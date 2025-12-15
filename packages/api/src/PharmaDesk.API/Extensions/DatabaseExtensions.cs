@@ -49,8 +49,13 @@ namespace PharmaDesk.API.Extensions
         {
             var connectionString = configuration.GetDatabaseConnectionString();
             
-            services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(connectionString));
-            services.AddDbContext<IdentityDbContext>(opt => opt.UseNpgsql(connectionString));
+            // Build NpgsqlDataSource with EnableDynamicJson for List<string> → JSONB serialization (Npgsql 8.0+ requirement)
+            var dataSourceBuilder = new Npgsql.NpgsqlDataSourceBuilder(connectionString);
+            dataSourceBuilder.EnableDynamicJson(); // Required for Medication.Alternatives, AllImagePaths JSONB columns
+            var dataSource = dataSourceBuilder.Build();
+            
+            services.AddDbContext<AppDbContext>(opt => opt.UseNpgsql(dataSource));
+            services.AddDbContext<IdentityDbContext>(opt => opt.UseNpgsql(dataSource));
             
             return services;
         }

@@ -1,23 +1,24 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using Backend.Data;
 using Backend.Dtos;
-using Backend.Models;
+using Backend.Services;
 using Microsoft.AspNetCore.Authorization;
 
 namespace Backend.Controllers
 {
+    /// <summary>
+    /// REFACTORED: Thin Controller - delegating all business logic to IInventoryService
+    /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize] // tum endpointler icin yetkilendirme zorunlu
+    [Authorize(Roles = "User,Admin")] // RBAC: Only Pharmacy and Admin roles
     public class InventoryController : ControllerBase
     {
-        private readonly AppDbContext _db;
+        private readonly IInventoryService _inventoryService;
 
-        public InventoryController(AppDbContext db)
+        public InventoryController(IInventoryService inventoryService)
         {
-            _db = db;
+            _inventoryService = inventoryService;
         }
 
         private int GetUserId()
@@ -34,35 +35,7 @@ namespace Backend.Controllers
             try
             {
                 var userId = GetUserId();
-
-                var inventory = await _db.InventoryItems
-                    .AsNoTracking()
-                    .Where(i => i.PharmacyProfileId == userId)
-                    .Include(i => i.Medication) 
-                    .Select(i => new
-                    {
-                        id = i.Id,
-                        medicationId = i.MedicationId,
-                        quantity = i.Quantity,
-                        bonusQuantity = i.BonusQuantity,
-                        costPrice = i.CostPrice,
-                        salePrice = i.SalePrice,
-                        expiryDate = i.ExpiryDate.ToString("yyyy-MM-dd"),
-                        batchNumber = i.BatchNumber,
-                        shelfLocation = i.ShelfLocation,
-                        isAlarmSet = i.IsAlarmSet,
-                        minStockLevel = i.MinStockLevel,
-                        medication = new
-                        {
-                            id = i.Medication.Id,
-                            name = i.Medication.Name,
-                            barcode = i.Medication.Barcode,
-                            atcCode = i.Medication.ATC,
-                            basePrice = i.Medication.BasePrice
-                        }
-                    })
-                    .ToListAsync();
-
+                var inventory = await _inventoryService.GetMyInventoryAsync(userId);
                 return Ok(inventory);
             }
             catch (UnauthorizedAccessException)
@@ -77,23 +50,19 @@ namespace Backend.Controllers
             try
             {
                 var userId = GetUserId();
-                
-                var medicationExists = await _db.Medications.AnyAsync(m => m.Id == req.MedicationId);
-                if (!medicationExists) return NotFound(new { error = "Belirtilen ilaç bulunamadı." });
+                var result = await _inventoryService.AddInventoryItemAsync(req, userId);
 
-                var newItem = new InventoryItem
+                if (!result.Success)
                 {
-                    PharmacyProfileId = userId,
-                    MedicationId = req.MedicationId,
-                    Quantity = req.Quantity,
-                    BatchNumber = req.BatchNumber,
-                    ExpiryDate = req.ExpiryDate.ToUniversalTime() 
-                };
+                    return result.ErrorCode switch
+                    {
+                        404 => NotFound(new { error = result.ErrorMessage }),
+                        401 => Unauthorized(),
+                        _ => BadRequest(new { error = result.ErrorMessage })
+                    };
+                }
 
-                _db.InventoryItems.Add(newItem);
-                await _db.SaveChangesAsync();
-
-                return CreatedAtAction(nameof(GetMyInventory), new { id = newItem.Id }, newItem);
+                return CreatedAtAction(nameof(GetMyInventory), new { id = (result.Data as dynamic)?.Id }, result.Data);
             }
             catch (UnauthorizedAccessException)
             {
@@ -107,18 +76,18 @@ namespace Backend.Controllers
             try
             {
                 var userId = GetUserId();
+                var result = await _inventoryService.UpdateInventoryItemAsync(id, req, userId);
 
-                var item = await _db.InventoryItems
-                    .Where(i => i.Id == id && i.PharmacyProfileId == userId)
-                    .SingleOrDefaultAsync();
+                if (!result.Success)
+                {
+                    return result.ErrorCode switch
+                    {
+                        404 => NotFound(new { error = result.ErrorMessage }),
+                        401 => Unauthorized(),
+                        _ => BadRequest(new { error = result.ErrorMessage })
+                    };
+                }
 
-                if (item == null) return NotFound(new { error = "Envanter öğesi bulunamadı veya yetkiniz yok." });
-
-                if (req.Quantity.HasValue) item.Quantity = req.Quantity.Value;
-                if (req.BatchNumber != null) item.BatchNumber = req.BatchNumber;
-                if (req.ExpiryDate.HasValue) item.ExpiryDate = req.ExpiryDate.Value.ToUniversalTime();
-
-                await _db.SaveChangesAsync();
                 return NoContent();
             }
             catch (UnauthorizedAccessException)
@@ -133,15 +102,18 @@ namespace Backend.Controllers
             try
             {
                 var userId = GetUserId();
+                var result = await _inventoryService.DeleteInventoryItemAsync(id, userId);
 
-                var item = await _db.InventoryItems
-                    .Where(i => i.Id == id && i.PharmacyProfileId == userId)
-                    .SingleOrDefaultAsync();
+                if (!result.Success)
+                {
+                    return result.ErrorCode switch
+                    {
+                        404 => NotFound(),
+                        401 => Unauthorized(),
+                        _ => BadRequest()
+                    };
+                }
 
-                if (item == null) return NotFound();
-
-                _db.InventoryItems.Remove(item);
-                await _db.SaveChangesAsync();
                 return NoContent();
             }
             catch (UnauthorizedAccessException)

@@ -56,8 +56,17 @@ services:
       - ./images:/app/wwwroot/images
     environment:
       ASPNETCORE_ENVIRONMENT: Development
+      # Database Configuration (Secrets)
+      ConnectionStrings__DefaultConnection: "Host=db;Port=5432;Database=pharmadesk_db;Username=pharmadesk_user;Password=melik123"
+      # JWT Configuration (Secrets)
+      Jwt__Key: "T2+ro+9e29io/v5OBIP3BTAiD++BfNcXwqauTQnm7FII="
+      # Alliance Healthcare API (Secrets)
+      AllianceHealthcare__PharmacyCode: "16195"
+      AllianceHealthcare__Username: "YENIBANU"
+      AllianceHealthcare__Password: "94030067"
+      # Application Settings
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
-      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001"
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://192.168.1.3:3000,http://192.168.1.3:3002"
       ADMIN_DEFAULT_PASSWORD: "melik123"
       SCRAPPER_SERVICE_URL: "http://scrapper-service:8000"
     depends_on:
@@ -94,10 +103,13 @@ services:
       # Backend servis ismini kullanıyoruz (server-side Next.js için)
       - API_BASE_URL=http://backend:8081
       # Browser-side requests için (client tarafından erişilebilir olmalı)
-      - NEXT_PUBLIC_API_URL=http://localhost:8081
+      # 📱 MOBILE ACCESS: Using local IP instead of localhost
+      - NEXT_PUBLIC_API_URL=http://192.168.1.3:8081
 
   frontend-admin:
-    build: ./packages/admin
+    build: 
+      context: ./packages/admin
+      dockerfile: Dockerfile.dev
     container_name: pharma_desk_frontend_admin
     ports:
       - "3001:3000"
@@ -106,9 +118,37 @@ services:
         condition: service_healthy
     networks:
       - pharmanet
+    # DEVELOPMENT MODE: Volume mapping for hot reload
+    volumes:
+      - ./packages/admin:/app
+      - /app/node_modules
+      - /app/.next
     environment:
       # Admin paneli için de aynı ayarı yapıyoruz
       - API_BASE_URL=http://backend:8081
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
+
+  frontend-cargo:
+    build:
+      context: ./packages/cargo
+      dockerfile: Dockerfile.dev
+    container_name: pharma_desk_frontend_cargo
+    ports:
+      - "3002:3002"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - pharmanet
+    # DEVELOPMENT MODE: Volume mapping for hot reload
+    volumes:
+      - ./packages/cargo:/app
+      - /app/node_modules
+      - /app/.next
+    environment:
+      - API_BASE_URL=http://backend:8081
+      # Browser-side API URL (must be accessible from host machine)
+      - NEXT_PUBLIC_API_URL=http://localhost:8081
 
 networks:
   pharmanet:

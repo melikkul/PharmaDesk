@@ -1,12 +1,16 @@
 // components/dashboard/OffersCard.tsx
 
 import React from 'react';
+import Link from 'next/link';
 import DashboardCard from '../DashboardCard'; 
 import type { Offer } from '../../lib/dashboardData';
 import tableStyles from './Table.module.css';
 
 interface OfferWithImage extends Offer {
   imageUrl?: string;
+  medicationId?: number;
+  type?: string;
+  malFazlasi?: string;
 }
 
 interface OffersCardProps {
@@ -15,7 +19,7 @@ interface OffersCardProps {
 }
 
 const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
-  const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+  const apiBaseUrl = '';
   
   return (
     <DashboardCard title="TEKLİFLERİM">
@@ -41,7 +45,14 @@ const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
                   onError={(e) => { e.currentTarget.src = '/logoYesil.png'; }}
                 />
               </td>
-              <td>{item.productName}</td>
+              <td>
+                <Link 
+                  href={`/ilaclar/${item.medicationId || item.id}?barem=${encodeURIComponent(item.malFazlasi || '1+0')}&type=${(item.type || 'stocksale').toLowerCase()}&offerId=${item.id}`}
+                  className="text-gray-900 hover:text-blue-600 hover:underline transition-colors"
+                >
+                  {item.productName}
+                </Link>
+              </td>
               <td>{item.stock}</td>
               <td>{item.price.toFixed(2)} ₺</td>
             </tr>
@@ -53,4 +64,3 @@ const OffersCard: React.FC<OffersCardProps> = ({ data, limit }) => {
 };
 
 export default OffersCard;
-

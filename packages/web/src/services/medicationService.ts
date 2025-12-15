@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 import { Medication, InventoryItem } from '../types';
 
@@ -37,8 +37,9 @@ export interface BaremResponse {
 export const medicationService = {
   getMedications: async (token: string): Promise<Medication[]> => {
     const response = await fetch(`${API_BASE_URL}/api/medications`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 
@@ -81,8 +82,9 @@ export const medicationService = {
 
   getMyInventory: async (token: string): Promise<InventoryItem[]> => {
     const response = await fetch(`${API_BASE_URL}/api/inventory/me`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 

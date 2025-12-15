@@ -12,6 +12,7 @@ namespace Backend.Dtos
         public decimal Price { get; set; }
         public string? ImagePath { get; set; }
         public int ImageCount { get; set; } = 1;
+        public System.Collections.Generic.List<string> Alternatives { get; set; } = new();
     }
         public class InventoryItemResponse
     {

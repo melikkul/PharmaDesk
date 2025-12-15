@@ -210,11 +210,14 @@ namespace Backend.Services
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
-            {
-                new System.Security.Claims.Claim("id", carrier.Id.ToString()),
-                new System.Security.Claims.Claim("email", carrier.Email),
-                new System.Security.Claims.Claim("role", "Carrier")
-            };
+        {
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.NameIdentifier, carrier.Id.ToString()),
+            new System.Security.Claims.Claim("id", carrier.Id.ToString()),
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, carrier.Email),
+            new System.Security.Claims.Claim("email", carrier.Email),
+            new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Role, "Carrier"),
+            new System.Security.Claims.Claim("role", "Carrier")  // Keep for backward compatibility
+        };    
 
             var token = new System.IdentityModel.Tokens.Jwt.JwtSecurityToken(
                 issuer: "PharmaDeskApi",

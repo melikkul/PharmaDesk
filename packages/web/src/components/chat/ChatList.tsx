@@ -1,7 +1,17 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { useMockChat } from "@/store/MockChatContext";
+import React, { useMemo, useEffect, useState } from "react";
+import { useChatContext } from "@/store/ChatContext";
+import { useSignalR } from "@/store/SignalRContext";
+import { useAuth } from "@/store/AuthContext";
+
+interface PharmacyProfile {
+  id: string;
+  pharmacyName: string;
+  profileImagePath?: string;
+  city?: string;
+  district?: string;
+}
 
 interface ChatListProps {
   onSelectChat: (userId: string) => void;
@@ -9,14 +19,58 @@ interface ChatListProps {
 }
 
 export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId }) => {
-  const { users, messages, onlineUsers } = useMockChat();
+  const { messages } = useChatContext();
+  const { onlineUsers } = useSignalR();
+  const { token, isLoading: isAuthLoading } = useAuth();
+  const [users, setUsers] = useState<PharmacyProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Build conversations from mock data
+  // Fetch group members from API
+  useEffect(() => {
+    const fetchGroupMembers = async () => {
+      if (isAuthLoading || !token) return;
+      
+      try {
+        const API_BASE_URL = '';
+        const response = await fetch(`${API_BASE_URL}/api/groups/my-groups/statistics`, {
+          credentials: 'include', // Send cookies
+          headers: token && token !== 'cookie-managed' 
+            ? { 'Authorization': `Bearer ${token}` }
+            : {}
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Extract unique pharmacies from group statistics
+          const uniquePharmacies = new Map<string, PharmacyProfile>();
+          data.forEach((stat: any) => {
+            if (stat.pharmacyId && !uniquePharmacies.has(String(stat.pharmacyId))) {
+              uniquePharmacies.set(String(stat.pharmacyId), {
+                id: String(stat.pharmacyId),
+                pharmacyName: stat.pharmacyName || 'Bilinmeyen Eczane',
+                district: stat.district,
+                city: stat.district // Using district as city fallback
+              });
+            }
+          });
+          setUsers(Array.from(uniquePharmacies.values()));
+        }
+      } catch (error) {
+        console.error("[ChatList] Grup üyeleri çekilemedi:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchGroupMembers();
+  }, [token, isAuthLoading]);
+
+  // Build conversations from real data
   const conversations = useMemo(() => {
     return users.map(user => {
       const userMessages = messages[user.id] || [];
       const lastMessage = userMessages[userMessages.length - 1];
-      const unreadCount = userMessages.filter(msg => !msg.isRead && msg.senderId !== 2).length; // 2 is the current user
+      const unreadCount = userMessages.filter(msg => !msg.isRead && msg.senderId !== "2").length;
       
       return {
         id: user.id,
@@ -24,7 +78,7 @@ export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId
           id: user.id,
           pharmacyName: user.pharmacyName,
           profileImagePath: user.profileImagePath || null,
-          city: user.city || "",
+          city: user.city || user.district || "",
         },
         lastMessage: lastMessage?.content || "Henüz mesaj yok",
         lastMessageDate: lastMessage?.sentAt || new Date().toISOString(),
@@ -37,11 +91,21 @@ export const ChatList: React.FC<ChatListProps> = ({ onSelectChat, selectedUserId
     });
   }, [users, messages, onlineUsers]);
 
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full bg-white w-full">
+        <div className="p-4 text-center text-gray-500">Yükleniyor...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-white w-full">
       <div className="flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
-          <div className="p-4 text-center text-gray-500">Henüz mesajınız yok.</div>
+          <div className="p-4 text-center text-gray-500">
+            Grup üyesi bulunamadı. Bir gruba katılın veya oluşturun.
+          </div>
         ) : (
           conversations.map((conv) => (
             <div

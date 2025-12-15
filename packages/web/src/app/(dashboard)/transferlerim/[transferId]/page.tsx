@@ -4,7 +4,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { shipmentsData, ShipmentItem, TrackingEvent } from '@/lib/dashboardData';
+import { ShipmentItem, TrackingEvent } from '@/lib/dashboardData';
 
 // Bileşenleri ve Stilleri import edelim
 import SettingsCard from '@/components/settings/SettingsCard';
@@ -25,11 +25,49 @@ export default function TransferDetayPage() {
   const { transferId } = params as { transferId: string };
 
   const [shipment, setShipment] = useState<ShipmentItem | null | undefined>(undefined);
+  const [error, setError] = useState<string | null>(null);
 
-  // Veriyi ID'ye göre bul (simülasyon)
+  // Fetch shipment data from API
   useEffect(() => {
-    const foundShipment = shipmentsData.find(s => s.id.toString() === transferId);
-    setShipment(foundShipment || null);
+    const fetchShipment = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const API_BASE_URL = '';
+        const response = await fetch(`${API_BASE_URL}/api/shipments/${transferId}`, {
+          credentials: 'include',
+          headers: token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          // Map API response to ShipmentItem format
+          setShipment({
+            id: data.id,
+            orderNumber: data.orderNumber || `ORD-${data.id}`,
+            productName: data.productName || 'Bilinmiyor',
+            quantity: data.quantity || 1,
+            trackingNumber: data.trackingNumber || 'N/A',
+            date: data.updatedAt || data.createdAt || new Date().toISOString(),
+            transferType: data.transferType || 'outbound',
+            counterparty: data.counterpartyName || 'Bilinmiyor',
+            shippingProvider: data.shippingProvider || 'Bilinmiyor',
+            status: data.status || 'pending',
+            trackingHistory: data.trackingHistory || []
+          });
+        } else if (response.status === 404) {
+          setShipment(null);
+        } else {
+          setError('Transfer detayları yüklenemedi');
+          setShipment(null);
+        }
+      } catch (err) {
+        console.error('Shipment fetch error:', err);
+        setError('Bir hata oluştu');
+        setShipment(null);
+      }
+    };
+    
+    fetchShipment();
   }, [transferId]);
 
   // Duruma göre ikon döndüren yardımcı fonksiyon

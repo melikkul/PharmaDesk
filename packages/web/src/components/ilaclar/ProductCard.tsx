@@ -162,7 +162,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ medication, linkHref, extraSe
   
   // 🆕 Get current image URL with backend prefix
   const getCurrentImageUrl = () => {
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+    const baseUrl = '';
     
     // No images available
     if (imagePaths.length === 0) {

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Backend.Models
 {
@@ -28,6 +29,10 @@ namespace Backend.Models
         [StringLength(50)]
         public string LastName { get; set; } = string.Empty;
 
+        [Required]
+        [StringLength(50)]
+        public string Username { get; set; } = string.Empty;
+
         [Phone]
         [StringLength(20)]
         public string? PhoneNumber { get; set; }
@@ -39,11 +44,20 @@ namespace Backend.Models
         public string? VehicleInfo { get; set; }
 
         public CarrierStatus Status { get; set; } = CarrierStatus.Active;
+        
+        [NotMapped]
+        public bool IsActive => Status == CarrierStatus.Active;
+        
+        [NotMapped]
+        public string FullName => $"{FirstName} {LastName}";
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public DateTime? LastLoginDate { get; set; }
 
         public string? Role { get; set; } = "Carrier";
+
+        // Navigation property for Groups
+        public ICollection<CarrierGroup> CarrierGroups { get; set; } = new List<CarrierGroup>();
     }
 }

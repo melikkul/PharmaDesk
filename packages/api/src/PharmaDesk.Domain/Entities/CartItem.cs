@@ -16,6 +16,12 @@ namespace Backend.Models
 
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 
+        /// <summary>
+        /// Kullanıcı "Depodan ben söyleyeceğim" seçeneğini işaretlediğinde true.
+        /// Sadece PurchaseRequest tipi tekliflerde geçerli.
+        /// </summary>
+        public bool IsDepotFulfillment { get; set; } = false;
+
         // Navigation Properties
         [ForeignKey(nameof(CartId))]
         public Cart Cart { get; set; } = null!;

@@ -6,9 +6,13 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get('token')?.value;
   const { pathname } = request.nextUrl;
 
-  // Public routes: Accessible to all, redirect authenticated users to dashboard
-  const publicRoutes = ['/login', '/register', '/anasayfa', '/sifremi-unuttum', '/reset-password'];
+  // Public routes: Accessible to all
+  const publicRoutes = ['/anasayfa', '/sifremi-unuttum', '/reset-password', '/access-denied'];
   const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route));
+  
+  // Auth routes: Login/Register - redirect authenticated users to dashboard
+  const authRoutes = ['/login', '/register'];
+  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route));
 
   // Admin routes: Require Admin role
   const adminRoutes = ['/admin'];
@@ -38,8 +42,13 @@ export function middleware(request: NextRequest) {
   // Check if user has valid token
   const hasValidToken = token && !isTokenExpired(token);
 
-  // 1. PUBLIC ROUTES: Redirect authenticated users to dashboard
+  // 1. PUBLIC ROUTES: Accessible to all (no redirect)
   if (isPublicRoute) {
+    return NextResponse.next();
+  }
+
+  // 2. AUTH ROUTES (login/register): Redirect authenticated users to dashboard
+  if (isAuthRoute) {
     if (hasValidToken) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
@@ -48,6 +57,11 @@ export function middleware(request: NextRequest) {
 
   // 2. PROTECTED/ADMIN ROUTES: Require authentication
   if (!hasValidToken && (isProtectedRoute || isAdminRoute)) {
+    // If trying to access dashboard directly without auth, show access denied error
+    if (pathname === '/dashboard') {
+        return NextResponse.redirect(new URL('/access-denied', request.url));
+    }
+
     // No token or expired - redirect to login
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('redirect', pathname); // Remember where they wanted to go
@@ -66,7 +80,15 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 4. All checks passed - allow access
+  // 4. CATCH-ALL: Any route not explicitly public requires authentication
+  // This ensures /dashboard and other protected routes redirect to login
+  if (!hasValidToken && !isPublicRoute) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('redirect', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // 5. All checks passed - allow access
   return NextResponse.next();
 }
 

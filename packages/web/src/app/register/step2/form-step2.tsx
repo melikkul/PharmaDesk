@@ -2,6 +2,7 @@
 
 import { useState, useMemo, FormEvent, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast, Toaster } from 'sonner';
 import './form-step2.css';
 
 interface City {
@@ -53,7 +54,7 @@ export default function FormStep2() {
 
   const fetchCities = async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      const apiUrl = '';
       const res = await fetch(`${apiUrl}/api/locations/cities`);
       
       if (res.ok) {
@@ -82,7 +83,7 @@ export default function FormStep2() {
     // Fetch districts
     setFetchingDistricts(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      const apiUrl = '';
       const res = await fetch(`${apiUrl}/api/locations/districts/${cityId}`);
       
       if (res.ok) {
@@ -101,7 +102,7 @@ export default function FormStep2() {
     // Fetch groups
     setFetchingGroups(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+      const apiUrl = '';
       const res = await fetch(`${apiUrl}/api/groups/by-city/${cityId}`);
       
       if (res.ok) {
@@ -161,7 +162,14 @@ export default function FormStep2() {
 
       if (res.ok) {
         sessionStorage.removeItem('registerStep1');
-        router.push('/login?success=true');
+        // Show success toast before redirect
+        toast.success('Kayıt başarılı! Giriş sayfasına yönlendiriliyorsunuz...', {
+          duration: 2000,
+        });
+        // Wait for toast to be visible then redirect
+        setTimeout(() => {
+          router.push('/login?success=true');
+        }, 1500);
       } else {
         setErrorMessage(data.error || 'Kayıt işlemi başarısız oldu.');
       }
@@ -175,7 +183,9 @@ export default function FormStep2() {
   };
 
   return (
-    <div className="step2-container">
+    <>
+      <Toaster position="top-right" richColors />
+      <div className="step2-container">
       <div className="step2-panel">
         <h1>Adres Ve Grup Bilgileri</h1>
         <form onSubmit={(e) => e.preventDefault()}>
@@ -270,5 +280,6 @@ export default function FormStep2() {
         </form>
       </div>
     </div>
+    </>
   );
 }

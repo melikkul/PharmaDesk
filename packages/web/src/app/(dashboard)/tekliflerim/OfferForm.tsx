@@ -11,10 +11,19 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
   MedicationItem, 
-  fullInventoryData,
-  otherPharmaciesData,
 } from '@/lib/dashboardData';
-import { stockOfferTiers, StockOfferTier } from '@/lib/stockOfferMockData';
+// StockOfferTier interface (previously from mock data)
+interface StockOfferTier {
+  id: string;
+  medicationName: string;
+  minQuantity: number;
+  mf: string;
+  unitPrice: number;
+  vade?: number;
+  iskontoKurum?: number;
+  iskontoTicari?: number;
+  isFromAlliance?: boolean;
+}
 import SettingsCard from '@/components/settings/SettingsCard';
 import formStyles from './OfferForm.module.css';
 import { medicationService, BaremInfo, BaremResponse } from '@/services/medicationService';
@@ -133,6 +142,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   const [baremError, setBaremError] = useState(false); // Only show error after submit attempt
   const [isPharmacySpecific, setIsPharmacySpecific] = useState(false);
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>('');
+  const [groupPharmacies, setGroupPharmacies] = useState<{id: string, pharmacyName: string, group?: string}[]>([]);
   const [baremMultiple, setBaremMultiple] = useState<number>(1); // 🆕 Barem katı
   const [warningToast, setWarningToast] = useState<string | null>(null); // 🆕 Sağ üst köşe uyarısı
   
@@ -274,15 +284,8 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
   // Convert API barem data to tier format for display
   const availableTiers = useMemo(() => {
     if (apiBarems.length === 0) {
-      // Fallback to mock data if no API barems
-      if (!productSearchTerm) return [];
-      const searchFirstWord = productSearchTerm.split(' ')[0].toLowerCase();
-      return stockOfferTiers.filter((t: StockOfferTier) => {
-        const tierFirstWord = t.medicationName.split(' ')[0].toLowerCase();
-        return tierFirstWord === searchFirstWord || 
-               t.medicationName.toLowerCase().includes(searchFirstWord) ||
-               searchFirstWord.includes(tierFirstWord);
-      });
+      // No barems from API - return empty array
+      return [];
     }
     
     // Convert API barems to tier format
@@ -407,14 +410,45 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
     fetchBaremForEditMode();
   }, [isEditMode, medication]);
 
+  // 🆕 Fetch group pharmacies for pharmacy-specific offer dropdown
+  useEffect(() => {
+    const fetchGroupPharmacies = async () => {
+      if (!isPharmacySpecific) return;
+      
+      try {
+        const token = localStorage.getItem('token');
+        if (!token) return;
+        
+        const API_BASE_URL = '';
+        const response = await fetch(`${API_BASE_URL}/api/groups/my-groups/statistics`, {
+          credentials: 'include',
+          headers: token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const pharmacies = data.map((stat: any) => ({
+            id: String(stat.pharmacyId),
+            pharmacyName: stat.pharmacyName || 'Bilinmeyen Eczane',
+            group: stat.groupName
+          }));
+          setGroupPharmacies(pharmacies);
+        }
+      } catch (error) {
+        console.error('Failed to fetch group pharmacies:', error);
+      }
+    };
+    
+    fetchGroupPharmacies();
+  }, [isPharmacySpecific]);
+
   useEffect(() => {
     let initialItem: MedicationItem | null | undefined = null;
 
     if (isEditMode) {
         initialItem = medication;
-    } else if (defaultValues.productName) {
-        initialItem = fullInventoryData.find(i => i.barcode === defaultValues.barcode);
     }
+    // NOTE: Removed fullInventoryData mock data lookup - form now uses proper autocomplete search
 
     if (initialItem) {
         // 🆕 Edit modunda offerType'ı değiştirme - medication'dan gelen değer kullanılmalı
@@ -500,6 +534,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
           // Update state after form values are set
           setProductSearchTerm(suggestion.name);
           setSelectedInventoryItem(null);
+          console.log('🔵 Setting selectedMedicationId:', suggestion.id); // DEBUG
           setSelectedMedicationId(suggestion.id);
           
           // Fetch barem data from Alliance Healthcare API
@@ -683,6 +718,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
     const dataToSave = {
         type: offerType, // Backend expects 'type' field
         offerType, // Keep for compatibility
+        medicationId: selectedMedicationId, // 🆕 Required for backend to find the medication
         productName: data.productName,
         barcode: data.barcode || '',
         expirationDate: sktValue ? sktValue.replace(/ /g, '') : '',
@@ -697,7 +733,10 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
 
         // Private offer fields
         isPrivate: isPharmacySpecific,
-        targetPharmacyIds: isPharmacySpecific && selectedPharmacyId ? selectedPharmacyId : null,
+        // 🆕 Refactored: Send as number[] instead of comma-separated string
+        targetPharmacyIds: isPharmacySpecific && selectedPharmacyId 
+          ? [parseInt(selectedPharmacyId, 10)] 
+          : null,
         // warehouseBaremId should be int - alliance tiers use string IDs so we skip them
         warehouseBaremId: selectedTier && typeof selectedTier.id === 'number' ? selectedTier.id : null,
         maxPriceLimit: tierPriceLimit,
@@ -719,6 +758,7 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
         ...(isEditMode && { id: medication.id }),
     };
 
+    console.log('🟢 selectedMedicationId state value:', selectedMedicationId); // DEBUG
     console.log('Form Data to Save:', dataToSave);
     onSave(dataToSave);
   };
@@ -1325,11 +1365,15 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
               className="w-full md:w-1/2 h-11 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="">Eczane seçiniz...</option>
-              {otherPharmaciesData.map(p => (
-                <option key={p.id} value={p.id}>
-                  {p.pharmacyName} ({p.group})
-                </option>
-              ))}
+              {groupPharmacies.length === 0 ? (
+                <option value="" disabled>Yükleniyor veya grup üyesi yok...</option>
+              ) : (
+                groupPharmacies.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.pharmacyName} {p.group ? `(${p.group})` : ''}
+                  </option>
+                ))
+              )}
             </select>
             <p className="mt-2 text-xs text-gray-500">Bu teklifi sadece seçilen eczane görebilecektir.</p>
           </div>

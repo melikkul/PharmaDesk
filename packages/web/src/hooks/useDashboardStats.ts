@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../store/AuthContext';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 interface DashboardStats {
   totalBalance: number;
@@ -25,10 +25,10 @@ export const useDashboardStats = () => {
 
       try {
         const response = await fetch(`${API_BASE_URL}/api/dashboard/stats`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
+          credentials: 'include',
+          headers: token && token !== 'cookie-managed'
+            ? { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+            : { 'Content-Type': 'application/json' },
         });
 
         if (!response.ok) {

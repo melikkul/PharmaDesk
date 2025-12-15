@@ -312,7 +312,10 @@ namespace PharmaDesk.Infrastructure.Persistence
                         Quantity = 500,
                         ExpiryDate = DateTime.SpecifyKind(new DateTime(2028, 1, 31), DateTimeKind.Utc),
                         BatchNumber = "BATCH001",
-                        CostPrice = 28.0m
+                        CostPrice = 28.0m,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                        // Note: RowVersion is auto-assigned by PostgreSQL xmin
                     });
                 }
                 
@@ -325,7 +328,9 @@ namespace PharmaDesk.Infrastructure.Persistence
                         Quantity = 300,
                         ExpiryDate = DateTime.SpecifyKind(new DateTime(2025, 10, 31), DateTimeKind.Utc),
                         BatchNumber = "BATCH002",
-                        CostPrice = 40.0m
+                        CostPrice = 40.0m,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     });
                 }
                 
@@ -338,7 +343,9 @@ namespace PharmaDesk.Infrastructure.Persistence
                         Quantity = 200,
                         ExpiryDate = DateTime.SpecifyKind(new DateTime(2026, 6, 30), DateTimeKind.Utc),
                         BatchNumber = "BATCH003",
-                        CostPrice = 20.0m
+                        CostPrice = 20.0m,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
                     });
                 }
                 

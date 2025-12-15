@@ -26,6 +26,7 @@ const AdminSidebar: React.FC<AdminSidebarProps> = ({ onLogout }) => {
     { href: '/transactions', label: 'Tüm İşlemler' },
     { href: '/drugs', label: 'Ana İlaç Listesi' },
     { href: '/groups', label: 'Grup Yönetimi' },
+    { href: '/cargo', label: 'Kargo Yönetimi' },
   ];
 
   return (

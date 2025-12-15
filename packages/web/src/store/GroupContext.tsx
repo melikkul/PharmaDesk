@@ -18,12 +18,14 @@ interface GroupContextType {
 const GroupContext = createContext<GroupContextType | undefined>(undefined);
 
 export function GroupProvider({ children }: { children: React.ReactNode }) {
-  const { user, token } = useAuth();
+  const { user, token, isLoading: isAuthLoading } = useAuth();
   const [userGroups, setUserGroups] = useState<Group[]>([]);
   const [activeGroupIdState, setActiveGroupIdState] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (isAuthLoading) return;
+    
     if (user?.pharmacyId) {
       fetchUserGroups();
     } else {
@@ -31,7 +33,7 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       setActiveGroupIdState(null);
       setIsLoading(false);
     }
-  }, [user]);
+  }, [user, isAuthLoading, token]);
 
   const fetchUserGroups = async () => {
     try {
@@ -46,8 +48,9 @@ export function GroupProvider({ children }: { children: React.ReactNode }) {
       }
       
       const res = await fetch(`${apiUrl}/api/users/my-groups`, {
+        credentials: 'include',
         headers: {
-          'Authorization': `Bearer ${token}`
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
         }
       });
 

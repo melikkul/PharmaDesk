@@ -93,6 +93,7 @@ export interface BalanceItem {
   type: 'positive' | 'negative';
   productName?: string; // İlaç adı
   orderId?: number; // Sipariş ID (link için)
+  medicationId?: number; // İlaç ID (ilaç detay sayfasına link için)
 }
 export interface TransferItem {
   id: number;

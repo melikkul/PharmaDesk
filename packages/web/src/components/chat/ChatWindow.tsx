@@ -1,9 +1,17 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import { useMockChat } from "@/store/MockChatContext";
 import { useChatContext, Message } from "@/store/ChatContext";
 import { useSignalR } from "@/store/SignalRContext";
+import { useAuth } from "@/store/AuthContext";
+
+interface PharmacyProfile {
+  id: string;
+  pharmacyName: string;
+  profileImagePath?: string;
+  city?: string;
+  district?: string;
+}
 
 interface ChatWindowProps {
   otherUserId: string | null;
@@ -12,20 +20,55 @@ interface ChatWindowProps {
   isMinimized?: boolean;
 }
 
-const MY_USER_ID = "2"; // Current user PharmacyId=2 (melik_kul@outlook.com) - must be string
-
 export const ChatWindow: React.FC<ChatWindowProps> = ({ otherUserId, onMinimize, onClose, isMinimized = false }) => {
-  const { users } = useMockChat();
   const { onlineUsers } = useSignalR();
-  const { messages, sendMessage } = useChatContext();
+  const { messages, sendMessage, loadMessages } = useChatContext();
+  const { token, user } = useAuth();
 
   const [newMessage, setNewMessage] = useState("");
+  const [otherUserProfile, setOtherUserProfile] = useState<PharmacyProfile | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const otherUserProfile = users.find(u => u.id === otherUserId);
+  const MY_USER_ID = user?.pharmacyId ? String(user.pharmacyId) : "2";
   const isOtherUserOnline = otherUserId ? onlineUsers.has(String(otherUserId)) : false;
   const conversationMessages = otherUserId ? (messages[otherUserId] || []) : [];
+
+  // Load chat history and user profile when chat opens
+  useEffect(() => {
+    if (!otherUserId || !token) return;
+
+    // Load messages from API
+    loadMessages(otherUserId);
+
+    // Fetch user profile from group statistics
+    const fetchUserProfile = async () => {
+      try {
+        const API_BASE_URL = '';
+        const response = await fetch(`${API_BASE_URL}/api/groups/my-groups/statistics`, {
+          credentials: 'include',
+          headers: token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          const found = data.find((stat: any) => String(stat.pharmacyId) === otherUserId);
+          if (found) {
+            setOtherUserProfile({
+              id: String(found.pharmacyId),
+              pharmacyName: found.pharmacyName || 'Bilinmeyen Eczane',
+              district: found.district,
+              city: found.district
+            });
+          }
+        }
+      } catch (error) {
+        console.error("[ChatWindow] Kullanıcı profili çekilemedi:", error);
+      }
+    };
+    
+    fetchUserProfile();
+  }, [otherUserId, token, loadMessages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });

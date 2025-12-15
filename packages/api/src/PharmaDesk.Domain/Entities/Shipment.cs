@@ -36,13 +36,53 @@ namespace Backend.Models
         public ShipmentStatus Status { get; set; } = ShipmentStatus.Pending;
 
         [Required, StringLength(100)]
-        public string Carrier { get; set; } = string.Empty; // Kargo firması (Yurtiçi, MNG, Aras, vb.)
+        public string Carrier { get; set; } = string.Empty; // Kargo firması adı (Legacy) Or Display Name
         
+        public int? CarrierId { get; set; } // İşlemi yapan/taşıyan kurye ID
+        [ForeignKey("CarrierId")]
+        public Carrier? AssignedCarrier { get; set; }
+
         public DateTime? ShippedDate { get; set; } // Kargoya verilme tarihi
         public DateTime? EstimatedDeliveryDate { get; set; } // Tahmini teslimat
         
         [StringLength(200)]
         public string? CurrentLocation { get; set; } // Güncel konum
+
+        // ═══════════════════════════════════════════════════════════════
+        // Cold Chain (Soğuk Zincir) Takibi
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Gönderi soğuk zincir gerektiriyor mu? (Aşı, insulin vb.)
+        /// </summary>
+        public bool RequiresColdChain { get; set; } = false;
+
+        /// <summary>
+        /// Minimum taşıma sıcaklığı (°C) - Soğuk zincir için zorunlu
+        /// </summary>
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? MinTemperature { get; set; }
+
+        /// <summary>
+        /// Maksimum taşıma sıcaklığı (°C) - Soğuk zincir için zorunlu
+        /// </summary>
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? MaxTemperature { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Taşınan Ürün Detayları (SKT ve Parti Takibi)
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Taşınan ürünün parti numarası
+        /// </summary>
+        [StringLength(50)]
+        public string? BatchNumber { get; set; }
+
+        /// <summary>
+        /// Taşınan ürünün son kullanma tarihi (SKT)
+        /// </summary>
+        public DateTime? ProductExpiryDate { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

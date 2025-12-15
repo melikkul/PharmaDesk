@@ -87,3 +87,32 @@
     cursor: pointer;
     font-weight: 500;
 }
+
+@media (max-width: 480px) {
+    .cartItem {
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .itemImage {
+        width: 50px;
+        height: 50px;
+    }
+    
+    .itemName {
+        font-size: 13px;
+    }
+    
+    .quantitySelector {
+        height: 28px;
+    }
+    
+    .quantitySelector button {
+        width: 20px;
+    }
+    
+    .quantitySelector input {
+        width: 30px;
+        font-size: 13px;
+    }
+}

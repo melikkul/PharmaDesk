@@ -26,9 +26,7 @@ import { pharmacyData } from '@/lib/dashboardData';
 import { useDashboardPanels } from '@/hooks/useDashboardPanels';
 import { DashboardContext, useDashboardContext, Notification, Message } from '@/store/DashboardContext';
 import { useAuth } from '@/store/AuthContext';
-import { MockChatProvider } from '@/store/MockChatContext';
 import { ChatProvider } from '@/store/ChatContext';
-import { SignalRProvider } from '@/store/SignalRContext';
 import { GroupProvider } from '@/store/GroupContext';
 import { Toaster } from 'sonner';
 
@@ -113,9 +111,10 @@ export default function DashboardLayout({
     const fetchBalance = async () => {
       if (!token) return;
       try {
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+        const API_BASE_URL = '';
         const response = await fetch(`${API_BASE_URL}/api/transactions/balance`, {
-          headers: { 'Authorization': `Bearer ${token}` }
+          credentials: 'include',
+          headers: token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}
         });
         if (response.ok) {
           const data = await response.json();
@@ -149,10 +148,8 @@ export default function DashboardLayout({
 
   return (
         <DashboardContext.Provider value={panelValues}>
-          <SignalRProvider>
             <GroupProvider>
-              <MockChatProvider>
-                <ChatProvider>
+              <ChatProvider>
                   <Toaster position="top-right" richColors />
                   <div className="dashboard-container">
                     <Sidebar isOpen={isSidebarOpen} onClose={closeSidebar} />
@@ -213,9 +210,7 @@ export default function DashboardLayout({
                     ))}
                   </div>
                 </ChatProvider>
-              </MockChatProvider>
             </GroupProvider>
-          </SignalRProvider>
         </DashboardContext.Provider>
   );
 }

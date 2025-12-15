@@ -1,6 +1,11 @@
 import axios, { AxiosInstance } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+// Use environment variable for API URL (client-side accessible)
+// In Docker: NEXT_PUBLIC_API_URL=http://192.168.1.3:8081 or http://localhost:8081
+// Falls back to relative URL for Next.js proxy if not set
+const API_URL = typeof window !== 'undefined' 
+    ? (process.env.NEXT_PUBLIC_API_URL || '') 
+    : '';
 
 // Create axios instance
 const api: AxiosInstance = axios.create({
@@ -80,6 +85,52 @@ export interface ValidateTokenResponse {
     email: string;
 }
 
+// 🆕 QR Scan Response interface
+export interface ScanResult {
+    success: boolean;
+    message: string;
+    newStatus?: string;
+    shipmentId?: number;
+    orderNumber?: string;
+    errorCode?: number;
+}
+
+// 🆕 Carrier Shipment interfaces
+export interface CarrierShipment {
+    id: number;
+    orderNumber: string;
+    pharmacyName: string;
+    pharmacyAddress: string;
+    pharmacyPhone?: string;
+    pharmacyLat?: number;
+    pharmacyLng?: number;
+    medicationName?: string;
+    quantity: number;
+    status: 'pending' | 'shipped' | 'intransit' | 'delivered' | 'cancelled';
+    statusText: string;
+    isAssignedToMe: boolean;
+    updatedAt: string;
+}
+
+export interface NextPharmacy {
+    id: number;
+    pharmacyName: string;
+    pharmacyAddress: string;
+    pharmacyPhone?: string;
+    lat?: number;
+    lng?: number;
+    status: string;
+}
+
+export interface ShipmentsResponse {
+    shipments: CarrierShipment[];
+    nextPharmacy: NextPharmacy | null;
+    totalCount: number;
+    pendingCount: number;
+    inTransitCount: number;
+    deliveredCount: number;
+}
+
 // API Service functions
 export const carrierApi = {
     login: async (credentials: CarrierLoginRequest): Promise<CarrierLoginResponse> => {
@@ -101,6 +152,63 @@ export const carrierApi = {
         const response = await api.get('/api/carrier/me');
         return response.data;
     },
+
+    // 🆕 Scan shipment QR code and update status
+    scanShipment: async (qrToken: string): Promise<ScanResult> => {
+        const response = await api.post('/api/shipments/scan', { token: qrToken });
+        return response.data;
+    },
+
+    // 🆕 Shift Management
+    getShiftStatus: async (): Promise<ShiftStatusResponse> => {
+        const response = await api.get('/api/carrier/shift/status');
+        return response.data;
+    },
+
+    startShift: async (lat?: number, lng?: number): Promise<StartShiftResponse> => {
+        const response = await api.post('/api/carrier/shift/start', { latitude: lat, longitude: lng });
+        return response.data;
+    },
+
+    endShift: async (lat?: number, lng?: number): Promise<EndShiftResponse> => {
+        const response = await api.post('/api/carrier/shift/end', { latitude: lat, longitude: lng });
+        return response.data;
+    },
+
+    updateShiftLocation: async (lat: number, lng: number): Promise<void> => {
+        await api.post('/api/carrier/shift/location', { latitude: lat, longitude: lng });
+    },
+
+    // 🆕 Get carrier's assigned shipments with real-time status
+    getMyShipments: async (): Promise<ShipmentsResponse> => {
+        const response = await api.get('/api/carrier/shift/shipments');
+        return response.data;
+    },
 };
+
+// Shift DTOs
+export interface ShiftStatusResponse {
+    isOnShift: boolean;
+    shiftId: number | null;
+    startTime: string | null;
+    durationMinutes: number;
+    durationFormatted: string;
+}
+
+export interface StartShiftResponse {
+    success: boolean;
+    shiftId: number;
+    startTime: string;
+    message: string;
+}
+
+export interface EndShiftResponse {
+    success: boolean;
+    shiftId: number;
+    startTime: string;
+    endTime: string;
+    durationMinutes: number;
+    message: string;
+}
 
 export default api;

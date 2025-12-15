@@ -2,7 +2,9 @@ using Backend.Data;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PharmaDesk.API.Hubs;
 
 namespace Backend.Controllers
 {
@@ -12,11 +14,13 @@ namespace Backend.Controllers
     public class StockLocksController : ControllerBase
     {
         private readonly AppDbContext _context;
+        private readonly IHubContext<NotificationHub> _hubContext;
         private const int LOCK_DURATION_MINUTES = 10; // Kilit süresi
 
-        public StockLocksController(AppDbContext context)
+        public StockLocksController(AppDbContext context, IHubContext<NotificationHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         /// <summary>
@@ -80,6 +84,15 @@ namespace Backend.Controllers
 
             await _context.SaveChangesAsync();
 
+            // 🆕 SignalR broadcast - notify all clients about stock lock
+            await _hubContext.Clients.All.SendAsync("ReceiveStockLockUpdate", new 
+            { 
+                type = "lock",
+                offerIds = lockedOfferIds,
+                pharmacyId = pharmacyId.Value,
+                expiresAt = expiresAt.ToString("o")
+            });
+
             return Ok(new 
             { 
                 message = "Stoklar kilitlendi", 
@@ -105,8 +118,17 @@ namespace Backend.Controllers
 
             if (locks.Any())
             {
+                var unlockedOfferIds = locks.Select(l => l.OfferId).Distinct().ToList();
                 _context.StockLocks.RemoveRange(locks);
                 await _context.SaveChangesAsync();
+
+                // 🆕 SignalR broadcast - notify all clients about stock unlock
+                await _hubContext.Clients.All.SendAsync("ReceiveStockLockUpdate", new 
+                { 
+                    type = "unlock",
+                    offerIds = unlockedOfferIds,
+                    pharmacyId = pharmacyId.Value
+                });
             }
 
             return Ok(new { message = "Kilitler serbest bırakıldı" });

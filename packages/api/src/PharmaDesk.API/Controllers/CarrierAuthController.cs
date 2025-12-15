@@ -66,9 +66,9 @@ namespace Backend.Controllers
         public async Task<IActionResult> GetProfile()
         {
             var userIdClaim = User.FindFirst("id")?.Value;
-            var roleClaim = User.FindFirst("role")?.Value;
-
-            if (string.IsNullOrEmpty(userIdClaim) || roleClaim != "Carrier")
+            
+            // Use IsInRole which respects the RoleClaimType mapping in JWT configuration
+            if (string.IsNullOrEmpty(userIdClaim) || !User.IsInRole("Carrier"))
                 return Unauthorized(new { error = "Geçersiz veya yetkisiz token." });
 
             if (!int.TryParse(userIdClaim, out int carrierId))

@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 export const inventoryService = {
   /**
@@ -6,10 +6,11 @@ export const inventoryService = {
    */
   getMyInventory: async (token: string) => {
     const response = await fetch(`${API_BASE_URL}/api/inventory/me`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -32,10 +33,11 @@ export const inventoryService = {
   }>) => {
     const response = await fetch(`${API_BASE_URL}/api/inventory/${itemId}`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       body: JSON.stringify(data),
     });
 
@@ -53,10 +55,11 @@ export const inventoryService = {
   deleteItem: async (token: string, itemId: number) => {
     const response = await fetch(`${API_BASE_URL}/api/inventory/${itemId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -84,10 +87,11 @@ export const inventoryService = {
   }) => {
     const response = await fetch(`${API_BASE_URL}/api/inventory`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       body: JSON.stringify(data),
     });
 

@@ -76,6 +76,11 @@ export interface Medication {
   description: string;
   imageUrl?: string;
   atcCode?: string;
+  
+  // 🆕 JSONB arrays from backend
+  alternatives?: string[]; // Alternative medication barcodes/ATCs
+  allImagePaths?: string[]; // All image paths for carousel
+  imageCount?: number; // Number of images
 }
 
 export interface InventoryItem {
@@ -121,18 +126,54 @@ export interface Offer {
   barcode?: string;
   price: number; // Price is usually required for display
   stock: string; // "100 + 10" format or string representation
-  type?: 'standard' | 'campaign' | 'tender';
+  type?: 'standard' | 'campaign' | 'tender' | 'stockSale' | 'jointOrder' | 'purchaseRequest';
   pharmacyName?: string;
   pharmacyUsername?: string;
   description?: string;
   manufacturer?: string;
   imageUrl?: string;
+  imageUrls?: string[]; // 🆕 All image paths for carousel
   imageCount?: number; // Number of images for multi-image gallery
   campaignEndDate?: string;
   campaignBonusMultiplier?: number;
   minimumOrderQuantity?: number;
   biddingDeadline?: string;
   buyers?: BuyerInfo[]; // 🆕 Sipariş veren alıcılar
+  
+  // 🆕 Private offer fields - refactored to number[] array
+  isPrivate?: boolean;
+  targetPharmacyIds?: number[]; // Changed from string to number[]
+  
+  // 🆕 Financial fields
+  depotPrice?: number;
+  malFazlasi?: string; // Barem format e.g., "20+2"
+  discountPercentage?: number;
+  netPrice?: number;
+  maxSaleQuantity?: number;
+  warehouseBaremId?: number;
+  maxPriceLimit?: number;
+  
+  // 🆕 Stock tracking
+  soldQuantity?: number;
+  remainingStock?: number;
+  
+  // 🆕 Depot claim fields
+  depotClaimerUserId?: number;
+  depotClaimedAt?: string;
+  
+  // 🆕 Finalization tracking (for Provision/Capture Pattern)
+  isFinalized?: boolean;
+  isPaymentProcessed?: boolean;
+}
+
+// 🆕 Shipment Label for QR code printing
+export interface ShipmentLabel {
+  shipmentId: number;
+  orderNumber: string;
+  buyerPharmacyName: string;
+  buyerPharmacyId: number;
+  quantity: number;
+  qrToken: string;
 }
 
 export interface BuyerInfo {
@@ -237,4 +278,71 @@ export interface DashboardStats {
   totalInventory?: number;
   totalMedications?: number;
   activeOrders?: number;
+}
+
+// 🆕 Transaction types
+export type TransactionType = 
+  | 'Sale' 
+  | 'Purchase' 
+  | 'Deposit' 
+  | 'Withdrawal' 
+  | 'Refund'
+  | 'OfferCreated'
+  | 'OfferUpdated'
+  | 'OfferDeleted'
+  | 'OrderCreated'
+  | 'OrderCompleted';
+
+export type TransactionStatus = 'Pending' | 'Completed' | 'Failed' | 'Cancelled';
+
+export interface Transaction {
+  id: number;
+  pharmacyProfileId: number;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  date: string;
+  status: TransactionStatus;
+  counterparty?: string;
+  counterpartyPharmacyId?: number;
+  
+  // 🆕 FK references for data integrity (replaces RelatedReferenceId string)
+  orderId?: number;
+  offerId?: number;
+}
+
+// 🆕 CreateOfferRequest interface for form submission
+export interface CreateOfferRequest {
+  type: 'stockSale' | 'jointOrder' | 'purchaseRequest';
+  productName?: string;
+  barcode?: string;
+  medicationId?: number;
+  price: number;
+  stock: number;
+  bonusQuantity?: number;
+  minSaleQuantity?: number;
+  expirationDate?: string;
+  
+  // Financial fields
+  depotPrice?: number;
+  malFazlasi?: string;
+  discountPercentage?: number;
+  maxSaleQuantity?: number;
+  description?: string;
+  
+  // Private offer fields - refactored to number[] array
+  isPrivate?: boolean;
+  targetPharmacyIds?: number[]; // Changed from string to number[]
+  warehouseBaremId?: number;
+  maxPriceLimit?: number;
+  
+  // Campaign fields
+  campaignStartDate?: string;
+  campaignEndDate?: string;
+  campaignBonusMultiplier?: number;
+  
+  // Tender fields
+  minimumOrderQuantity?: number;
+  biddingDeadline?: string;
+  acceptingCounterOffers?: boolean;
 }

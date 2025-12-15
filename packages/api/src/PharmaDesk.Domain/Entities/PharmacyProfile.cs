@@ -56,6 +56,14 @@ namespace Backend.Models
         /// </summary>
         public bool HasShippingService { get; set; } = false; // Default: kargo hizmeti yok
         
+        // 🆕 Optimistic Concurrency Token (PostgreSQL xmin)
+        /// <summary>
+        /// Concurrency token for preventing Lost Update problem during balance modifications.
+        /// PostgreSQL uses xmin system column mapped to this property.
+        /// </summary>
+        [Timestamp]
+        public uint RowVersion { get; set; }
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
 }

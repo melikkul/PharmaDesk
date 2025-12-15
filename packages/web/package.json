@@ -24,6 +24,7 @@
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.555.0",
     "next": "15.5.5",
+    "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-hook-form": "^7.66.1",
@@ -49,10 +50,10 @@
     "tailwindcss": "^4"
   },
   "optionalDependencies": {
-    "lightningcss-linux-x64-gnu": "^1.30.2",
-    "lightningcss-linux-x64-musl": "^1.30.2",
     "lightningcss-darwin-arm64": "^1.30.2",
     "lightningcss-darwin-x64": "^1.30.2",
+    "lightningcss-linux-x64-gnu": "^1.30.2",
+    "lightningcss-linux-x64-musl": "^1.30.2",
     "lightningcss-win32-x64-msvc": "^1.30.2"
   },
   "overrides": {
@@ -60,4 +61,3 @@
     "react-dom": "19.1.0"
   }
 }
-

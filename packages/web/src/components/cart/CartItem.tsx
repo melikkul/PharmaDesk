@@ -1,5 +1,5 @@
 // src/components/cart/CartItem.tsx
-import React, { useCallback } from 'react';
+import React, { useCallback, useMemo } from 'react';
 import { CartItem } from '../../store/CartContext';
 import { PriceDisplay } from '@/components/common';
 import styles from './CartItem.module.css';
@@ -9,36 +9,88 @@ interface CartItemProps {
   onUpdateQuantity: (productId: number, sellerName: string, newQuantity: number) => void;
   onRemove: (productId: number, sellerName: string) => void;
   isPending?: boolean; // Miktar güncelleme beklemede mi?
+  othersLockedQuantity?: number; // 🆕 Başkaları tarafından kilitlenen stok
 }
 
-const CartItemComponent: React.FC<CartItemProps> = React.memo(({ item, onUpdateQuantity, onRemove, isPending = false }) => {
+// 🆕 Helper: Parse image URL from various formats (JSON array, string, etc.)
+const getImageUrl = (imageUrl: string | undefined): string => {
+  if (!imageUrl) return '/placeholder-med.png';
+  
+  // Handle JSON array format: ["path1.jpg", "path2.jpg"]  
+  if (imageUrl.startsWith('[')) {
+    try {
+      const paths = JSON.parse(imageUrl);
+      if (Array.isArray(paths) && paths.length > 0) {
+        return paths[0];
+      }
+    } catch {
+      // JSON parse failed, use original
+    }
+  }
+  
+  return imageUrl;
+};
+
+const CartItemComponent: React.FC<CartItemProps> = React.memo(({ item, onUpdateQuantity, onRemove, isPending = false, othersLockedQuantity = 0 }) => {
   const { product, quantity, sellerName, offerType, isDepotSelfOrder } = item;
   
-  const handleDecrement = useCallback(() => {
-    onUpdateQuantity(product.id, sellerName, quantity - 1);
-  }, [onUpdateQuantity, product.id, sellerName, quantity]);
+  // 🆕 Memoize parsed image URL
+  const imageUrl = useMemo(() => getImageUrl(product.imageUrl), [product.imageUrl]);
+  
+  // 🆕 Max stok kontrolü için sabit
+  const MAX_ALLOWED = 1000;
+  
+  // 🆕 Miktar limiti hesaplaması - Component scope'unda olmalı (JSX erişimi için)
+  const currentStock = Number(product.currentStock || 0);
+  const lockedQty = Number(othersLockedQuantity || 0);
+  // Kullanıcı isteği üzerine -1 güvenlik payı eklendi (Limit aşımını önlemek için)
+  const availableStock = Math.max(0, currentStock - lockedQty - 1);
+  const effectiveMax = Math.min(availableStock, MAX_ALLOWED);
 
   const handleIncrement = useCallback(() => {
-    onUpdateQuantity(product.id, sellerName, quantity + 1);
-  }, [onUpdateQuantity, product.id, sellerName, quantity]);
+    if (isPending) return; // 🆕 Race condition koruması
+    
+    console.log(`[CartItem] Check limit: qty=${quantity}, max=${effectiveMax}`);
 
-  const handleRemove = useCallback(() => {
-    if (window.confirm(`${product.name} ürününü sepetten kaldırmak istediğinizden emin misiniz?`)) {
-      onRemove(product.id, sellerName);
+    if (quantity < effectiveMax) {
+      onUpdateQuantity(product.id, sellerName, quantity + 1);
     }
+  }, [quantity, product.id, sellerName, onUpdateQuantity, effectiveMax, isPending]);
+
+  const handleDecrement = useCallback(() => {
+    if (isPending) return; // 🆕 Race condition koruması
+    if (quantity > 1) {
+      onUpdateQuantity(product.id, sellerName, quantity - 1);
+    }
+  }, [quantity, product.id, sellerName, onUpdateQuantity, isPending]);
+
+  const handleRemove = useCallback(async () => {
+    // console.log('[CartItem] handleRemove called for:', product.name);
+    // Temporarily disabled confirm to test
+    // if (window.confirm(`${product.name} ürününü sepetten kaldırmak istediğinizden emin misiniz?`)) {
+    // console.log('[CartItem] Calling onRemove...');
+    try {
+      const result = await onRemove(product.id, sellerName);
+      console.log('[CartItem] onRemove result:', result);
+    } catch (err) {
+      console.error('[CartItem] onRemove error:', err);
+    }
+    // }
   }, [onRemove, product.id, product.name, sellerName]);
 
   // Teklif türü badge renkleri
   const getOfferTypeBadge = () => {
     if (!offerType) return null;
     
-    const config = {
+    const config: Record<string, { bg: string; label: string }> = {
       jointorder: { bg: '#f97316', label: 'Ortak Sipariş' },
       purchaserequest: { bg: '#8b5cf6', label: 'Alım Talebi' },
       stocksale: { bg: '#10b981', label: 'Stok Satışı' }
     };
     
-    const typeConfig = config[offerType] || config.stocksale;
+    // Normalize to lowercase for case-insensitive matching
+    const normalizedType = offerType.toLowerCase();
+    const typeConfig = config[normalizedType] || config.stocksale;
     
     return (
       <span style={{
@@ -67,7 +119,13 @@ const CartItemComponent: React.FC<CartItemProps> = React.memo(({ item, onUpdateQ
         transition: 'opacity 0.2s ease'
       }}
     >
-      <img src={product.imageUrl || '/dolorex_placeholder.png'} alt={product.name} className={styles.itemImage} />
+      {/* 🆕 Enhanced image with fallback handler */}
+      <img 
+        src={imageUrl} 
+        alt={product.name} 
+        className={styles.itemImage}
+        onError={(e) => { e.currentTarget.src = '/placeholder-med.png'; }}
+      />
       <div className={styles.itemDetails}>
         <strong className={styles.itemName}>{product.name}</strong>
         {getOfferTypeBadge()}
@@ -96,7 +154,7 @@ const CartItemComponent: React.FC<CartItemProps> = React.memo(({ item, onUpdateQ
       </div>
       <div className={styles.itemActions}>
         <div className={styles.quantitySelector}>
-          <button onClick={handleDecrement} disabled={quantity <= 1}>-</button>
+          <button onClick={handleDecrement} disabled={quantity <= 1 || isPending}>-</button>
           <input 
             type="number" 
             value={quantity} 
@@ -106,7 +164,14 @@ const CartItemComponent: React.FC<CartItemProps> = React.memo(({ item, onUpdateQ
               color: isPending ? '#3b82f6' : 'inherit'
             }}
           />
-          <button onClick={handleIncrement} disabled={quantity >= product.currentStock}>+</button>
+          <button 
+            onClick={handleIncrement} 
+            disabled={quantity >= effectiveMax || isPending}
+            style={{ 
+              opacity: (quantity >= effectiveMax || isPending) ? 0.5 : 1,
+              cursor: (quantity >= effectiveMax || isPending) ? 'not-allowed' : 'pointer'
+            }}
+          >+</button>
         </div>
         {/* Senkronizasyon göstergesi */}
         {isPending && (
@@ -129,7 +194,7 @@ const CartItemComponent: React.FC<CartItemProps> = React.memo(({ item, onUpdateQ
             Kaydediliyor...
           </span>
         )}
-        <button onClick={handleRemove} className={styles.removeButton}>
+        <button type="button" onClick={handleRemove} className={styles.removeButton}>
           Kaldır
         </button>
       </div>

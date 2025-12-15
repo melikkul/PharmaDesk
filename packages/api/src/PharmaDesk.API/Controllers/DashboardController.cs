@@ -9,7 +9,7 @@ namespace Backend.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "User,Admin")]
     public class DashboardController : ControllerBase
     {
         private readonly AppDbContext _context;
@@ -79,40 +79,42 @@ namespace Backend.Controllers
                     Price = o.Price,
                     Status = o.Status.ToString(),
                     ImageUrl = !string.IsNullOrEmpty(o.Medication.ImagePath) ? $"/{o.Medication.ImagePath}" : "/logoYesil.png",
+                    Type = o.Type.ToString(),  // 🆕 Teklif tipi
+                    MalFazlasi = o.MalFazlasi, // 🆕 Barem değeri
                     o.CreatedAt
                 })
                 .ToListAsync();
 
-            // Balance history (last 7 days) - İlaç adı ve sipariş ID'si dahil
+            // Balance history (last 7 days) - İlaç adı ve sipariş ID'si dahil (FK-based, not string-based)
             var sevenDaysAgo = DateTime.UtcNow.AddDays(-7);
             var balanceHistory = await _context.Transactions
+                .Include(t => t.Order)
+                    .ThenInclude(o => o != null ? o.OrderItems : null!)
+                        .ThenInclude(oi => oi.Medication)
+                .Include(t => t.Offer)
+                    .ThenInclude(o => o != null ? o.Medication : null!)
                 .Where(t => t.PharmacyProfileId == pharmacyId && t.Date >= sevenDaysAgo)
                 .OrderByDescending(t => t.Date)
                 .Take(10)
-                .Select(t => new
-                {
-                    Id = t.Id,
-                    Date = t.Date.ToString("dd/MM/yyyy"),
-                    t.Amount,
-                    Type = t.Amount >= 0 ? "positive" : "negative",
-                    Description = t.Description,
-                    // İlgili siparişteki ilaç adını al
-                    ProductName = t.RelatedReferenceId != null 
-                        ? _context.Orders
-                            .Where(o => o.OrderNumber == t.RelatedReferenceId)
-                            .SelectMany(o => o.OrderItems)
-                            .Select(oi => oi.Medication.Name)
-                            .FirstOrDefault()
-                        : null,
-                    // Sipariş ID'sini al
-                    OrderId = t.RelatedReferenceId != null
-                        ? _context.Orders
-                            .Where(o => o.OrderNumber == t.RelatedReferenceId)
-                            .Select(o => (int?)o.Id)
-                            .FirstOrDefault()
-                        : null
-                })
                 .ToListAsync();
+
+            // Map to anonymous objects after loading (avoids complex EF translation issues)
+            var balanceHistoryDto = balanceHistory.Select(t => new
+            {
+                Id = t.Id,
+                Date = t.Date.ToString("dd/MM/yyyy"),
+                t.Amount,
+                Type = t.Amount >= 0 ? "positive" : "negative",
+                Description = t.Description,
+                // 🆕 Get medication name from Order->OrderItems or Offer->Medication (FK-based)
+                ProductName = t.Order?.OrderItems?.FirstOrDefault()?.Medication?.Name 
+                    ?? t.Offer?.Medication?.Name,
+                // İlaç ID'si (detay sayfasına link için)
+                MedicationId = t.Order?.OrderItems?.FirstOrDefault()?.MedicationId 
+                    ?? t.Offer?.MedicationId,
+                // Sipariş ID'si
+                OrderId = t.OrderId
+            }).ToList();
 
             // Recent shipments
             var shipments = await _context.Shipments
@@ -144,7 +146,7 @@ namespace Backend.Controllers
                     TenderOffers = tenderOffers
                 },
                 RecentOffers = recentOffers,
-                BalanceHistory = balanceHistory,
+                BalanceHistory = balanceHistoryDto,
                 Transfers = new List<object>(), // Deprecated, use shipments
                 Shipments = shipments
             });

@@ -80,11 +80,16 @@ namespace Backend.Dtos
         
         // Private offer fields
         public bool IsPrivate { get; set; }
-        public string? TargetPharmacyIds { get; set; }
+        
+        // 🆕 Refactored: List<long> instead of comma-separated string
+        public List<long>? TargetPharmacyIds { get; set; }
+        
         public int? WarehouseBaremId { get; set; }
         public decimal MaxPriceLimit { get; set; }
         public int SoldQuantity { get; set; } // Satılan/Sipariş geçilen adet
         public int RemainingStock { get; set; } // Kalan stok (Stock - SoldQuantity)
+        public int LockedQuantity { get; set; } // 🆕 Diğer kullanıcılar tarafından sepetlerde kilitli stok
+        public int AvailableStock { get; set; } // 🆕 Gerçek satın alınabilir stok (RemainingStock - LockedQuantity)
 
         // 🆕 Depo Sorumlusu için
         public long? DepotClaimerUserId { get; set; }
@@ -92,6 +97,16 @@ namespace Backend.Dtos
         
         // 🆕 Sipariş veren alıcılar (JointOrder, PurchaseRequest için)
         public List<BuyerInfo>? Buyers { get; set; }
+        
+        // 🆕 Finalization Tracking (for Provision/Capture Pattern)
+        /// <summary>Teklif sonlandırılmış mı?</summary>
+        public bool IsFinalized { get; set; }
+        
+        /// <summary>Ödeme işlendi mi?</summary>
+        public bool IsPaymentProcessed { get; set; }
+        
+        /// <summary>Teklif oluşturma tarihi</summary>
+        public string? CreatedAt { get; set; }
     }
 
     // 🆕 Sipariş veren alıcı bilgisi
@@ -101,6 +116,18 @@ namespace Backend.Dtos
         public string PharmacyName { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public string? OrderDate { get; set; }
+    }
+
+    // 🆕 Shipment Label DTO for QR code printing
+    public class ShipmentLabelDto
+    {
+        public int ShipmentId { get; set; }
+        public string OrderNumber { get; set; } = string.Empty;
+        public string BuyerPharmacyName { get; set; } = string.Empty;
+        public long BuyerPharmacyId { get; set; }
+        public int Quantity { get; set; }
+        /// <summary>AES-256 encrypted token for QR code</summary>
+        public string QRToken { get; set; } = string.Empty;
     }
 
     public class CreateOfferRequest
@@ -145,7 +172,10 @@ namespace Backend.Dtos
         
         // Private offer fields
         public bool IsPrivate { get; set; } = false;
-        public string? TargetPharmacyIds { get; set; } // Comma-separated IDs for multiple pharmacies
+        
+        // 🆕 Refactored: List<long> instead of comma-separated string
+        public List<long>? TargetPharmacyIds { get; set; }
+        
         public int? WarehouseBaremId { get; set; }
         public decimal MaxPriceLimit { get; set; } = 0; // Barem price limit for validation
     }
@@ -173,6 +203,7 @@ namespace Backend.Dtos
         public DateTime? BiddingDeadline { get; set; }
         public bool? AcceptingCounterOffers { get; set; }
         public string? TargetPharmacyId { get; set; } // For Pharmacy Specific Offers
+        
         // New fields
         public decimal? DepotPrice { get; set; }
         public string? MalFazlasi { get; set; }
@@ -183,6 +214,9 @@ namespace Backend.Dtos
         // Barem fields for edit
         public int? WarehouseBaremId { get; set; }
         public decimal? MaxPriceLimit { get; set; }
+        
+        // 🆕 Refactored: List<long> for target pharmacies
+        public List<long>? TargetPharmacyIds { get; set; }
     }
 
     public class UpdateOfferStatusRequest
@@ -202,6 +236,10 @@ namespace Backend.Dtos
         public string? Counterparty { get; set; } // "Alıcı: ..." or "Satıcı: ..."
         public decimal Amount { get; set; }
         public string Status { get; set; } = string.Empty; // "Tamamlandı", "İşlemde", "İptal Edildi"
+        
+        // 🆕 FK references for data integrity
+        public int? OrderId { get; set; }
+        public int? OfferId { get; set; }
     }
 
     public class CreateTransactionRequest
@@ -215,8 +253,14 @@ namespace Backend.Dtos
         [Required]
         public string Description { get; set; } = string.Empty;
         
+        // 🆕 Refactored: Nullable FKs instead of RelatedReferenceId string
+        public int? OrderId { get; set; }
+        public int? OfferId { get; set; }
+        
+        [Obsolete("Use OrderId or OfferId instead")]
         public string? RelatedReferenceId { get; set; }
-        public int? CounterpartyPharmacyId { get; set; }
+        
+        public long? CounterpartyPharmacyId { get; set; }
     }
 
     // ========== SHIPMENT DTOs ==========

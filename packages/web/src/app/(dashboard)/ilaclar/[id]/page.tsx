@@ -10,7 +10,7 @@ import Link from 'next/link';
 import ProductCard from '@/components/ilaclar/ProductCard';
 import PriceChart from '@/components/ilaclar/PriceChart';
 import WarehouseOffers from '@/components/ilaclar/WarehouseOffers';
-import { priceHistoryData, warehouseOffersData, ShowroomMedication } from '@/lib/dashboardData';
+import { ShowroomMedication, warehouseBaremsData, warehouseOffersData, WarehouseOffer } from '@/lib/dashboardData';
 
 import styles from './ilacDetay.module.css';
 import '@/app/(dashboard)/dashboard/dashboard.css';
@@ -114,7 +114,7 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
             offerId: offer.id, // Backend offer ID for cart API
             name: offer.productName || 'Bilinmiyor',
             manufacturer: offer.manufacturer || 'Bilinmiyor',
-            imageUrl: offer.imageUrl?.startsWith('/images/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${offer.imageUrl}` : (offer.imageUrl || '/logoYesil.png'),
+            imageUrl: offer.imageUrl?.startsWith('/images/') ? `${''}${offer.imageUrl}` : (offer.imageUrl || '/logoYesil.png'),
             price: offer.price,
             expirationDate: offer.expirationDate || '',
             initialStock: currentStock + bonus,
@@ -135,9 +135,22 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
         }, 1000);
     }, [canBuy, isAdding, offerQuantity, effectiveMaxStock, addToCart, offer, currentStock, bonus]);
 
-    // Kalan stok hesapla: Stok - Satılan
+    // Kalan stok hesapla - Ortak Sipariş ve Alım Talebi için barem bazlı
     const soldQuantity = (offer as any).soldQuantity || 0;
-    const remainingStock = currentStock - soldQuantity;
+    // 🆕 Backend'den gelen remainingStock'u kullan (barem bazlı hesaplanmış)
+    // Eğer yoksa, barem toplamı - stock - soldQuantity formülünü kullan
+    let remainingStock: number;
+    if ((offer as any).remainingStock !== undefined) {
+        remainingStock = (offer as any).remainingStock;
+    } else if (isJointOrder || isPurchaseRequest) {
+        // Barem bazlı hesapla: BaremTotal - Stock - SoldQuantity
+        const malFazlasiVal = (offer as any).malFazlasi || '0+0';
+        const baremPartsParsed = malFazlasiVal.split('+').map((s: string) => parseInt(s.trim()) || 0);
+        const baremTotal = baremPartsParsed.reduce((a: number, b: number) => a + b, 0);
+        remainingStock = baremTotal - currentStock - soldQuantity;
+    } else {
+        remainingStock = currentStock - soldQuantity;
+    }
     const canBuyRemaining = remainingStock > 0;
 
     // Barem bilgisi - malFazlasi'ndan parse et
@@ -184,7 +197,7 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
                 {isJointOrder ? (
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '18px', fontWeight: '700', color: '#ea580c' }}>{currentStock} Adet</div>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#78716c' }}>talep ediyor</div>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#78716c' }}>katkı miktarı</div>
                     </div>
                 ) : isPurchaseRequest ? (
                     <div style={{ textAlign: 'center' }}>
@@ -245,6 +258,48 @@ function IlacDetayPage() {
     
     const { offers: allOffers, loading, error, refetch } = useMedicationOffers(id);
     const { connection } = useSignalR();
+    
+    // 🆕 Stock lock status state
+    const [othersLockedQuantity, setOthersLockedQuantity] = useState<number>(0);
+    const currentOfferId = offerId ? parseInt(offerId) : null;
+    
+    // 🆕 Fetch lock status for current offer
+    const fetchLockStatus = useCallback(async () => {
+        console.log('[IlacDetay] fetchLockStatus called, currentOfferId:', currentOfferId);
+        if (!currentOfferId) {
+            console.log('[IlacDetay] No currentOfferId, skipping lock status fetch');
+            return;
+        }
+        
+        try {
+            const API_BASE_URL = '';
+            console.log('[IlacDetay] Fetching lock status from:', `${API_BASE_URL}/api/stocklocks/offer/${currentOfferId}`);
+            
+            const response = await fetch(`${API_BASE_URL}/api/stocklocks/offer/${currentOfferId}`, {
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            console.log('[IlacDetay] Lock status response:', response.status, response.ok);
+            
+            if (response.ok) {
+                const data = await response.json();
+                setOthersLockedQuantity(data.othersLocked || 0);
+                console.log('[IlacDetay] Lock status for offer', currentOfferId, ':', data);
+            } else {
+                console.log('[IlacDetay] Lock status fetch failed:', response.status);
+            }
+        } catch (err) {
+            console.error('[IlacDetay] Failed to fetch lock status:', err);
+        }
+    }, [currentOfferId]);
+    
+    // Fetch lock status on mount and when offerId changes
+    React.useEffect(() => {
+        fetchLockStatus();
+    }, [fetchLockStatus]);
 
     // Real-time updates listener
     React.useEffect(() => {
@@ -254,18 +309,29 @@ function IlacDetayPage() {
             // Refetch offers when notification received
             refetch();
         };
+        
+        // 🆕 Handle stock lock updates in real-time
+        const handleStockLockUpdate = (data: { type: string; offerIds: number[]; pharmacyId: number }) => {
+            console.log('[IlacDetay] ReceiveStockLockUpdate:', data);
+            // If current offer is affected, refresh lock status
+            if (currentOfferId && data.offerIds.includes(currentOfferId)) {
+                fetchLockStatus();
+            }
+        };
 
         // Listen for general notifications and specific stock updates
         connection.on("ReceiveNotification", handleUpdate);
         connection.on("ReceiveStockUpdate", handleUpdate); // In case backend uses this specific event
         connection.on("ReceiveOfferUpdate", handleUpdate);
+        connection.on("ReceiveStockLockUpdate", handleStockLockUpdate); // 🆕 Stock lock updates
 
         return () => {
             connection.off("ReceiveNotification", handleUpdate);
             connection.off("ReceiveStockUpdate", handleUpdate);
             connection.off("ReceiveOfferUpdate", handleUpdate);
+            connection.off("ReceiveStockLockUpdate", handleStockLockUpdate);
         };
-    }, [connection, refetch]);
+    }, [connection, refetch, currentOfferId, fetchLockStatus]);
     
     const { addToCart, cartItems } = useCart();
 
@@ -364,7 +430,9 @@ function IlacDetayPage() {
         const singleBaremTotal = (baremParts[0] || 0) + (baremParts[1] || 0);
         const totalRequestedStock = offers.reduce((sum, o) => {
             const sParts = o.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
-            return sum + (sParts[0] || 0);
+            const organizerStock = sParts[0] || 0;
+            const sold = (o as any).soldQuantity || 0;
+            return sum + organizerStock + sold;
         }, 0);
         
         // 🆕 Barem katını hesapla: toplam talep / tek barem = kaç kat gerekli
@@ -376,12 +444,24 @@ function IlacDetayPage() {
     }
     
     // Joint Order ve PurchaseRequest'de max = kalan barem stoğu, diğerlerinde = mevcut stok
-    const canBuy = (typeFilter === 'jointorder' || typeFilter === 'purchaserequest') 
-        ? baremRemainingStock > 0 
-        : currentStock > 0;
-    const effectiveMaxStock = (typeFilter === 'jointorder' || typeFilter === 'purchaserequest') 
-        ? Math.min(baremRemainingStock, MAX_ALLOWED_QUANTITY)
-        : Math.min(currentStock, MAX_ALLOWED_QUANTITY);
+    // 🆕 Başka kullanıcıların kilitlediği miktarı düş
+    const baseMaxStock = (typeFilter === 'jointorder' || typeFilter === 'purchaserequest') 
+        ? baremRemainingStock 
+        : currentStock;
+    
+    // 🆕 Kilitli stok düşüldükten sonra kalan miktar
+    const availableAfterLocks = Math.max(0, baseMaxStock - othersLockedQuantity);
+    
+    // 🆕 Kullanıcının sepetindeki bu teklif için miktar
+    const alreadyInCart = cartItems.find(
+        item => item.offerId === currentOfferId
+    )?.quantity || 0;
+    
+    // 🆕 Daha ne kadar eklenebilir = mevcut - sepetteki
+    const canAddMore = Math.max(0, availableAfterLocks - alreadyInCart);
+    
+    const canBuy = canAddMore > 0;
+    const effectiveMaxStock = Math.min(canAddMore, MAX_ALLOWED_QUANTITY);
 
     const handleMainIncrement = () => {
         setMainQuantity(q => {
@@ -455,7 +535,7 @@ function IlacDetayPage() {
             offerId: mainOffer.id, // Backend offer ID for cart API
             name: mainOffer.productName || 'Bilinmiyor',
             manufacturer: mainOffer.manufacturer || 'Bilinmiyor',
-            imageUrl: mainOffer.imageUrl?.startsWith('/images/') ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${mainOffer.imageUrl}` : (mainOffer.imageUrl || '/logoYesil.png'),
+            imageUrl: mainOffer.imageUrl?.startsWith('/images/') ? `${''}${mainOffer.imageUrl}` : (mainOffer.imageUrl || '/logoYesil.png'),
             price: mainOffer.price,
             expirationDate: mainOffer.expirationDate || '',
             initialStock: stockForCart + bonus,
@@ -537,9 +617,9 @@ function IlacDetayPage() {
                     {/* Ana Görsel */}
                     <img 
                         src={allImagePaths.length > 0 
-                            ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/${allImagePaths[selectedImageIndex] || allImagePaths[0]}`
+                            ? `${''}/${allImagePaths[selectedImageIndex] || allImagePaths[0]}`
                             : (mainOffer.imageUrl?.startsWith('/images/') 
-                                ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}${mainOffer.imageUrl}`
+                                ? `${''}${mainOffer.imageUrl}`
                                 : '/logoYesil.png')
                         }
                         alt={mainOffer.productName}
@@ -563,7 +643,7 @@ function IlacDetayPage() {
                                     onClick={() => setSelectedImageIndex(index)}
                                 >
                                     <img 
-                                        src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081'}/${path}`}
+                                        src={`${''}/${path}`}
                                         alt={`${mainOffer.productName} - ${index + 1}`}
                                         onError={(e) => {
                                             // Hide broken thumbnail
@@ -604,9 +684,10 @@ function IlacDetayPage() {
                     {/* Başlık ve Barem yan yana */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '8px', flexWrap: 'wrap' }}>
                         <h1 style={{ margin: 0 }}>{mainOffer.productName}</h1>
-                        {/* Barem Bilgisi - sadece filtreli linkte göster */}
-                        {baremFilter && (() => {
-                            const parts = baremFilter.split('+').map((s: string) => parseInt(s.trim()) || 0);
+                        {/* Barem Bilgisi - offer'ın gerçek malFazlasi değerinden al */}
+                        {(() => {
+                            const actualBarem = (mainOffer as any).malFazlasi || '0+0';
+                            const parts = actualBarem.split('+').map((s: string) => parseInt(s.trim()) || 0);
                             const baremMin = parts[0] || 0;
                             const baremBonus = parts[1] || 0;
                             if (baremBonus > 0) {
@@ -641,6 +722,29 @@ function IlacDetayPage() {
                     <div className={styles.mainInfoRow}>
                         <span className={styles.mainPriceDisplay}>{mainOffer.price.toFixed(2).replace('.', ',')} ₺</span>
                         <div className={styles.mainBuyActionGroup}>
+                            {/* 🆕 Stok Durumu Uyarısı */}
+                            {/* 🆕 Sadece Kilitli Stok Uyarısı */}
+                            {othersLockedQuantity > 0 && (
+                                <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    padding: '8px 12px',
+                                    backgroundColor: canBuy ? '#fef3c7' : '#fee2e2',
+                                    border: `1px solid ${canBuy ? '#f59e0b' : '#ef4444'}`,
+                                    borderRadius: '8px',
+                                    marginBottom: '12px',
+                                    fontSize: '13px',
+                                    color: canBuy ? '#b45309' : '#dc2626',
+                                    fontWeight: '500',
+                                }}>
+                                    <span style={{ fontSize: '16px' }}>⏳</span>
+                                    <span>
+                                        {othersLockedQuantity} adet <strong>işlemde</strong>
+                                    </span>
+                                </div>
+                            )}
+                            
                             {/* Stok Satışı ve JointOrder için miktar seçici */}
                             {canBuy && typeFilter !== 'purchaserequest' && (
                                 <QuantitySelector
@@ -731,13 +835,19 @@ function IlacDetayPage() {
                     <div className={styles.chartAndOfferContainer}>
                         <div className={styles.sellerAndChart}>
                             <div className={styles.priceChartWrapper}>
-                                <PriceChart data={priceHistoryData} />
+                                <PriceChart data={[]} /> {/* TODO: Fetch real price history from API */}
                             </div>
                         </div>
                         <div className={styles.offerCountWrapper}>
                             <div className={styles.offerCount}>
-                                <span>{typeFilter === 'jointorder' ? 'Talep Sayısı' : 'Teklif Sayısı'}</span>
-                                <strong>{offers.length}</strong>
+                                <span>{typeFilter === 'jointorder' ? 'Katılımcı Sayısı' : typeFilter === 'purchaserequest' ? 'Talep Sayısı' : 'Teklif Sayısı'}</span>
+                                <strong>
+                                    {typeFilter === 'jointorder' || typeFilter === 'purchaserequest'
+                                        // Organizatör (1) + Katılımcılar (buyers count)
+                                        ? 1 + (mainOffer?.buyers?.length || 0)
+                                        : offers.length
+                                    }
+                                </strong>
                             </div>
                         </div>
                     </div>
@@ -860,7 +970,7 @@ function IlacDetayPage() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
                                 <span style={{ color: '#78716c' }}>Barem Doluluk Oranı</span>
                                 <span style={{ fontWeight: '600', color: usagePercent >= 100 ? '#ef4444' : '#ea580c' }}>
-                                    %{Math.min(usagePercent, 100).toFixed(0)} ({offers.length} Talep)
+                                    %{Math.min(usagePercent, 100).toFixed(0)} ({1 + (mainOffer?.buyers?.length || 0)} Katılımcı)
                                 </span>
                             </div>
                             <div style={{
@@ -898,7 +1008,43 @@ function IlacDetayPage() {
                 );
             })()}
 
-            <WarehouseOffers data={warehouseOffersData} />
+            {/* Depo Fiyatları - Scraped Data Integration */}
+            {(() => {
+                // Mevcut ilaç için barem verilerini filtrele
+                const productName = mainOffer.productName || '';
+                const productBarems = warehouseBaremsData.filter(b => 
+                    b.productName.toLowerCase().includes(productName.toLowerCase()) || 
+                    productName.toLowerCase().includes(b.productName.toLowerCase())
+                );
+                
+                // Eğer scrap edilen (barem) veri varsa onları kullan
+                // Yoksa genel mock veriyi (warehouseOffersData) kullan
+                let displayData: WarehouseOffer[] = [];
+                
+                if (productBarems.length > 0) {
+                    displayData = productBarems.map((b, index) => ({
+                        id: index + 1000,
+                        warehouseName: b.warehouseName,
+                        price: b.netPrice, // Birim Fiyat (Net Fiyat)
+                        stockInfo: `${b.quantity}+${b.bonus}` // Barem bilgisi
+                    }));
+                } else {
+                    // Veri yoksa standart listeyi göster ama fiyatları ilaca göre biraz değiştir (görsel çeşitlilik için)
+                    displayData = warehouseOffersData.map(w => ({
+                        ...w,
+                        price: mainOffer.price * (0.9 + Math.random() * 0.2) // +/- %10 değişim
+                    }));
+                    
+                    // Alliance Healthcare için özel birim fiyat vurgusu (User talebi)
+                    // Eğer listede Alliance varsa, onun fiyatını net gösterelim
+                    const allianceIdx = displayData.findIndex(d => d.warehouseName.includes('Alliance'));
+                    if (allianceIdx >= 0) {
+                        displayData[allianceIdx].price = mainOffer.price * 0.95; // %5 indirimli gibi göster
+                    }
+                }
+                
+                return <WarehouseOffers data={displayData} />;
+            })()}
 
             <div className={styles.offersSection}>
                 <h2>
@@ -929,7 +1075,9 @@ function IlacDetayPage() {
                             const totalBaremStock = (parts[0] || 0) + (parts[1] || 0);
                             const totalRequestedStock = offers.reduce((sum, o) => {
                                 const stockParts = o.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
-                                return sum + (stockParts[0] || 0);
+                                const organizerStock = stockParts[0] || 0;
+                                const sold = (o as any).soldQuantity || 0;
+                                return sum + organizerStock + sold;
                             }, 0);
                             baremRemainingStock = Math.max(0, totalBaremStock - totalRequestedStock);
                         }

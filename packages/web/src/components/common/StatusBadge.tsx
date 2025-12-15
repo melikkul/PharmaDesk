@@ -40,7 +40,13 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status, type, className = '' 
     if (type === 'offer') {
       switch (statusLower) {
         case 'active':
-          return { label: 'Aktif Teklif', variant: 'success' };
+          return { label: 'Aktif', variant: 'success' };
+        case 'passive':
+          return { label: 'Pasif', variant: 'default' };
+        case 'expired':
+          return { label: 'Süresi Doldu', variant: 'danger' };
+        case 'sold':
+          return { label: 'Satıldı', variant: 'info' };
         case 'paused':
           return { label: 'Duraklatıldı', variant: 'warning' };
         case 'out_of_stock':

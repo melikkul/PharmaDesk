@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import * as signalR from "@microsoft/signalr";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useAuth } from "@/store/AuthContext";
 
 type ConnectionState = "Connected" | "Disconnected" | "Reconnecting";
 
@@ -30,40 +31,40 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
   const [connectionState, setConnectionState] = useState<ConnectionState>("Disconnected");
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set<string>());
   const queryClient = useQueryClient();
-
-  const getAccessToken = useCallback(() => {
-    // Try to get token from cookies first (httpOnly cookies won't be accessible)
-    // So we need to check localStorage as fallback
-    if (typeof window !== "undefined") {
-      // Check localStorage for token
-      const token = localStorage.getItem("token") || sessionStorage.getItem("token");
-      return token || "";
-    }
-    return "";
-  }, []);
+  const { token, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
-    // Use relative URL to leverage Next.js rewrites (proxies to backend)
-    const apiUrl = "";
-    const accessToken = getAccessToken();
-
-    if (!accessToken) {
-      console.log("[SignalR] No access token found, skipping connection");
+    // Wait for auth initialization to complete before checking authentication
+    if (isLoading) {
+      console.log("[SignalR] Waiting for auth initialization...");
       return;
     }
+
+    // Only connect when user is authenticated
+    if (!isAuthenticated || !token) {
+      console.log("[SignalR] Skipping connection - user not authenticated");
+      return;
+    }
+
+    // Use relative URL for Next.js proxy (consistent with authService)
+    // The proxy in next.config.mjs will forward /hubs/* to the backend
+    const apiUrl = "";
 
     let isMounted = true;
     let isConnecting = false;
     let currentConnection: signalR.HubConnection | null = null;
     const abortController = new AbortController();
 
-    // Create connection with automatic reconnection
+    // Create connection with token-based authentication
     const newConnection = new signalR.HubConnectionBuilder()
       .withUrl(`${apiUrl}/hubs/notifications`, {
-        accessTokenFactory: () => accessToken,
-        // skipNegotiation: true, // Removed to allow negotiation
-        // transport: signalR.HttpTransportType.WebSockets, // Removed to allow fallback
-        withCredentials: true, // Changed to true for cookie-based affinity if needed
+        // Pass token via accessTokenFactory ONLY if it's a real JWT (not 'cookie-managed')
+        accessTokenFactory: () => {
+          return (token && token !== 'cookie-managed') ? token : '';
+        },
+        withCredentials: true,
+        // Allow negotiation - needed for proxy compatibility
+        // Let SignalR choose the best transport
       })
       .withAutomaticReconnect({
         nextRetryDelayInMilliseconds: (retryContext) => {
@@ -141,8 +142,8 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
         return; // Toast gösterme
       }
 
-      // 🆕 Hedef kullanıcı kontrolü - targetUserId varsa sadece o kullanıcıda göster
-      const currentUserId = localStorage.getItem("userId") || sessionStorage.getItem("userId");
+      // Hedef kullanıcı kontrolü - targetUserId varsa sadece o kullanıcıda göster
+      const currentUserId = sessionStorage.getItem("userId");
       if (notification.targetUserId && notification.targetUserId !== currentUserId) {
         console.log("[SignalR] Notification not for this user, skipping toast");
         return; // Bu kullanıcı için değil, toast gösterme
@@ -239,7 +240,7 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       setConnection(null);
       setConnectionState("Disconnected");
     };
-  }, [getAccessToken, queryClient]);
+  }, [queryClient, token, isAuthenticated, isLoading]);
 
   return (
     <SignalRContext.Provider value={{ connectionState, connection, onlineUsers }}>

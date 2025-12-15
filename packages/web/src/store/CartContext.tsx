@@ -6,6 +6,7 @@ import { useAuth } from './AuthContext';
 import { useSignalR } from './SignalRContext';
 import { cartService, BackendCart, BackendCartItem } from '../services/cartService';
 import { ShowroomMedication } from '../lib/dashboardData';
+import { toast } from 'sonner';
 
 // Sepet için gereken minimum ürün bilgileri
 export interface CartProduct {
@@ -46,6 +47,7 @@ interface CartContextType {
   updateQuantity: (productId: number, sellerName: string, newQuantity: number) => void; // Artık debounced, Promise dönmez
   clearCart: () => Promise<void>;
   refreshCart: () => Promise<void>;
+  setDepotFulfillment: (cartItemId: number, isDepotFulfillment: boolean) => Promise<void>; // 🆕 Depo sorumluluğu ayarla
   unreadCartItemCount: number;
 }
 
@@ -54,10 +56,28 @@ const MAX_ALLOWED_QUANTITY = 1000;
 
 // Backend response'unu frontend formatına dönüştür
 function transformBackendCart(backendCart: BackendCart): CartItem[] {
+  const API_BASE_URL = '';
+  
+  // 🆕 Map numeric enum to string (Backend sends 0, 1, 2 for OfferType)
+  const mapOfferType = (rawType: string | number | undefined): 'stocksale' | 'jointorder' | 'purchaserequest' => {
+    if (typeof rawType === 'number') {
+      // Backend OfferType enum: 0=StockSale, 1=JointOrder, 2=PurchaseRequest
+      switch (rawType) {
+        case 0: return 'stocksale';
+        case 1: return 'jointorder';
+        case 2: return 'purchaserequest';
+        default: return 'stocksale';
+      }
+    }
+    if (typeof rawType === 'string') {
+      return rawType.toLowerCase() as 'stocksale' | 'jointorder' | 'purchaserequest';
+    }
+    return 'stocksale';
+  };
+  
   return backendCart.cartItems.map((item: BackendCartItem): CartItem => {
-    // offer.type'ı güvenli bir şekilde string'e çevir
-    const rawType = item.offer?.type;
-    const typeStr = typeof rawType === 'string' ? rawType.toLowerCase() : 'stocksale';
+    // 🆕 Use mapOfferType for proper enum handling
+    const typeStr = mapOfferType(item.offer?.type);
     
     // 🆕 Kar hesapla: (bonus / toplam birim) * fiyat * miktar
     const stock = item.offer?.stock || 0;
@@ -68,18 +88,69 @@ function transformBackendCart(backendCart: BackendCart): CartItem[] {
       ? (bonus / totalUnits) * price * item.quantity 
       : 0;
     
+    // 🆕 Fix image URL - check multiple possible fields from backend
+    const medication = item.offer?.medication;
+    let imageUrl = '/placeholder-med.png';
+    
+    // Priority: allImagePaths > imagePath > imageUrl
+    if (medication) {
+      let rawPath: string | undefined;
+      
+      // Check allImagePaths first (may be JSON string or array)
+      if (medication.allImagePaths) {
+        if (typeof medication.allImagePaths === 'string') {
+          if (medication.allImagePaths.startsWith('[')) {
+            try {
+              const paths = JSON.parse(medication.allImagePaths);
+              if (Array.isArray(paths) && paths.length > 0) {
+                rawPath = paths[0];
+              }
+            } catch { /* ignore */ }
+          } else {
+            rawPath = medication.allImagePaths;
+          }
+        } else if (Array.isArray(medication.allImagePaths) && medication.allImagePaths.length > 0) {
+          rawPath = medication.allImagePaths[0];
+        }
+      }
+      
+      // Fallback to imagePath
+      if (!rawPath && medication.imagePath) {
+        rawPath = medication.imagePath;
+      }
+      
+      // Fallback to imageUrl  
+      if (!rawPath && medication.imageUrl) {
+        rawPath = medication.imageUrl;
+      }
+      
+      // Apply API base URL prefix for relative paths
+      if (rawPath) {
+        if (rawPath.startsWith('/images/') || rawPath.startsWith('images/')) {
+          imageUrl = `${API_BASE_URL}${rawPath.startsWith('/') ? '' : '/'}${rawPath}`;
+        } else if (rawPath.startsWith('http')) {
+          imageUrl = rawPath;
+        } else if (rawPath.startsWith('/')) {
+          imageUrl = `${API_BASE_URL}${rawPath}`;
+        } else {
+          imageUrl = rawPath;
+        }
+      }
+    }
+    
     return {
       id: item.id,
-      offerId: item.offerId,
+      offerId: item.offerId || item.offer?.id, // 🆕 offerId öncelikli, yoksa offer objesinden al
       quantity: item.quantity,
       sellerName: item.offer?.pharmacyProfile?.pharmacyName || 'Bilinmeyen Satıcı',
       offerType: (typeStr as 'stocksale' | 'jointorder' | 'purchaserequest') || 'stocksale',
+      isDepotSelfOrder: (item as any).isDepotFulfillment || false, // 🆕 Backend'den oku
       bonusQuantity: bonus, // 🆕
       profitAmount: profitAmount, // 🆕
       product: {
         id: item.offer?.medication?.id || 0,
         name: item.offer?.medication?.name || '',
-        imageUrl: item.offer?.medication?.imageUrl || '/dolorex_placeholder.png',
+        imageUrl: imageUrl, // 🆕 Fixed: use prefixed imageUrl
         manufacturer: item.offer?.medication?.manufacturer || '',
         price: item.offer?.price || 0,
         currentStock: item.offer?.stock || 0,
@@ -87,7 +158,7 @@ function transformBackendCart(backendCart: BackendCart): CartItem[] {
         sellerName: item.offer?.pharmacyProfile?.pharmacyName || '',
         sellerUsername: item.offer?.pharmacyProfile?.username || '',
         sellerId: item.offer?.pharmacyProfile?.id || 0,
-        offerType: typeof rawType === 'string' ? rawType : 'StockSale',
+        offerType: typeStr, // 🆕 Fixed: use normalized lowercase type
       },
     };
   });
@@ -187,11 +258,22 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         // Sepeti yeniden yükle
         fetchCart();
       };
+      
+      // 🆕 Stok kilitleme güncellemelerini sadece log et - fetchCart çağırmıyoruz (429 hatası önleme)
+      const handleStockLockUpdate = (data: { type: string; offerIds: number[] }) => {
+        console.log('[CartContext] SignalR stock lock update received:', data);
+        // NOT: fetchCart çağırmıyoruz çünkü:
+        // 1. CartPanel kendi lock status'ünü ayrıca fetch ediyor
+        // 2. Product detail sayfası kendi lock status'ünü ayrıca fetch ediyor
+        // 3. Çok fazla istek 429 rate limiting'e neden oluyor
+      };
 
       connection.on('ReceiveCartUpdate', handleCartUpdate);
+      connection.on('ReceiveStockLockUpdate', handleStockLockUpdate);
 
       return () => {
         connection.off('ReceiveCartUpdate', handleCartUpdate);
+        connection.off('ReceiveStockLockUpdate', handleStockLockUpdate);
       };
     }
   }, [connection, connectionState, fetchCart]);
@@ -224,8 +306,17 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
 
     try {
-      await cartService.addToCart(token, offerId, quantityToAdd);
+      const response = await cartService.addToCart(token, offerId, quantityToAdd);
       await fetchCart(); // Sepeti yeniden yükle
+      
+      // 🆕 Stok yetersizliği nedeniyle miktar güncellendiyse uyarı göster
+      if (response.adjustedQuantity !== undefined && response.adjustedQuantity < quantityToAdd) {
+        toast.warning(
+          `Stok yetersizliği nedeniyle miktar ${response.adjustedQuantity} olarak güncellendi.`,
+          { duration: 5000 }
+        );
+      }
+      
       return true;
     } catch (err: any) {
       console.error("Sepete eklenirken hata:", err);
@@ -238,7 +329,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   // Sepetten ürün çıkar
   const removeFromCart = useCallback(async (productId: number, sellerName: string): Promise<boolean> => {
+    console.log('[removeFromCart] Called with:', { productId, sellerName });
+    
     if (!token) {
+      console.log('[removeFromCart] No token!');
       setError('Giriş yapmanız gerekiyor');
       return false;
     }
@@ -248,8 +342,10 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       item => item.product.id === productId && item.sellerName === sellerName
     );
 
+    console.log('[removeFromCart] Found cartItem:', cartItem);
+
     if (!cartItem) {
-      console.warn('Cart item not found for removal');
+      console.warn('[removeFromCart] Cart item not found for removal');
       return false;
     }
 
@@ -257,12 +353,14 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
 
     try {
+      console.log('[removeFromCart] Calling API with cartItem.id:', cartItem.id);
       await cartService.removeFromCart(token, cartItem.id);
+      console.log('[removeFromCart] API success, updating state');
       // Optimistic update
       setCartItems(prev => prev.filter(item => item.id !== cartItem.id));
       return true;
     } catch (err) {
-      console.error("Sepetten çıkarılırken hata:", err);
+      console.error("[removeFromCart] Error:", err);
       setError('Ürün silinirken hata oluştu');
       await fetchCart(); // Hata durumunda yeniden yükle
       return false;
@@ -418,6 +516,28 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     await fetchCart(true);
   }, [fetchCart]);
 
+  // 🆕 Depo sorumluluğu ayarla (Depot fulfillment)
+  const setDepotFulfillment = useCallback(async (cartItemId: number, isDepotFulfillment: boolean) => {
+    if (!token) {
+      setError('Giriş yapmanız gerekiyor');
+      return;
+    }
+
+    try {
+      await cartService.setDepotFulfillment(token, cartItemId, isDepotFulfillment);
+      // Optimistic update
+      setCartItems(prev => prev.map(item =>
+        item.id === cartItemId
+          ? { ...item, isDepotSelfOrder: isDepotFulfillment }
+          : item
+      ));
+    } catch (err) {
+      console.error("Depo sorumluluğu güncellenirken hata:", err);
+      setError('Depo sorumluluğu güncellenirken hata oluştu');
+      await fetchCart(); // Hata durumunda yeniden yükle
+    }
+  }, [token, fetchCart]);
+
   // Context value
   const contextValue = useMemo(() => ({
     cartItems, 
@@ -430,6 +550,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     updateQuantity, 
     clearCart,
     refreshCart,
+    setDepotFulfillment,
     unreadCartItemCount
   }), [
     cartItems, 
@@ -443,6 +564,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     clearCart,
     // fetchCart depends on context which depends on token. fetchCart is stable.
     refreshCart, // Now stable
+    setDepotFulfillment,
     unreadCartItemCount
   ]);
 

@@ -4,10 +4,14 @@ const API_BASE_URL = ''; // Use relative URL for Next.js proxy
 import { LoginResponse } from '../types';
 
 export const authService = {
+  /**
+   * Login - Cookie is now set by backend as HttpOnly
+   */
   login: async (email: string, password: string): Promise<LoginResponse> => {
     const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include", // 🔒 Send cookies with request
       body: JSON.stringify({ email, password }),
     });
 
@@ -28,10 +32,32 @@ export const authService = {
     return data;
   },
 
+  /**
+   * Logout - Clears the HttpOnly cookie
+   */
+  logout: async (): Promise<void> => {
+    try {
+      await fetch(`${API_BASE_URL}/api/auth/logout`, {
+        method: "POST",
+        credentials: "include", // 🔒 Send cookies with request
+      });
+    } catch {
+      // Ignore errors on logout
+    }
+    // Clear any local storage items (backward compatibility)
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
+    }
+  },
+
   forgotPassword: async (email: string): Promise<void> => {
     const res = await fetch(`${API_BASE_URL}/api/auth/forgot-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ email }),
     });
 
@@ -45,6 +71,7 @@ export const authService = {
     const res = await fetch(`${API_BASE_URL}/api/auth/reset-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ token, password }),
     });
 
@@ -54,3 +81,4 @@ export const authService = {
     }
   }
 };
+

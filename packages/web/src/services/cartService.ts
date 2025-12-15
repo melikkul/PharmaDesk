@@ -1,5 +1,5 @@
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081';
+const API_BASE_URL = '';
 
 // Backend CartItem response tipi
 export interface BackendCartItem {
@@ -13,7 +13,7 @@ export interface BackendCartItem {
     price: number;
     stock: number;
     bonusQuantity?: number; // 🆕 Barem bonus miktarı
-    type: string; // 'StockSale' | 'JointOrder' | 'PurchaseRequest'
+    type: string | number; // 🆕 Backend may send numeric enum (0, 1, 2) or string
     pharmacyProfile: {
       id: number;
       pharmacyName: string;
@@ -22,7 +22,9 @@ export interface BackendCartItem {
     medication: {
       id: number;
       name: string;
-      imageUrl?: string;
+      imageUrl?: string;      // May be present
+      imagePath?: string;     // Backend actual field name
+      allImagePaths?: string | string[]; // JSON array or string
       manufacturer?: string;
     };
   };
@@ -54,10 +56,11 @@ export interface LockResponse {
 export const cartService = {
   getCart: async (token: string, signal?: AbortSignal): Promise<BackendCart> => {
     const response = await fetch(`${API_BASE_URL}/api/carts`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       signal, // AbortSignal for cancellation
     });
 
@@ -75,19 +78,25 @@ export const cartService = {
     }
 
     if (!response.ok) {
-      throw new Error('Failed to fetch cart');
+      console.error('[cartService] Failed to fetch cart:', response.status, response.statusText);
+      try {
+        const text = await response.text();
+        console.error('[cartService] Error details:', text);
+      } catch (e) { /* ignore */ }
+      throw new Error(`Failed to fetch cart: ${response.status}`);
     }
 
     return response.json();
   },
 
-  addToCart: async (token: string, offerId: number, quantity: number): Promise<{ message: string; cartItemCount: number }> => {
+  addToCart: async (token: string, offerId: number, quantity: number): Promise<{ message: string; cartItemCount: number; adjustedQuantity?: number }> => {
     const response = await fetch(`${API_BASE_URL}/api/carts/items`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       body: JSON.stringify({ offerId, quantity }),
     });
 
@@ -102,10 +111,11 @@ export const cartService = {
   removeFromCart: async (token: string, cartItemId: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/carts/items/${cartItemId}`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -116,10 +126,11 @@ export const cartService = {
   updateQuantity: async (token: string, cartItemId: number, quantity: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/carts/items/${cartItemId}`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       body: JSON.stringify({ quantity }),
     });
 
@@ -131,10 +142,11 @@ export const cartService = {
   clearCart: async (token: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/carts/clear`, {
       method: 'DELETE',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -146,10 +158,11 @@ export const cartService = {
   lockStocks: async (token: string): Promise<LockResponse> => {
     const response = await fetch(`${API_BASE_URL}/api/stocklocks/lock`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -163,10 +176,11 @@ export const cartService = {
   unlockStocks: async (token: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/stocklocks/unlock`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -177,10 +191,11 @@ export const cartService = {
 
   getLockStatus: async (token: string): Promise<StockLockStatus> => {
     const response = await fetch(`${API_BASE_URL}/api/stocklocks/status`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -196,10 +211,11 @@ export const cartService = {
     othersLocked: number;
   }> => {
     const response = await fetch(`${API_BASE_URL}/api/stocklocks/offer/${offerId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
     });
 
     if (!response.ok) {
@@ -207,5 +223,21 @@ export const cartService = {
     }
 
     return response.json();
+  },
+
+  setDepotFulfillment: async (token: string, cartItemId: number, isDepotFulfillment: boolean): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/api/carts/items/${cartItemId}/depot-fulfillment`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ isDepotFulfillment }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to update depot fulfillment');
+    }
   }
 };

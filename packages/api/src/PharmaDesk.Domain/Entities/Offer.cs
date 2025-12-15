@@ -6,105 +6,131 @@ namespace Backend.Models
     public enum OfferStatus
     {
         Active,
-        Paused,
+        Passive, 
         Expired,
-        OutOfStock,
-        Stopped  // New status for manually stopped offers
+        Sold
     }
 
     public enum OfferType
     {
-        StockSale,       // Stok Satışı
-        JointOrder,      // Ortak Sipariş
-        PurchaseRequest  // Alım Talebi
+        StockSale,      // Stok Satış
+        JointOrder,     // Ortak Sipariş
+        PurchaseRequest // Alım Talebi
     }
 
-    public class Offer
+    /// <summary>
+    /// Refactored Offer entity with:
+    /// - OfferTarget collection instead of TargetPharmacyIds string (1NF)
+    /// - PostgreSQL xmin concurrency token
+    /// - ISoftDelete & IAuditable implementation
+    /// </summary>
+    public class Offer : BaseEntity
     {
-        [Key]
-        public int Id { get; set; }
-
+        // Foreign Keys
         public long PharmacyProfileId { get; set; }
         public int MedicationId { get; set; }
-        public int? InventoryItemId { get; set; } // Hangi stoktan düşülecek
-
-        [Required]
-        public OfferType Type { get; set; } = OfferType.StockSale; // Offer type
-        
-        // Eczaneye özel teklif için hedef eczane ID'leri (virgülle ayrılmış)
-        public string? TargetPharmacyIds { get; set; }
-        
-        // Bu teklif özel mi?
-        public bool IsPrivate { get; set; } = false;
-        
-        // Seçilen barem referansı
+        public int? InventoryItemId { get; set; }
         public int? WarehouseBaremId { get; set; }
-        
-        // Fiyat validasyonu için maksimum limit (Barem fiyatı)
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal MaxPriceLimit { get; set; } = 0;
 
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal Price { get; set; } // Satış fiyatı
-
+        // Core Fields
         [Required]
-        public int Stock { get; set; } // Satışa açılan adet
-        
-        public int MinSaleQuantity { get; set; } = 1; // Minimum alım adedi
-
-        public int BonusQuantity { get; set; } = 0; // Verilecek MF
-
-        // New Financial Fields
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal DepotPrice { get; set; } // Depo Fiyatı
-
-        public string? MalFazlasi { get; set; } // Format: "X+Y" (e.g., "10+2")
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal DiscountPercentage { get; set; } // İskonto Oranı
-
-        [Column(TypeName = "decimal(18,2)")]
-        public decimal NetPrice { get; set; } // Net Birim Maliyet
-
-        public int? MaxSaleQuantity { get; set; } // Maksimum Satış Adedi
-
-        public int SoldQuantity { get; set; } = 0; // Satılan/Sipariş geçilen adet (default 0)
-
-        public string? Description { get; set; } // Açıklama
+        public OfferType Type { get; set; }
 
         [Required]
         public OfferStatus Status { get; set; } = OfferStatus.Active;
-        
-        public DateTime PublishDate { get; set; } = DateTime.UtcNow;
-        public DateTime? EndDate { get; set; }
-        public DateTime? ExpirationDate { get; set; } // SKT - Son Kullanma Tarihi
 
-        // Campaign-specific fields
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal Price { get; set; }
+
+        public int Stock { get; set; }
+        public int BonusQuantity { get; set; }
+        public int MinSaleQuantity { get; set; }
+        public int? MaxSaleQuantity { get; set; }
+        public int SoldQuantity { get; set; }
+
+        // Pricing Fields
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DepotPrice { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal DiscountPercentage { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal NetPrice { get; set; }
+
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal MaxPriceLimit { get; set; }
+
+        // Barem Info
+        public string? MalFazlasi { get; set; } // e.g., "10+2"
+
+        // Date Fields
+        public DateTime? ExpirationDate { get; set; }
+        public DateTime? EndDate { get; set; }
+        public DateTime PublishDate { get; set; } = DateTime.UtcNow;
+
+        // Campaign Fields (for JointOrder)
         public DateTime? CampaignStartDate { get; set; }
         public DateTime? CampaignEndDate { get; set; }
-        public decimal CampaignBonusMultiplier { get; set; } = 1.0m; // Bonus multiplier for campaigns
+        public decimal CampaignBonusMultiplier { get; set; }
 
-        // Tender-specific fields
-        public int? MinimumOrderQuantity { get; set; } // Minimum order for tender
-        public DateTime? BiddingDeadline { get; set; } // Deadline for bidding
-        public bool AcceptingCounterOffers { get; set; } = false; // Whether accepting counter offers
-        public string? TargetPharmacyId { get; set; } // For Pharmacy Specific Offers
+        // Purchase Request Fields
+        public int? MinimumOrderQuantity { get; set; }
+        public DateTime? BiddingDeadline { get; set; }
+        public bool AcceptingCounterOffers { get; set; }
 
-        // 🆕 Depo Sorumlusu - Ortak Sipariş için depodan söyleyecek kişi
-        // TODO: Migration yapıldıktan sonra [NotMapped] kaldırılacak
-        [NotMapped]
-        public long? DepotClaimerUserId { get; set; } // Depodan sipariş geçeceğini söyleyen kullanıcı
-        [NotMapped]
-        public DateTime? DepotClaimedAt { get; set; } // Ne zaman üstlendiği
+        // Private Offer Fields
+        public bool IsPrivate { get; set; }
+        
+        // ⚠️ DEPRECATED: Use OfferTargets collection instead
+        // Kept for backwards compatibility during migration
+        [Obsolete("Use OfferTargets collection instead")]
+        public string? TargetPharmacyId { get; set; }
+        
+        [Obsolete("Use OfferTargets collection instead")]
+        public string? TargetPharmacyIds { get; set; }
 
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-        public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+        // Depot Fields
+        public long? DepotClaimerUserId { get; set; }
+        public DateTime? DepotClaimedAt { get; set; }
 
+        // 🆕 Finalization Tracking (for Provision/Capture Pattern)
+        /// <summary>
+        /// Teklif sonlandırılmış mı? (Stok tükendi veya manuel kapatıldı)
+        /// </summary>
+        public bool IsFinalized { get; set; } = false;
+        
+        /// <summary>
+        /// Ödeme işlendi mi? (ProcessBalance çağrıldı mı)
+        /// </summary>
+        public bool IsPaymentProcessed { get; set; } = false;
+
+        // Description
+        public string? Description { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
         // Navigation Properties
+        // ═══════════════════════════════════════════════════════════════
+
         [ForeignKey(nameof(PharmacyProfileId))]
         public PharmacyProfile PharmacyProfile { get; set; } = null!;
 
         [ForeignKey(nameof(MedicationId))]
         public Medication Medication { get; set; } = null!;
+
+        [ForeignKey(nameof(InventoryItemId))]
+        public InventoryItem? InventoryItem { get; set; }
+
+        [ForeignKey(nameof(WarehouseBaremId))]
+        public WarehouseBarem? WarehouseBarem { get; set; }
+
+        // 🆕 Normalized Target Pharmacies Collection (replaces TargetPharmacyIds string)
+        public ICollection<OfferTarget> OfferTargets { get; set; } = new List<OfferTarget>();
+
+        // Related entities
+        public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+        public ICollection<OrderItem> OrderItems { get; set; } = new List<OrderItem>();
+        public ICollection<StockLock> StockLocks { get; set; } = new List<StockLock>();
+        public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
     }
 }

@@ -14,8 +14,9 @@ export const offerService = {
 
   getOfferById: async (token: string, id: string): Promise<Offer> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${id}`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
       },
     });
     if (!response.ok) {
@@ -37,8 +38,9 @@ export const offerService = {
 
   getMyOffers: async (token: string): Promise<Offer[]> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/my-offers?_=${Date.now()}`, {
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {}),
       },
     });
     if (!response.ok) {
@@ -50,10 +52,11 @@ export const offerService = {
   createOffer: async (token: string, offerData: any): Promise<{success: boolean; suggestion?: any}> => {
     const response = await fetch(`${API_BASE_URL}/api/offers`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       body: JSON.stringify(offerData),
     });
 
@@ -76,10 +79,11 @@ export const offerService = {
   updateOffer: async (token: string, id: string, offerData: any): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${id}`, {
       method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       body: JSON.stringify(offerData),
     });
 
@@ -92,10 +96,11 @@ export const offerService = {
   updateOfferStatus: async (token: string, id: number, status: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${id}/status`, {
       method: 'PATCH',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+        },
       body: JSON.stringify({ status }),
     });
 
@@ -107,8 +112,9 @@ export const offerService = {
   deleteOffer: async (token: string, id: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${id}`, {
       method: 'DELETE',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 
@@ -121,8 +127,9 @@ export const offerService = {
   claimDepot: async (token: string, offerId: number): Promise<{ claimerUserId: number; claimedAt: string }> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/claim-depot`, {
       method: 'POST',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 
@@ -138,8 +145,9 @@ export const offerService = {
   unclaimDepot: async (token: string, offerId: number): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/claim-depot`, {
       method: 'DELETE',
+      credentials: 'include',
       headers: {
-        'Authorization': `Bearer ${token}`,
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
       },
     });
 
@@ -147,5 +155,58 @@ export const offerService = {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Failed to unclaim depot');
     }
+  },
+
+  // 🆕 Teklifi sonlandır
+  finalizeOffer: async (token: string, offerId: number): Promise<{ message: string; offer: any }> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/finalize`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to finalize offer');
+    }
+
+    return response.json();
+  },
+
+  // 🆕 Bakiyeleri işle (Process Balance / Capture)
+  processBalance: async (token: string, offerId: number): Promise<{ message: string; capturedAmount: number; transactionCount: number }> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/process-balance`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to process balance');
+    }
+
+    return response.json();
+  },
+
+  // 🆕 Kargo etiketlerini getir (QR kodlar için)
+  getShipmentLabels: async (token: string, offerId: number): Promise<any[]> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/shipment-labels`, {
+      credentials: 'include',
+      headers: {
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to get shipment labels');
+    }
+
+    return response.json();
   }
 };

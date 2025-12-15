@@ -504,3 +504,140 @@
 .secondaryQuantitySelector input {
     width: 40px;
 }
+
+/* ========== RESPONSIVE STYLES ========== */
+
+/* Tablet (max-width: 992px) */
+@media (max-width: 992px) {
+    .productDetailGrid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .mainInfoRow {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .mainBuyActionGroup {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .offerItem {
+        grid-template-columns: 100px 1fr 80px;
+        gap: 10px;
+    }
+    
+    .offerItem .quantitySelector,
+    .offerItem .buyButtonSecondary {
+        grid-column: span 1;
+    }
+    
+    .chartAndOfferContainer {
+        flex-direction: column;
+    }
+}
+
+/* Mobile (max-width: 768px) */
+@media (max-width: 768px) {
+    .pageContainer {
+        gap: 20px;
+    }
+    
+    .productDetailGrid {
+        padding: 15px;
+    }
+    
+    .productInfoContainer h1 {
+        font-size: 22px;
+    }
+    
+    .mainPriceDisplay {
+        font-size: 32px;
+    }
+    
+    .mainBuyActionGroup {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .quantitySelector {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .buyButtonMain {
+        width: 100%;
+    }
+    
+    .offerItem {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        text-align: left;
+    }
+    
+    .offerPrice {
+        font-size: 18px;
+    }
+    
+    .offerStock {
+        text-align: left;
+    }
+    
+    .offersSection {
+        padding: 15px;
+    }
+    
+    .offersSection h2 {
+        font-size: 18px;
+    }
+    
+    .warehouseItem {
+        width: 180px;
+    }
+    
+    .offerCount {
+        padding: 15px 25px;
+    }
+    
+    .offerCount strong {
+        font-size: 28px;
+    }
+}
+
+/* Small Mobile (max-width: 480px) */
+@media (max-width: 480px) {
+    .productImageContainer img {
+        height: 200px;
+    }
+    
+    .productInfoContainer h1 {
+        font-size: 18px;
+    }
+    
+    .mainPriceDisplay {
+        font-size: 26px;
+    }
+    
+    .buyButton, .buyButtonMain {
+        padding: 12px 20px;
+        font-size: 14px;
+    }
+    
+    .quantitySelector {
+        height: 40px;
+    }
+    
+    .quantitySelector button {
+        width: 35px;
+        font-size: 16px;
+    }
+    
+    .quantitySelector input {
+        width: 40px;
+        font-size: 14px;
+    }
+}

@@ -1,6 +1,8 @@
 using PharmaDesk.API.Extensions;
 using Serilog;
 
+// Note: JWT claims use ClaimTypes.Role directly for proper ASP.NET Core integration
+
 // Configure Serilog early (bootstrap logger)
 Log.Logger = new LoggerConfiguration()
     .WriteTo.Console()
