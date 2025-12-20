@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getRoleFromToken, isTokenExpired } from './lib/jwt';
+import { getRoleFromToken, isTokenExpired, isSubscriptionActive, getSubscriptionStatusFromToken } from './lib/jwt';
 
 export function middleware(request: NextRequest) {
+  // Check for both access token and refresh token cookies
   const token = request.cookies.get('token')?.value;
+  const refreshToken = request.cookies.get('refreshToken')?.value;
   const { pathname } = request.nextUrl;
 
   // Public routes: Accessible to all
@@ -18,29 +20,48 @@ export function middleware(request: NextRequest) {
   const adminRoutes = ['/admin'];
   const isAdminRoute = adminRoutes.some(route => pathname.startsWith(route));
 
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 SaaS Subscription Routing
+  // ═══════════════════════════════════════════════════════════════
+  
+  // Free routes: Accessible to authenticated users WITHOUT active subscription
+  // Users can access these even if subscription is expired/trial
+  const freeRoutes = [
+    '/dashboard',     // Dashboard (with warning banner)
+    '/abonelik',      // Subscription page (to pay)
+    '/profil',        // Profile settings
+    '/ayarlar',       // General settings
+    '/grubum',        // Group info (read-only)
+    '/access-denied', // Error pages
+  ];
+  const isFreeRoute = freeRoutes.some(route => pathname.startsWith(route));
+
+  // Subscription required routes: Require ACTIVE subscription
+  // These are the operational/transactional features
+  const subscriptionRequiredRoutes = [
+    '/envanterim',      // Inventory management
+    '/ilaclar',         // Medication search
+    '/tekliflerim',     // My offers
+    '/transferlerim',   // Transfers
+    '/siparisler',      // Orders
+    '/islem-gecmisi',   // Transaction history
+    '/raporlar',        // Reports
+    '/sepet',           // Shopping cart
+    '/teklif',          // Create offer
+    '/rbac-demo',       // Demo page
+  ];
+  const isSubscriptionRequiredRoute = subscriptionRequiredRoutes.some(route => pathname.startsWith(route));
+
   // Protected routes: Require any authenticated user
-  // Note: (dashboard) is a route group in Next.js - it's NOT part of the URL
-  // So routes are /envanterim, /ilaclar, etc. NOT /dashboard/envanterim
   const protectedRoutes = [
-    '/dashboard',
-    '/envanterim',
-    '/ilaclar',
-    '/tekliflerim',
-    '/transferlerim',
-    '/siparisler',
-    '/islem-gecmisi',
-    '/grubum',
-    '/raporlar',
-    '/profil',
-    '/ayarlar',
-    '/sepet',
-    '/teklif',
-    '/rbac-demo'
+    ...freeRoutes,
+    ...subscriptionRequiredRoutes,
   ];
   const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route));
 
-  // Check if user has valid token
-  const hasValidToken = token && !isTokenExpired(token);
+  // Check if user has valid session
+  // Access token valid OR refresh token present (frontend will auto-refresh access token)
+  const hasValidToken = (token && !isTokenExpired(token)) || !!refreshToken;
 
   // 1. PUBLIC ROUTES: Accessible to all (no redirect)
   if (isPublicRoute) {
@@ -55,7 +76,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 2. PROTECTED/ADMIN ROUTES: Require authentication
+  // 3. PROTECTED/ADMIN ROUTES: Require authentication
   if (!hasValidToken && (isProtectedRoute || isAdminRoute)) {
     // If trying to access dashboard directly without auth, show access denied error
     if (pathname === '/dashboard') {
@@ -68,8 +89,8 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 3. ADMIN ROUTES: Check role
-  if (isAdminRoute && hasValidToken) {
+  // 4. ADMIN ROUTES: Check role
+  if (isAdminRoute && hasValidToken && token) {
     const role = getRoleFromToken(token);
     
     if (role !== 'Admin') {
@@ -80,7 +101,34 @@ export function middleware(request: NextRequest) {
     }
   }
 
-  // 4. CATCH-ALL: Any route not explicitly public requires authentication
+  // ═══════════════════════════════════════════════════════════════
+  // 🆕 5. SUBSCRIPTION CHECK: For routes that require active subscription
+  // ═══════════════════════════════════════════════════════════════
+  if (isSubscriptionRequiredRoute && hasValidToken && token) {
+    const role = getRoleFromToken(token);
+    
+    // Admins bypass subscription check
+    if (role === 'Admin') {
+      return NextResponse.next();
+    }
+    
+    // Check subscription status from JWT claims
+    const hasActiveSubscription = isSubscriptionActive(token);
+    const subStatus = getSubscriptionStatusFromToken(token);
+    
+    console.log(`[Middleware] Path: ${pathname}, Role: ${role}, SubStatus: ${subStatus}, IsActive: ${hasActiveSubscription}`);
+    
+    
+    if (!hasActiveSubscription) {
+      // No active subscription - redirect to subscription page
+      const abonelikUrl = new URL('/abonelik', request.url);
+      abonelikUrl.searchParams.set('redirect', pathname);
+      abonelikUrl.searchParams.set('reason', 'subscription_required');
+      return NextResponse.redirect(abonelikUrl);
+    }
+  }
+
+  // 6. CATCH-ALL: Any route not explicitly public requires authentication
   // This ensures /dashboard and other protected routes redirect to login
   if (!hasValidToken && !isPublicRoute) {
     const loginUrl = new URL('/login', request.url);
@@ -88,7 +136,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // 5. All checks passed - allow access
+  // 7. All checks passed - allow access
   return NextResponse.next();
 }
 

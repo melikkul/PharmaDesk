@@ -131,3 +131,406 @@
         grid-template-columns: 1fr; /* Alt alta sırala */
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* TRACKING SECTION - Canlı Kargo Takip Stilleri                   */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.trackingSection {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border-radius: 16px;
+    border: 1px solid #bbf7d0;
+}
+
+.sectionTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #166534;
+    margin: 0 0 1rem 0;
+}
+
+/* Live Tracking Container */
+.liveTrackingContainer {
+    margin-top: 1rem;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.liveHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    color: white;
+}
+
+.liveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.liveDot {
+    width: 10px;
+    height: 10px;
+    background: #ffffff;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.6; transform: scale(1.2); }
+}
+
+.approachingMessage {
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Queue Info Container (When RemainingStops > 5) */
+.queueInfoContainer {
+    margin-top: 1rem;
+}
+
+.blurredMapPlaceholder {
+    position: relative;
+    height: 300px;
+    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #7dd3fc;
+}
+
+.blurLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="%2310b981" opacity="0.3"/></svg>') repeat;
+    background-size: 20px 20px;
+    filter: blur(2px);
+}
+
+.queueMessage {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    padding: 24px 32px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    max-width: 90%;
+}
+
+.queueIcon {
+    font-size: 48px;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.queueMessage h4 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: #1f2937;
+}
+
+.queueMessage p {
+    margin: 0 0 8px 0;
+    color: #374151;
+    font-size: 16px;
+}
+
+.queueMessage p strong {
+    color: #10b981;
+    font-size: 24px;
+}
+
+.queueSubtext {
+    font-size: 13px !important;
+    color: #6b7280 !important;
+    margin-bottom: 16px !important;
+}
+
+.progressContainer {
+    width: 100%;
+    max-width: 250px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 16px auto;
+}
+
+.progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.etaText {
+    font-size: 14px !important;
+    color: #374151 !important;
+    margin-top: 12px !important;
+}
+
+.etaText strong {
+    color: #10b981;
+    font-size: 18px;
+}
+
+/* Tracking Loading */
+.trackingLoading {
+    text-align: center;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #10b981;
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* No Tracking Data */
+.noTrackingData {
+    text-align: center;
+    padding: 1.5rem;
+    color: #6b7280;
+    background: #f9fafb;
+    border-radius: 8px;
+}
+
+/* Mobile Responsive */
+@media (max-width: 640px) {
+    .liveHeader {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .blurredMapPlaceholder {
+        height: 350px;
+    }
+    
+    .queueMessage {
+        padding: 20px;
+    }
+    
+    .queueIcon {
+        font-size: 36px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* YENİ TASARIM - Sağ Sütun ve Harita Stilleri                     */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Sağ sütun - kartları ve haritayı içerir */
+.rightColumn {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Bilgi ayırıcı çizgi */
+.infoDivider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border-color), transparent);
+    margin: 8px 0;
+}
+
+/* Harita bölümü */
+.mapSection {
+    background: var(--card-bg, white);
+    border-radius: 16px;
+    border: 1px solid var(--border-color, #e5e7eb);
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+}
+
+.mapHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.mapHeader h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #1f2937);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Bağlantı durumu */
+.connectionStatus {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: var(--text-secondary, #6b7280);
+    background: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    border: 1px solid var(--border-color, #e5e7eb);
+}
+
+/* Header sağ taraf - Son güncelleme + Canlı */
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lastUpdateText {
+    font-size: 12px;
+    color: var(--text-secondary, #6b7280);
+}
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    background: #f59e0b;
+    border-radius: 50%;
+    animation: statusPulse 2s ease-in-out infinite;
+}
+
+.statusDot.connected {
+    background: #10b981;
+    animation: connectedPulse 2s ease-in-out infinite;
+}
+
+@keyframes statusPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+}
+
+@keyframes connectedPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.2); }
+}
+
+/* Harita yükleniyor */
+.mapLoading {
+    height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary, #6b7280);
+}
+
+/* Mobile responsive - yeni stiller */
+@media (max-width: 1200px) {
+    .rightColumn {
+        order: 2; /* Mobilde sağ sütun alta */
+    }
+}
+
+@media (max-width: 768px) {
+    .mapHeader {
+        flex-direction: column;
+        gap: 12px;
+        text-align: center;
+    }
+    
+    .connectionStatus {
+        align-self: center;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* SIRA BİLGİSİ PANELİ - İlk 5'te olmayan eczaneler için           */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.queueInfoPanel {
+    padding: 40px 24px;
+    text-align: center;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 0 0 16px 16px;
+}
+
+.queueInfoPanel .queueIcon {
+    font-size: 48px;
+    margin-bottom: 12px;
+}
+
+.queueInfoPanel h4 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #1e40af;
+}
+
+.queueNumber {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: #374151;
+}
+
+.queueNumber strong {
+    font-size: 28px;
+    color: #3b82f6;
+}
+
+.queueProgress {
+    max-width: 300px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 0 auto 16px;
+}
+
+.queueProgressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.queueNote {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.queueEta {
+    margin: 0 0 8px 0;
+    font-size: 15px;
+    color: #374151;
+}
+
+.queueEta strong {
+    color: #10b981;
+    font-size: 18px;
+}
+
+.queueCarrier {
+    margin: 0;
+    font-size: 14px;
+    color: #374151;
+}

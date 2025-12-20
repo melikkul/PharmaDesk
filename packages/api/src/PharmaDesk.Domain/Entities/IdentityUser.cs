@@ -43,6 +43,12 @@ namespace Backend.Models
         
         public UserStatus Status { get; set; } = UserStatus.Active;
         
+        /// <summary>
+        /// Admin onayı durumu. false ise kullanıcı sisteme giremez.
+        /// Yeni kayıtlarda default false'tur, admin tarafından onaylanmalıdır.
+        /// </summary>
+        public bool IsApproved { get; set; } = false;
+        
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public string? ResetToken { get; set; }
         public DateTime? ResetTokenExpires { get; set; }

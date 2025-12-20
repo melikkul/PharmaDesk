@@ -358,5 +358,78 @@ namespace Backend.Services
                 Location = e.Location ?? ""
             }).ToList();
         }
+
+        /// <summary>
+        /// Get tracking status for a shipment (Queue-based visibility algorithm)
+        /// Calculates queue position and remaining stops for pharmacy users
+        /// </summary>
+        public async Task<TrackingResult> GetTrackingStatusAsync(int shipmentId, long pharmacyId)
+        {
+            // 1. Kargo bilgisini getir ve yetkilendirme kontrolü
+            var shipment = await _context.Shipments
+                .Include(s => s.AssignedCarrier)
+                .FirstOrDefaultAsync(s => s.Id == shipmentId && 
+                    (s.SenderPharmacyId == pharmacyId || s.ReceiverPharmacyId == pharmacyId));
+            
+            if (shipment == null)
+                return TrackingResult.NotFound("Kargo bulunamadı veya erişim yetkiniz yok");
+            
+            // 2. Kurye atanmamışsa veya teslim edildiyse basit response
+            if (shipment.CarrierId == null || shipment.Status == ShipmentStatus.Delivered)
+            {
+                return TrackingResult.Ok(new TrackingStatusDto
+                {
+                    ShipmentId = shipmentId,
+                    ShipmentStatus = TranslateShipmentStatus(shipment.Status),
+                    IsLiveTrackingAvailable = false,
+                    EstimatedArrival = shipment.Status == ShipmentStatus.Delivered ? "Teslim Edildi" : "Kurye bekleniyor"
+                });
+            }
+            
+            // 3. Kuryenin aktif mesai bilgisini al (konum için)
+            var activeShift = await _context.CarrierShifts
+                .Where(s => s.CarrierId == shipment.CarrierId && s.EndTime == null)
+                .FirstOrDefaultAsync();
+            
+            // 4. Bugünkü tüm teslimatları al ve CreatedAt ile sırala (sabit sıralama)
+            var todayStart = DateTime.UtcNow.Date;
+            var carrierShipments = await _context.Shipments
+                .Where(s => s.CarrierId == shipment.CarrierId && 
+                            s.CreatedAt >= todayStart &&
+                            (s.Status == ShipmentStatus.InTransit || s.Status == ShipmentStatus.Delivered))
+                .OrderBy(s => s.CreatedAt) // CreatedAt for stable ordering
+                .ToListAsync();
+            
+            // 5. Hesaplamalar
+            var deliveredCount = carrierShipments.Count(s => s.Status == ShipmentStatus.Delivered);
+            var myOrder = carrierShipments.FindIndex(s => s.Id == shipmentId) + 1;
+            if (myOrder == 0) myOrder = deliveredCount + 1; // Henüz listeye eklenmemişse
+            var remainingStops = Math.Max(0, myOrder - deliveredCount);
+            
+            // 6. Basit heuristic: Her durak ortalama 15 dk
+            var estimatedArrival = remainingStops > 0 
+                ? DateTime.Now.AddMinutes(remainingStops * 15).ToString("HH:mm") 
+                : "Yakında";
+            
+            return TrackingResult.Ok(new TrackingStatusDto
+            {
+                ShipmentId = shipmentId,
+                CarrierId = shipment.CarrierId,
+                CarrierName = shipment.AssignedCarrier?.FullName,
+                CarrierPhone = shipment.AssignedCarrier?.PhoneNumber,
+                CarrierLocation = activeShift?.LastLatitude != null ? new CarrierLocationDto
+                {
+                    Latitude = activeShift.LastLatitude.Value,
+                    Longitude = activeShift.LastLongitude!.Value,
+                    LastUpdate = activeShift.LastLocationUpdate ?? DateTime.UtcNow
+                } : null,
+                CurrentStopCount = deliveredCount,
+                MyStopOrder = myOrder,
+                RemainingStops = remainingStops,
+                EstimatedArrival = estimatedArrival,
+                ShipmentStatus = TranslateShipmentStatus(shipment.Status),
+                IsLiveTrackingAvailable = remainingStops <= 5
+            });
+        }
     }
 }

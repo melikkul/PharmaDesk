@@ -128,6 +128,11 @@ export default function FormStep2() {
       return;
     }
 
+    if (!selectedGroupId) {
+      setErrorMessage('Lütfen bir grup seçiniz. Gruba katılım zorunludur.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -238,15 +243,16 @@ export default function FormStep2() {
           </div>
 
           <div className="input-wrapper-step2">
-            <label htmlFor="group">Grup (Opsiyonel)</label>
+            <label htmlFor="group">Grup <span style={{ color: '#e74c3c' }}>*</span></label>
             <select 
               id="group" 
               value={selectedGroupId || ''} 
               onChange={(e) => setSelectedGroupId(Number(e.target.value) || null)} 
               disabled={!selectedCityId || fetchingGroups}
+              required
             >
               <option value="">
-                {fetchingGroups ? 'Yükleniyor...' : selectedCityId ? 'Grup seçiniz (opsiyonel)' : 'Önce şehir seçiniz'}
+                {fetchingGroups ? 'Yükleniyor...' : selectedCityId ? 'Grup seçiniz (zorunlu)' : 'Önce şehir seçiniz'}
               </option>
               {groups.map(group => (
                 <option key={group.id} value={group.id}>
@@ -255,8 +261,13 @@ export default function FormStep2() {
               ))}
             </select>
             {selectedCityId && groups.length === 0 && !fetchingGroups && (
-              <small style={{ color: '#666', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
-                Bu ilde henüz aktif grup bulunmamaktadır
+              <small style={{ color: '#e74c3c', fontSize: '0.875rem', marginTop: '0.25rem', display: 'block' }}>
+                ⚠️ Bu ilde henüz aktif grup bulunmamaktadır. Kayıt için lütfen yöneticinize başvurunuz.
+              </small>
+            )}
+            {groups.length > 0 && (
+              <small style={{ color: '#27ae60', fontSize: '0.8rem', marginTop: '0.25rem', display: 'block' }}>
+                ✓ Gruba katılım zorunludur
               </small>
             )}
           </div>

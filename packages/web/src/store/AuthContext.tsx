@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
+import { authService } from "@/services/authService";
 
 import { User as BackendUser } from '@/types';
 
@@ -9,6 +10,9 @@ export interface User extends BackendUser {
   pharmacyId: number;
   publicId?: string;
   username?: string;
+  // 🆕 SaaS Subscription Fields
+  subscriptionStatus?: string; // Active, Trial, PastDue, Cancelled
+  subscriptionExpireDate?: string;
   [key: string]: any;
 }
 
@@ -19,6 +23,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isLoading: boolean;
+  // 🆕 SignalR subscription sync
+  updateSubscription: (status: string, expireDate?: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,10 +32,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 // API base URL - Use relative URL for Next.js proxy (same as authService)
 const API_BASE_URL = '';
 
+// Token refresh interval (14 minutes = 840000 ms)
+// Access token expires in 15 minutes, refresh 1 minute before
+const TOKEN_REFRESH_INTERVAL = 14 * 60 * 1000;
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Helper function to clear all auth cookies
   const clearAuthCookies = () => {
@@ -39,16 +50,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // Start the token refresh cycle
+  const startTokenRefresh = () => {
+    // Clear any existing interval
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+    }
+
+    // Set up automatic token refresh
+    refreshIntervalRef.current = setInterval(async () => {
+      console.log('[Auth] Refreshing access token...');
+      const result = await authService.refreshToken();
+      if (result) {
+        console.log('[Auth] Token refreshed successfully');
+        setToken(result.accessToken);
+      } else {
+        console.log('[Auth] Token refresh failed, logging out...');
+        // Refresh failed - logout user
+        stopTokenRefresh();
+        clearAuthCookies();
+        setUser(null);
+        setToken(null);
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+      }
+    }, TOKEN_REFRESH_INTERVAL);
+  };
+
+  // Stop the token refresh cycle
+  const stopTokenRefresh = () => {
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current);
+      refreshIntervalRef.current = null;
+    }
+  };
+
   useEffect(() => {
-    // Token artık sadece HttpOnly Cookie üzerinden yönetilir (XSS koruması)
-    // Backend /api/auth/me endpoint'inden kullanıcı bilgisi alınır
     const initializeAuth = async () => {
       try {
-        // Cookie'den token varlığını kontrol et (HttpOnly cookie'lere erişilemez,
-        // bu yüzden backend'den kullanıcı bilgisi istiyoruz)
         const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
           method: 'GET',
-          credentials: 'include', // Cookie'leri gönder
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -57,9 +100,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.ok) {
           const userData = await response.json();
           setUser(userData);
-          setToken('cookie-managed'); // Token cookie'de, sadece authenticated state için
+          setToken('cookie-managed');
+          // Start token refresh cycle for authenticated users
+          startTokenRefresh();
         } else {
-          // Cookie geçersiz veya yok - tüm auth cookie'lerini temizle
           console.log('[Auth] Session invalid, clearing cookies...');
           clearAuthCookies();
           setUser(null);
@@ -67,7 +111,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         console.error("Auth initialization failed:", error);
-        // Network hatası varsa da cookie'leri temizle (stale state'i önle)
         clearAuthCookies();
         setUser(null);
         setToken(null);
@@ -77,6 +120,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     initializeAuth();
+
+    // Cleanup on unmount
+    return () => {
+      stopTokenRefresh();
+    };
   }, []);
 
   const login = (newToken: string, userData: User, rememberMe: boolean = true) => {
@@ -95,6 +143,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     setToken(newToken);
     setUser(userData);
+  };
+
+  // 🆕 SignalR subscription sync - update user subscription state in real-time
+  const updateSubscription = (status: string, expireDate?: string) => {
+    if (user) {
+      setUser({
+        ...user,
+        subscriptionStatus: status,
+        subscriptionExpireDate: expireDate
+      });
+      console.log('[Auth] Subscription updated via SignalR:', status, expireDate);
+    }
   };
 
   const logout = async () => {
@@ -126,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, isLoading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, isAuthenticated: !!token, isLoading, updateSubscription }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,0 +1,36 @@
+Building project...
+  Determining projects to restore...
+  Restored /home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.Application/PharmaDesk.Application.csproj (in 256 ms).
+  Restored /home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.Domain/PharmaDesk.Domain.csproj (in 256 ms).
+  Restored /home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.Infrastructure/PharmaDesk.Infrastructure.csproj (in 263 ms).
+/home/melik/.dotnet/sdk/8.0.416/NuGet.targets(174,5): error : Access to the path '/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/obj/7712c7f2-6a66-4d8a-b7dd-cd57cc779d46.tmp' is denied. [/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/PharmaDesk.API.csproj]
+/home/melik/.dotnet/sdk/8.0.416/NuGet.targets(174,5): error :   Permission denied [/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/PharmaDesk.API.csproj]
+
+Build FAILED.
+
+/home/melik/.dotnet/sdk/8.0.416/NuGet.targets(174,5): error : Access to the path '/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/obj/7712c7f2-6a66-4d8a-b7dd-cd57cc779d46.tmp' is denied. [/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/PharmaDesk.API.csproj]
+/home/melik/.dotnet/sdk/8.0.416/NuGet.targets(174,5): error :   Permission denied [/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/PharmaDesk.API.csproj]
+    0 Warning(s)
+    1 Error(s)
+
+Time Elapsed 00:00:01.06
+Adding migration...
+Using project '/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.Infrastructure/PharmaDesk.Infrastructure.csproj'.
+Using startup project '/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/PharmaDesk.API.csproj'.
+Writing '/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.Infrastructure/obj/PharmaDesk.Infrastructure.csproj.EntityFrameworkCore.targets'...
+dotnet msbuild /target:GetEFProjectMetadata /property:EFProjectMetadataFile=/tmp/tmpLaz4ru.tmp /verbosity:quiet /nologo /home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.Infrastructure/PharmaDesk.Infrastructure.csproj
+System.UnauthorizedAccessException: Access to the path '/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/obj/PharmaDesk.API.csproj.EntityFrameworkCore.targets' is denied.
+ ---> System.IO.IOException: Permission denied
+   --- End of inner exception stack trace ---
+   at Interop.ThrowExceptionForIoErrno(ErrorInfo errorInfo, String path, Boolean isDirError)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String path, OpenFlags flags, Int32 mode, Boolean failForSymlink, Boolean& wasSymlink, Func`4 createOpenException)
+   at Microsoft.Win32.SafeHandles.SafeFileHandle.Open(String fullPath, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, UnixFileMode openPermissions, Int64& fileLength, UnixFileMode& filePermissions, Boolean failForSymlink, Boolean& wasSymlink, Func`4 createOpenException)
+   at System.IO.Strategies.OSFileStreamStrategy..ctor(String path, FileMode mode, FileAccess access, FileShare share, FileOptions options, Int64 preallocationSize, Nullable`1 unixCreateMode)
+   at System.IO.File.OpenWrite(String path)
+   at Microsoft.EntityFrameworkCore.Tools.Project.FromFile(String file, String buildExtensionsDir, String framework, String configuration, String runtime)
+   at Microsoft.EntityFrameworkCore.Tools.RootCommand.Execute(String[] _)
+   at Microsoft.EntityFrameworkCore.Tools.Commands.CommandBase.<>c__DisplayClass0_0.<Configure>b__0(String[] args)
+   at Microsoft.DotNet.Cli.CommandLine.CommandLineApplication.Execute(String[] args)
+   at Microsoft.EntityFrameworkCore.Tools.Program.Main(String[] args)
+Access to the path '/home/melik/PharmaDesk-main/packages/api/src/PharmaDesk.API/obj/PharmaDesk.API.csproj.EntityFrameworkCore.targets' is denied.
+Done.

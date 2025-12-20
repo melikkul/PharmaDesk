@@ -30,9 +30,9 @@ const BalanceHistoryCard: React.FC<BalanceHistoryCardProps> = ({ data, limit }) 
              <tr key={item.id ?? `balance-${index}`}>
                 <td>{item.date}</td>
                 <td>
-                  {item.medicationId ? (
+                  {item.id ? (
                     <Link 
-                      href={`/ilaclar/${item.medicationId}`}
+                      href={`/islem-gecmisi/${item.id}`}
                       style={{ color: '#3b82f6', textDecoration: 'none', fontWeight: 500 }}
                     >
                       {item.productName || item.description}

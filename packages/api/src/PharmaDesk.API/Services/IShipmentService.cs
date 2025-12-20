@@ -33,6 +33,12 @@ namespace Backend.Services
         /// Pending -> InTransit -> Delivered
         /// </summary>
         Task<ScanResult> ScanShipmentAsync(string encryptedToken, int carrierId);
+        
+        /// <summary>
+        /// Get tracking status for a shipment (Queue-based visibility algorithm)
+        /// Used by pharmacy users to track their deliveries
+        /// </summary>
+        Task<TrackingResult> GetTrackingStatusAsync(int shipmentId, long pharmacyId);
     }
 
     /// <summary>

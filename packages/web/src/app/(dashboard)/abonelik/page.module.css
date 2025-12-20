@@ -1,0 +1,551 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   PREMIUM SUBSCRIPTION PAGE - Modern SaaS Payment Design
+   Türkiye Ödeme Sistemleri: iyzico, PayTR, Param, Papara entegrasyon hazır
+═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  --subscription-primary: #6366f1;
+  --subscription-primary-dark: #4f46e5;
+  --subscription-secondary: #10b981;
+  --subscription-accent: #f59e0b;
+  --subscription-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --subscription-surface: #ffffff;
+  --subscription-bg: #f8fafc;
+  --subscription-text: #1e293b;
+  --subscription-text-muted: #64748b;
+  --subscription-border: #e2e8f0;
+  --subscription-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --subscription-shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+}
+
+.container {
+  min-height: calc(100vh - 100px);
+  background: var(--subscription-bg);
+  padding: 2rem 1rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   HERO SECTION
+═══════════════════════════════════════════════════════════════ */
+
+.heroSection {
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 3rem;
+}
+
+.heroTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  background: var(--subscription-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 1rem;
+  line-height: 1.2;
+}
+
+.heroSubtitle {
+  font-size: 1.125rem;
+  color: var(--subscription-text-muted);
+  line-height: 1.6;
+}
+
+/* Current Status Badge */
+.currentStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.5rem;
+  background: var(--subscription-surface);
+  border: 1px solid var(--subscription-border);
+  border-radius: 999px;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--subscription-shadow);
+}
+
+.statusDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.statusDotActive {
+  background: var(--subscription-secondary);
+}
+
+.statusDotInactive {
+  background: #ef4444;
+}
+
+.statusText {
+  font-weight: 600;
+  color: var(--subscription-text);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MAIN GRID
+═══════════════════════════════════════════════════════════════ */
+
+.mainGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 1024px) {
+  .mainGrid {
+    grid-template-columns: 1.2fr 1fr;
+    align-items: start;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PRICING CARD - Left Side
+═══════════════════════════════════════════════════════════════ */
+
+.pricingCard {
+  background: var(--subscription-surface);
+  border-radius: 24px;
+  overflow: hidden;
+  box-shadow: var(--subscription-shadow-lg);
+  position: relative;
+}
+
+.pricingHeader {
+  background: var(--subscription-gradient);
+  padding: 2rem;
+  color: white;
+  text-align: center;
+  position: relative;
+}
+
+.pricingBadge {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 1rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.pricingTitle {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.pricingSubtitle {
+  opacity: 0.9;
+  font-size: 0.95rem;
+}
+
+.priceDisplay {
+  padding: 2rem;
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.05) 0%, transparent 100%);
+}
+
+.priceWrapper {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.currency {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--subscription-primary);
+}
+
+.priceAmount {
+  font-size: 4rem;
+  font-weight: 800;
+  color: var(--subscription-text);
+  line-height: 1;
+}
+
+.pricePeriod {
+  font-size: 1.25rem;
+  color: var(--subscription-text-muted);
+}
+
+.priceNote {
+  text-align: center;
+  color: var(--subscription-text-muted);
+  font-size: 0.875rem;
+}
+
+/* Price Breakdown */
+.priceBreakdown {
+  padding: 0 2rem 2rem;
+}
+
+.breakdownTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--subscription-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.breakdownItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--subscription-border);
+}
+
+.breakdownItem:last-child {
+  border-bottom: none;
+}
+
+.breakdownLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--subscription-text);
+}
+
+.breakdownLabelIcon {
+  font-size: 1.25rem;
+}
+
+.breakdownValue {
+  font-weight: 600;
+  color: var(--subscription-text);
+}
+
+/* Features List */
+.featuresList {
+  padding: 0 2rem 2rem;
+}
+
+.featuresTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--subscription-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 0;
+  color: var(--subscription-text);
+  font-size: 0.95rem;
+}
+
+.featureCheck {
+  width: 20px;
+  height: 20px;
+  background: var(--subscription-secondary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAYMENT SECTION - Right Side
+═══════════════════════════════════════════════════════════════ */
+
+.paymentSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Payment Method Selector */
+.paymentMethods {
+  background: var(--subscription-surface);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--subscription-shadow);
+}
+
+.paymentMethodsTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--subscription-text);
+  margin-bottom: 1rem;
+}
+
+.paymentMethodGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+.paymentMethod {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: var(--subscription-bg);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.paymentMethod:hover {
+  border-color: var(--subscription-primary);
+  transform: translateY(-2px);
+}
+
+.paymentMethodActive {
+  border-color: var(--subscription-primary);
+  background: rgba(99, 102, 241, 0.05);
+}
+
+.paymentMethodLogo {
+  height: 32px;
+  object-fit: contain;
+}
+
+.paymentMethodName {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--subscription-text-muted);
+}
+
+/* Trust Badges */
+.trustBadges {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: var(--subscription-surface);
+  border-radius: 12px;
+  box-shadow: var(--subscription-shadow);
+}
+
+.trustBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--subscription-text-muted);
+  font-size: 0.8rem;
+}
+
+.trustIcon {
+  font-size: 1.25rem;
+}
+
+/* Payment Form Wrapper */
+.paymentFormCard {
+  background: var(--subscription-surface);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--subscription-shadow);
+}
+
+.paymentFormTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--subscription-text);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* CTA Button */
+.ctaButton {
+  width: 100%;
+  padding: 1.25rem;
+  background: var(--subscription-gradient);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+
+.ctaButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+}
+
+.ctaButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.ctaButtonIcon {
+  font-size: 1.25rem;
+}
+
+/* Stats Section */
+.statsSection {
+  display: flex;
+  gap: 1rem;
+}
+
+.statCard {
+  flex: 1;
+  text-align: center;
+  padding: 1.25rem;
+  background: var(--subscription-surface);
+  border-radius: 12px;
+  box-shadow: var(--subscription-shadow);
+}
+
+.statNumber {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--subscription-primary);
+  line-height: 1;
+  margin-bottom: 0.25rem;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  color: var(--subscription-text-muted);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   PAYMENT PROVIDERS INFO
+═══════════════════════════════════════════════════════════════ */
+
+.providersInfo {
+  text-align: center;
+  padding: 2rem 1rem;
+  max-width: 800px;
+  margin: 3rem auto 0;
+}
+
+.providersTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--subscription-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+}
+
+.providersGrid {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  opacity: 0.6;
+  filter: grayscale(100%);
+  transition: all 0.3s ease;
+}
+
+.providersGrid:hover {
+  opacity: 1;
+  filter: grayscale(0%);
+}
+
+.providerLogo {
+  height: 28px;
+  object-fit: contain;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   LOADING STATE
+═══════════════════════════════════════════════════════════════ */
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--subscription-border);
+  border-top-color: var(--subscription-primary);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loadingText {
+  color: var(--subscription-text-muted);
+  font-size: 0.95rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   ERROR BANNER
+═══════════════════════════════════════════════════════════════ */
+
+.errorBanner {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  border: 1px solid #fca5a5;
+  border-radius: 12px;
+  color: #b91c1c;
+  max-width: 800px;
+  margin: 0 auto 2rem;
+}
+
+.errorIcon {
+  font-size: 1.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════════════════ */
+
+@media (max-width: 768px) {
+  .heroTitle {
+    font-size: 1.75rem;
+  }
+  
+  .priceAmount {
+    font-size: 3rem;
+  }
+  
+  .paymentMethodGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .statsSection {
+    flex-direction: column;
+  }
+}

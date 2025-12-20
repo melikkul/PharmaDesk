@@ -1,16 +1,18 @@
 'use client';
 
-import React, { useState, useMemo, useCallback, Suspense } from 'react';
-import { useParams, useSearchParams } from 'next/navigation';
+import React, { useState, useMemo, useCallback, Suspense, useEffect } from 'react';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { useMedicationOffers } from '@/hooks/useOffers';
 import { Offer } from '@/types';
 import { useCart } from '@/store/CartContext';
 import { useSignalR } from '@/store/SignalRContext';
+import { useAuth } from '@/store/AuthContext';
 import Link from 'next/link';
 import ProductCard from '@/components/ilaclar/ProductCard';
 import PriceChart from '@/components/ilaclar/PriceChart';
 import WarehouseOffers from '@/components/ilaclar/WarehouseOffers';
 import { ShowroomMedication, warehouseBaremsData, warehouseOffersData, WarehouseOffer } from '@/lib/dashboardData';
+import { offerService } from '@/services/offerService';
 
 import styles from './ilacDetay.module.css';
 import '@/app/(dashboard)/dashboard/dashboard.css';
@@ -48,9 +50,10 @@ interface OfferItemComponentProps {
     baremRemainingStock?: number; // Ortak Sipariş için kalan barem stoğu
     isJointOrder?: boolean; // Ortak Sipariş mod - sepet kontrolleri gizlenir
     isPurchaseRequest?: boolean; // Alım Talebi mod - sepet kontrolleri gizlenir
+    displayPharmacyName?: string; // Gösterilecek eczane ismi (override)
 }
 
-const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offer, showBarem = false, baremRemainingStock, isJointOrder = false, isPurchaseRequest = false }) => {
+const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offer, showBarem = false, baremRemainingStock, isJointOrder = false, isPurchaseRequest = false, displayPharmacyName }) => {
     const [offerQuantity, setOfferQuantity] = useState<number | string>(1);
     const [isAdding, setIsAdding] = useState(false);
     
@@ -122,18 +125,18 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
             bonus: bonus,
             sellers: [{
                 pharmacyId: String(offer.pharmacyId),
-                pharmacyName: offer.pharmacyName || 'Bilinmiyor',
+                pharmacyName: displayPharmacyName || offer.pharmacyName || 'Bilinmiyor',
                 pharmacyUsername: offer.pharmacyUsername || 'bilinmiyor'
             }]
         };
 
         setIsAdding(true);
-        addToCart(medicationForCart, quantityToAdd, offer.pharmacyName || 'Bilinmiyor');
+        addToCart(medicationForCart, quantityToAdd, displayPharmacyName || offer.pharmacyName || 'Bilinmiyor');
 
         setTimeout(() => {
             setIsAdding(false);
         }, 1000);
-    }, [canBuy, isAdding, offerQuantity, effectiveMaxStock, addToCart, offer, currentStock, bonus]);
+    }, [canBuy, isAdding, offerQuantity, effectiveMaxStock, addToCart, offer, currentStock, bonus, displayPharmacyName]);
 
     // Kalan stok hesapla - Ortak Sipariş ve Alım Talebi için barem bazlı
     const soldQuantity = (offer as any).soldQuantity || 0;
@@ -168,7 +171,7 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
             <span className={styles.offerPrice}>{offer.price.toFixed(2).replace('.', ',')} ₺</span>
             <div className={styles.offerSellerInfo}>
                 <Link href={`/profile/${offer.pharmacyId}`} className={styles.sellerLink}>
-                    {offer.pharmacyName}
+                    {displayPharmacyName || offer.pharmacyName}
                 </Link>
                 {/* SKT tarihi */}
                 {offer.expirationDate && (
@@ -197,7 +200,9 @@ const OfferItemComponent: React.FC<OfferItemComponentProps> = React.memo(({ offe
                 {isJointOrder ? (
                     <div style={{ textAlign: 'center' }}>
                         <div style={{ fontSize: '18px', fontWeight: '700', color: '#ea580c' }}>{currentStock} Adet</div>
-                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#78716c' }}>katkı miktarı</div>
+                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#78716c' }}>
+                            {displayPharmacyName ? 'sipariş sorumlusu' : 'tarafından oluşturuldu'}
+                        </div>
                     </div>
                 ) : isPurchaseRequest ? (
                     <div style={{ textAlign: 'center' }}>
@@ -255,6 +260,17 @@ function IlacDetayPage() {
     
     // 🆕 Offer ID from URL - specific offer selection
     const offerId = searchParams.get('offerId'); // URL'den offerId parametresi
+    
+    const router = useRouter();
+    
+    // 🆕 Redirect to error page if required parameters are missing
+    useEffect(() => {
+        // All three parameters are required for proper offer display
+        if (!baremFilter || !typeFilter || !offerId) {
+            console.warn('[IlacDetay] Missing required URL parameters. Redirecting to error page.');
+            router.replace('/error?message=Ge%C3%A7ersiz%20teklif%20linki.%20L%C3%BCtfen%20%C4%B0la%C3%A7%20Vitrini%20%C3%BCzerinden%20tekrar%20deneyin.');
+        }
+    }, [baremFilter, typeFilter, offerId, router]);
     
     const { offers: allOffers, loading, error, refetch } = useMedicationOffers(id);
     const { connection } = useSignalR();
@@ -333,13 +349,74 @@ function IlacDetayPage() {
         };
     }, [connection, refetch, currentOfferId, fetchLockStatus]);
     
-    const { addToCart, cartItems } = useCart();
+    const { addToCart, cartItems, setDepotFulfillment } = useCart();
 
     const [mainQuantity, setMainQuantity] = useState<number | string>(1);
     const [isMainAdding, setIsMainAdding] = useState(false);
     const [cartWarning, setCartWarning] = useState<string | null>(null);
     const [isDepotSelfOrder, setIsDepotSelfOrder] = useState(false); // Depodan ben söyleyeceğim
     const [selectedImageIndex, setSelectedImageIndex] = useState(0); // Gallery için seçili görsel index
+    
+    // 🆕 Joint Order Conversion States
+    const [showConvertSection, setShowConvertSection] = useState(false);
+    const [supplierQuantity, setSupplierQuantity] = useState<number>(1);
+    const [convertLoading, setConvertLoading] = useState(false);
+    const [convertMessage, setConvertMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+    
+    // 🆕 Get token and user for conversion
+    const { token, user } = useAuth();
+    const currentUserPharmacyId = user?.pharmacyId;
+    
+    // 🆕 Sepetteki "Depodan ben söyleyeceğim" durumunu sync et
+    const cartItemForOffer = useMemo(() => {
+        if (!currentOfferId) return null;
+        return cartItems.find(item => item.offerId === currentOfferId);
+    }, [cartItems, currentOfferId]);
+    
+    // 🆕 Sepetteki değer değiştiğinde local state'i güncelle
+    React.useEffect(() => {
+        if (cartItemForOffer && cartItemForOffer.isDepotSelfOrder !== isDepotSelfOrder) {
+            setIsDepotSelfOrder(cartItemForOffer.isDepotSelfOrder || false);
+        }
+    }, [cartItemForOffer?.isDepotSelfOrder]);
+    
+    // 🆕 Checkbox değiştiğinde hem local state hem de cart'ı güncelle
+    const handleDepotSelfOrderChange = useCallback((checked: boolean) => {
+        setIsDepotSelfOrder(checked);
+        
+        // Eğer ürün sepetteyse, cart'taki değeri de güncelle
+        if (cartItemForOffer) {
+            setDepotFulfillment(cartItemForOffer.id, checked);
+        }
+    }, [cartItemForOffer, setDepotFulfillment]);
+    
+    // 🆕 Handle PurchaseRequest to JointOrder conversion
+    const handleConvertToJoint = useCallback(async () => {
+        if (!token || !currentOfferId) return;
+        if (supplierQuantity < 1) {
+            setConvertMessage({ type: 'error', text: 'Adet en az 1 olmalıdır.' });
+            return;
+        }
+        
+        setConvertLoading(true);
+        setConvertMessage(null);
+        
+        try {
+            await offerService.convertToJointOrder(token, currentOfferId, supplierQuantity);
+            setConvertMessage({ type: 'success', text: 'Talep başarıyla ortak siparişe dönüştürüldü!' });
+            setShowConvertSection(false);
+            // Refetch offers to update the display
+            refetch();
+            // Redirect to the jointorder view after a delay
+            setTimeout(() => {
+                window.location.href = `/ilaclar/${id}?barem=${encodeURIComponent(baremFilter || '')}&type=jointorder&offerId=${currentOfferId}`;
+            }, 1500);
+        } catch (err: any) {
+            setConvertMessage({ type: 'error', text: err.message || 'Dönüştürme başarısız oldu.' });
+        } finally {
+            setConvertLoading(false);
+        }
+    }, [token, currentOfferId, supplierQuantity, refetch, id, baremFilter]);
 
     // Helper function: Generate possible image paths from first image path
     // e.g., "images/24/1.png" -> ["images/24/1.png", "images/24/2.png", ...]
@@ -806,11 +883,12 @@ function IlacDetayPage() {
                                         <input 
                                             type="checkbox" 
                                             checked={isDepotSelfOrder}
-                                            onChange={(e) => setIsDepotSelfOrder(e.target.checked)}
+                                            onChange={(e) => handleDepotSelfOrderChange(e.target.checked)}
                                             style={{ width: '18px', height: '18px', accentColor: '#8b5cf6' }}
                                         />
                                         📦 Depodan ben söyleyeceğim
                                     </label>
+
                                 </div>
                             )}
                             {/* Stok Satışı için Sepete Ekle */}
@@ -845,7 +923,11 @@ function IlacDetayPage() {
                                     {typeFilter === 'jointorder' || typeFilter === 'purchaserequest'
                                         // Organizatör (1) + Katılımcılar (buyers count)
                                         ? 1 + (mainOffer?.buyers?.length || 0)
-                                        : offers.length
+                                        // 🆕 Filter out offers with 0 remaining stock from count
+                                        : offers.filter(o => {
+                                            const remaining = (o as any).remainingStock ?? (o as any).stock - ((o as any).soldQuantity || 0);
+                                            return remaining > 0;
+                                          }).length
                                     }
                                 </strong>
                             </div>
@@ -861,22 +943,32 @@ function IlacDetayPage() {
                 const baremBonus = parts[1] || 0;
                 const singleBaremTotal = baremMin + baremBonus;
                 
-                // Tüm tekliflerdeki talep edilen stokları topla
-                const totalRequestedStock = offers.reduce((sum, o) => {
-                    const stockParts = o.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
-                    return sum + (stockParts[0] || 0);
-                }, 0);
-                
-                // 🆕 Tüm siparişleri (buyers) topla
-                const totalOrderedStock = offers.reduce((sum, o) => {
-                    if (o.buyers && o.buyers.length > 0) {
-                        return sum + o.buyers.reduce((bSum, b) => bSum + b.quantity, 0);
-                    }
-                    return sum;
-                }, 0);
-                
-                // Toplam doluluk = talepler + siparişler
-                const totalUsedStock = totalRequestedStock + totalOrderedStock;
+                // Calculate statistics prioritizing Participants list (JointOrder source of truth)
+                let totalUsedStock = 0;
+                let participantCount = 0;
+                const participants = (mainOffer as any).participants;
+
+                if (participants && participants.length > 0) {
+                    // Method A: Use Participants List (Accurate for JointOrder)
+                    totalUsedStock = participants.reduce((sum: number, p: any) => sum + p.quantity, 0);
+                    participantCount = participants.length;
+                } else {
+                    // Method B: Fallback (Legacy logic)
+                    const totalRequestedStock = offers.reduce((sum, o) => {
+                        const stockParts = o.stock.split('+').map((s: string) => parseInt(s.trim()) || 0);
+                        return sum + (stockParts[0] || 0);
+                    }, 0);
+                    
+                    const totalOrderedStock = offers.reduce((sum, o) => {
+                        if (o.buyers && o.buyers.length > 0) {
+                            return sum + o.buyers.reduce((bSum, b) => bSum + b.quantity, 0);
+                        }
+                        return sum;
+                    }, 0);
+                    
+                    totalUsedStock = totalRequestedStock + totalOrderedStock;
+                    participantCount = 1 + (mainOffer?.buyers?.length || 0);
+                }
                 
                 // 🆕 Barem katını hesapla: toplam kullanım / tek barem = kaç kat gerekli
                 const baremMultiple = Math.max(1, Math.ceil(totalUsedStock / singleBaremTotal));
@@ -970,7 +1062,7 @@ function IlacDetayPage() {
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
                                 <span style={{ color: '#78716c' }}>Barem Doluluk Oranı</span>
                                 <span style={{ fontWeight: '600', color: usagePercent >= 100 ? '#ef4444' : '#ea580c' }}>
-                                    %{Math.min(usagePercent, 100).toFixed(0)} ({1 + (mainOffer?.buyers?.length || 0)} Katılımcı)
+                                    %{Math.min(usagePercent, 100).toFixed(0)} ({participantCount} Katılımcı)
                                 </span>
                             </div>
                             <div style={{
@@ -1086,20 +1178,142 @@ function IlacDetayPage() {
                         const items: React.ReactNode[] = [];
                         
                         offers.forEach(offer => {
-                            // Add the offer card
-                            items.push(
-                                <OfferItemComponent
-                                    key={`offer-${offer.id}`}
-                                    offer={offer}
-                                    showBarem={!baremFilter}
-                                    baremRemainingStock={baremRemainingStock}
-                                    isJointOrder={typeFilter === 'jointorder'}
-                                    isPurchaseRequest={typeFilter === 'purchaserequest'}
-                                />
-                            );
+                            // Check if participants data exists (to avoid duplicate display loop, but we also want correct name if fallback shows)
+                            const participants = (offer as any).participants;
+                            const hasParticipants = (typeFilter === 'jointorder' || typeFilter === 'purchaserequest') && 
+                                                    participants && 
+                                                    participants.length > 0;
                             
-                            // Add buyer cards separately (for JointOrder and PurchaseRequest)
-                            if ((typeFilter === 'jointorder' || typeFilter === 'purchaserequest') && offer.buyers && offer.buyers.length > 0) {
+                            // Determine correct pharmacy name to display (Organizer/Supplier)
+                            let displayPharmacyName: string | undefined = undefined;
+                            if (typeFilter === 'jointorder' && hasParticipants) {
+                                const supplier = participants.find((p: any) => p.isSupplier);
+                                if (supplier) {
+                                    displayPharmacyName = supplier.pharmacyName;
+                                }
+                            }
+                            
+                            // Only add OfferItemComponent if NO participants data - otherwise they're duplicated
+                            // 🆕 Also skip offers with 0 remaining stock
+                            if (!hasParticipants) {
+                                // Calculate remaining stock for this offer
+                                const offerRemainingStock = (offer as any).remainingStock ?? (offer as any).stock - ((offer as any).soldQuantity || 0);
+                                
+                                // Skip offers with 0 or negative remaining stock
+                                if (offerRemainingStock <= 0) {
+                                    return; // Skip this offer entirely
+                                }
+                                
+                                items.push(
+                                    <OfferItemComponent
+                                        key={`offer-${offer.id}`}
+                                        offer={offer}
+                                        showBarem={!baremFilter}
+                                        baremRemainingStock={baremRemainingStock}
+                                        isJointOrder={typeFilter === 'jointorder'}
+                                        isPurchaseRequest={typeFilter === 'purchaserequest'}
+                                        displayPharmacyName={displayPharmacyName}
+                                    />
+                                );
+                            }
+                            
+                            // Add participant cards (from OfferTargets - includes original requester after conversion)
+                            if ((typeFilter === 'jointorder' || typeFilter === 'purchaserequest') && 
+                                (offer as any).participants && (offer as any).participants.length > 0) {
+                                const participants = (offer as any).participants as Array<{
+                                    pharmacyId: number;
+                                    pharmacyName: string;
+                                    quantity: number;
+                                    isSupplier: boolean;
+                                    addedAt?: string;
+                                }>;
+                                
+                                // Sort participants: Suppliers first, then requesters
+                                // Also filter out participants with 0 quantity
+                                const sortedParticipants = [...participants]
+                                    .filter(p => p.quantity > 0)  // 🆕 Hide 0 stock participants
+                                    .sort((a, b) => {
+                                    if (a.isSupplier && !b.isSupplier) return -1;
+                                    if (!a.isSupplier && b.isSupplier) return 1;
+                                    return 0;
+                                });
+                                // Show ALL participants with role distinction (simple style)
+                                sortedParticipants.forEach((participant, idx) => {
+                                    const isSupplier = participant.isSupplier;
+                                    items.push(
+                                        <div 
+                                            key={`participant-${offer.id}-${idx}`} 
+                                            className={styles.offerItem}
+                                        >
+                                            <span className={styles.offerPrice} style={{ color: isSupplier ? '#059669' : '#8b5cf6' }}>
+                                                {isSupplier ? 'Tedarikçi' : 'Talep'}
+                                            </span>
+                                            <div className={styles.offerSellerInfo}>
+                                                <Link 
+                                                    href={`/profile/${participant.pharmacyId}`} 
+                                                    className={styles.sellerLink}
+                                                >
+                                                    {participant.pharmacyName}
+                                                </Link>
+                                                {participant.addedAt && (() => {
+                                                    try {
+                                                        const date = new Date(participant.addedAt);
+                                                        if (isNaN(date.getTime())) return null;
+                                                        return (
+                                                            <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginTop: '2px' }}>
+                                                                {date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                                                            </span>
+                                                        );
+                                                    } catch { return null; }
+                                                })()}
+                                            </div>
+                                            <div className={styles.offerStock}>
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '18px', fontWeight: '700', color: isSupplier ? '#059669' : '#8b5cf6' }}>
+                                                        {participant.quantity} Adet
+                                                    </div>
+                                                    <div style={{ fontSize: '13px', fontWeight: '500', color: '#6b7280' }}>
+                                                        {isSupplier ? 'üstlendi' : 'talep edildi'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                });
+                                
+                                // Also get participant pharmacyIds to avoid duplicating in buyers list
+                                const participantPharmacyIds = new Set(participants.map(p => p.pharmacyId));
+                                
+                                // Add buyer cards that are NOT already in participants 
+                                if (offer.buyers && offer.buyers.length > 0) {
+                                    offer.buyers.filter(b => !participantPharmacyIds.has(b.pharmacyId)).forEach((buyer, idx) => {
+                                        items.push(
+                                            <div key={`buyer-${offer.id}-${idx}`} className={styles.offerItem}>
+                                                <span className={styles.offerPrice} style={{ color: '#059669' }}>
+                                                    Sipariş
+                                                </span>
+                                                <div className={styles.offerSellerInfo}>
+                                                    <Link href={`/profile/${buyer.pharmacyId}`} className={styles.sellerLink} style={{ color: '#047857' }}>
+                                                        {buyer.pharmacyName}
+                                                    </Link>
+                                                    {buyer.orderDate && (
+                                                        <span style={{ fontSize: '11px', color: '#6b7280', display: 'block', marginTop: '2px' }}>
+                                                            {buyer.orderDate}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className={styles.offerStock}>
+                                                    <div style={{ textAlign: 'center' }}>
+                                                        <div style={{ fontSize: '18px', fontWeight: '700', color: '#059669' }}>{buyer.quantity} Adet</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '500', color: '#6b7280' }}>sipariş edildi</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    });
+                                }
+                            } else if ((typeFilter === 'jointorder' || typeFilter === 'purchaserequest') && offer.buyers && offer.buyers.length > 0) {
+                                // Fallback: No participants data, show buyers from OrderItems
                                 offer.buyers.forEach((buyer, idx) => {
                                     items.push(
                                         <div key={`buyer-${offer.id}-${idx}`} className={styles.offerItem}>

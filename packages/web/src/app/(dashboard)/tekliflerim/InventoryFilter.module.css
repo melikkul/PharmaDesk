@@ -145,6 +145,7 @@
 .badgeWarning { background-color: #f39c12; } /* Pasif için turuncu */
 .badgeDanger { background-color: var(--negative-color); } /* Miadı doldu için kırmızı */
 .badgeSecondary { background-color: var(--text-secondary); } /* Stokta yok için gri */
+.badgeInfo { background-color: var(--sidebar-bg); } /* Bakiye Yükleme için mavi */
 
 /* Pagination */
 .pagination {

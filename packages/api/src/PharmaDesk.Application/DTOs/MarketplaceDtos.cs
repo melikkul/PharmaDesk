@@ -107,6 +107,16 @@ namespace Backend.Dtos
         
         /// <summary>Teklif oluşturma tarihi</summary>
         public string? CreatedAt { get; set; }
+        
+        // 🆕 Joint Order Conversion için
+        /// <summary>Ortak Sipariş katılımcı detayları (Talep Eden + Üstlenen)</summary>
+        public List<JointOrderParticipantDto>? Participants { get; set; }
+        
+        /// <summary>Toplam talep edilen adet (tüm katılımcıların toplamı)</summary>
+        public int TotalRequestedQuantity { get; set; }
+        
+        /// <summary>Kurucu miktarı (JointOrder/PurchaseRequest için)</summary>
+        public int CreatorQuantity { get; set; }
     }
 
     // 🆕 Sipariş veren alıcı bilgisi
@@ -116,6 +126,16 @@ namespace Backend.Dtos
         public string PharmacyName { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public string? OrderDate { get; set; }
+    }
+
+    // 🆕 Ortak Sipariş katılımcı bilgisi
+    public class JointOrderParticipantDto
+    {
+        public long PharmacyId { get; set; }
+        public string PharmacyName { get; set; } = string.Empty;
+        public int Quantity { get; set; }
+        public bool IsSupplier { get; set; }
+        public string? AddedAt { get; set; }
     }
 
     // 🆕 Shipment Label DTO for QR code printing
@@ -146,6 +166,9 @@ namespace Backend.Dtos
         [Required]
         [Range(1, int.MaxValue, ErrorMessage = "Stock must be at least 1")]
         public int Stock { get; set; }
+        
+        /// <summary>Kurucunun kendi miktarı (JointOrder/PurchaseRequest için)</summary>
+        public int CreatorQuantity { get; set; } = 0;
         
         public int BonusQuantity { get; set; } = 0;
         public int MinSaleQuantity { get; set; } = 1;
@@ -223,6 +246,17 @@ namespace Backend.Dtos
     {
         [Required]
         public string Status { get; set; } = string.Empty; // "active", "paused", "expired", "out_of_stock", "stopped"
+    }
+
+    /// <summary>
+    /// Alım Talebini Ortak Siparişe dönüştürme isteği
+    /// </summary>
+    public class ConvertToJointOrderDto
+    {
+        /// <summary>Siparişi üstlenen kişinin eklemek istediği kendi adeti</summary>
+        [Required]
+        [Range(1, int.MaxValue, ErrorMessage = "Adet en az 1 olmalıdır")]
+        public int SupplierQuantity { get; set; }
     }
 
     // ========== TRANSACTION DTOs ==========

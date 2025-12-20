@@ -1,6 +1,6 @@
 using Backend.Dtos;
 using Backend.Services;
-using Backend.Data; // 🆕 Added for AppDbContext
+using Backend.Data;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 
@@ -23,7 +23,6 @@ namespace Backend.Controllers
 
         /// <summary>
         /// Get current user profile from JWT cookie
-        /// Frontend calls this after login to populate user state
         /// </summary>
         [HttpGet("me")]
         [Microsoft.AspNetCore.Authorization.Authorize]
@@ -45,8 +44,10 @@ namespace Backend.Controllers
             string address = "";
             string city = "";
             string district = "";
+            // 🆕 Subscription fields for frontend access control
+            string subscriptionStatus = "Trial";
+            DateTime? subscriptionExpireDate = null;
 
-            // Check if PharmacyProfile exists in database
             if (!string.IsNullOrEmpty(pharmacyId) && long.TryParse(pharmacyId, out long pId))
             {
                 var profile = _appDb.PharmacyProfiles.Find(pId);
@@ -56,12 +57,12 @@ namespace Backend.Controllers
                     address = profile.Address ?? "";
                     city = profile.City ?? "";
                     district = profile.District ?? "";
-                    // userAvatar = profile.LogoUrl; // Future improvement
+                    // 🆕 Get subscription info from profile
+                    subscriptionStatus = profile.SubscriptionStatus.ToString();
+                    subscriptionExpireDate = profile.SubscriptionExpireDate;
                 }
                 else
                 {
-                    // 🆕 PharmacyProfile doesn't exist - likely stale JWT from old database
-                    // Return 401 to force re-authentication
                     return Unauthorized(new { 
                         error = "Oturum geçersiz. Lütfen tekrar giriş yapın.",
                         code = "PROFILE_NOT_FOUND"
@@ -73,19 +74,22 @@ namespace Backend.Controllers
             {
                 id = userId,
                 role = role ?? "Pharmacy",
-                name = name ?? "", // Keep for backward compatibility
-                fullName = name ?? "", // 🆕 Match frontend interface
+                name = name ?? "",
+                fullName = name ?? "",
                 email = email ?? "",
                 pharmacyId = pharmacyId,
-                pharmacyName = pharmacyName, // 🆕 Return real pharmacy name
-                address = address, // 🆕 For cart address pre-fill
-                city = city, // 🆕 For cart address pre-fill
-                district = district // 🆕 For cart address pre-fill
+                pharmacyName = pharmacyName,
+                address = address,
+                city = city,
+                district = district,
+                // 🆕 Subscription fields
+                subscriptionStatus = subscriptionStatus,
+                subscriptionExpireDate = subscriptionExpireDate?.ToString("o")
             });
         }
 
         /// <summary>
-        /// User registration - sets HttpOnly cookie on success
+        /// User registration - returns pending approval status
         /// </summary>
         [HttpPost("register")]
         public async Task<IActionResult> Register([FromBody] RegisterRequest req)
@@ -103,14 +107,12 @@ namespace Backend.Controllers
                     return BadRequest(new { error = "Bu e-posta adresi veya GLN numarası zaten kayıtlı." });
                 }
 
-                // 🆕 Set JWT as HttpOnly cookie
-                SetAuthCookie(response.Token);
-
-                // Return user info without token in body (token is in cookie)
+                // Don't set any cookies - user needs admin approval first
                 return Ok(new
                 {
                     user = response.User,
-                    message = "Kayıt başarılı."
+                    message = "Kayıt başarılı. Hesabınız yönetici onayına gönderildi. Onaylandıktan sonra giriş yapabilirsiniz.",
+                    pendingApproval = true
                 });
             }
             catch (Exception)
@@ -120,30 +122,48 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// User login - sets HttpOnly cookie on success
+        /// User login - sets HttpOnly cookie for refresh token on success
         /// </summary>
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginRequest req)
         {
             try
             {
-                var result = await _authService.LoginAsync(req);
+                var ipAddress = GetIpAddress();
+                var result = await _authService.LoginAsync(req, ipAddress: ipAddress);
 
                 if (result == null)
                 {
                     return Unauthorized(new { error = "E-posta adresi veya şifre hatalı." });
                 }
 
-                // 🆕 Set JWT as HttpOnly cookie
-                SetAuthCookie(result.Token);
+                // Set refresh token as HttpOnly cookie
+                SetRefreshTokenCookie(result.RefreshToken, req.RememberMe);
+                
+                // Also set access token as HttpOnly cookie for middleware compatibility
+                SetAccessTokenCookie(result.AccessToken);
 
-                // Return user info without token in body (token is in cookie)
-                // Also return token for backward compatibility during transition
                 return Ok(new
                 {
+                    accessToken = result.AccessToken,
+                    expiresIn = result.ExpiresIn,
                     user = result.User,
-                    token = result.Token, // Keep for backward compatibility, remove after frontend update
+                    isFirstLogin = result.IsFirstLogin,
                     message = "Giriş başarılı."
+                });
+            }
+            catch (PendingApprovalException)
+            {
+                return StatusCode(403, new { 
+                    error = "Hesabınız oluşturuldu ancak yönetici onayı bekleniyor. Lütfen daha sonra tekrar deneyin.",
+                    code = "PENDING_APPROVAL"
+                });
+            }
+            catch (AccountSuspendedException)
+            {
+                return StatusCode(403, new { 
+                    error = "Hesabınız askıya alınmıştır. Daha fazla bilgi için yönetici ile iletişime geçin.",
+                    code = "ACCOUNT_SUSPENDED"
                 });
             }
             catch (Exception)
@@ -153,19 +173,62 @@ namespace Backend.Controllers
         }
 
         /// <summary>
-        /// Logout - clears auth cookie
+        /// Refresh access token using refresh token from cookie
+        /// </summary>
+        [HttpPost("refresh")]
+        public async Task<IActionResult> RefreshToken()
+        {
+            var refreshToken = Request.Cookies["refreshToken"];
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return Unauthorized(new { error = "Oturum süresi doldu. Lütfen tekrar giriş yapın." });
+            }
+
+            try
+            {
+                var ipAddress = GetIpAddress();
+                var result = await _authService.RefreshTokenAsync(refreshToken, ipAddress);
+                
+                if (result == null)
+                {
+                    // Clear invalid cookies
+                    ClearAuthCookies();
+                    return Unauthorized(new { error = "Geçersiz veya süresi dolmuş oturum." });
+                }
+
+                // Update access token cookie
+                SetAccessTokenCookie(result.AccessToken);
+
+                return Ok(new
+                {
+                    accessToken = result.AccessToken,
+                    expiresIn = result.ExpiresIn
+                });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { error = "Token yenileme sırasında bir hata oluştu." });
+            }
+        }
+
+        /// <summary>
+        /// Logout - clears auth cookies and revokes refresh token
         /// </summary>
         [HttpPost("logout")]
-        public IActionResult Logout()
+        public async Task<IActionResult> Logout()
         {
-            // 🆕 Clear the auth cookie
-            Response.Cookies.Delete("token", new CookieOptions
+            var refreshToken = Request.Cookies["refreshToken"];
+            
+            if (!string.IsNullOrEmpty(refreshToken))
             {
-                Path = "/",
-                Domain = GetCookieDomain(),
-                Secure = !IsDevelopment(),
-                SameSite = SameSiteMode.Strict
-            });
+                var ipAddress = GetIpAddress();
+                await _authService.RevokeTokenAsync(refreshToken, ipAddress);
+            }
+
+            ClearAuthCookies();
+
+            // Force browser to clear all cookies and storage
+            Response.Headers.Append("Clear-Site-Data", "\"cookies\", \"storage\"");
 
             return Ok(new { message = "Çıkış yapıldı." });
         }
@@ -199,23 +262,56 @@ namespace Backend.Controllers
         // Private Helpers
         // ═══════════════════════════════════════════════════════════════
 
-        /// <summary>
-        /// Sets JWT token as HttpOnly, Secure, SameSite=Strict cookie
-        /// </summary>
-        private void SetAuthCookie(string token)
+        private void SetAccessTokenCookie(string token)
         {
             var cookieOptions = new CookieOptions
             {
-                HttpOnly = true,                    // 🔒 JavaScript cannot access
-                Secure = !IsDevelopment(),          // 🔒 HTTPS only in production
-                SameSite = SameSiteMode.Strict,     // 🔒 Prevent CSRF
+                HttpOnly = true,
+                Secure = !IsDevelopment(),
+                SameSite = SameSiteMode.Strict,
                 Path = "/",
                 Domain = GetCookieDomain(),
-                Expires = DateTimeOffset.UtcNow.AddDays(7), // Match JWT expiry
+                Expires = DateTimeOffset.UtcNow.AddMinutes(15),
                 IsEssential = true
             };
 
             Response.Cookies.Append("token", token, cookieOptions);
+        }
+
+        private void SetRefreshTokenCookie(string token, bool rememberMe)
+        {
+            var cookieOptions = new CookieOptions
+            {
+                HttpOnly = true,
+                Secure = !IsDevelopment(),
+                SameSite = SameSiteMode.Strict,
+                Path = "/",
+                Domain = GetCookieDomain(),
+                IsEssential = true
+            };
+
+            // If RememberMe, set 30-day expiry; otherwise session cookie
+            if (rememberMe)
+            {
+                cookieOptions.Expires = DateTimeOffset.UtcNow.AddDays(30);
+            }
+            // If not rememberMe, no Expires = session cookie (expires when browser closes)
+
+            Response.Cookies.Append("refreshToken", token, cookieOptions);
+        }
+
+        private void ClearAuthCookies()
+        {
+            var cookieOptions = new CookieOptions
+            {
+                Path = "/",
+                Domain = GetCookieDomain(),
+                Secure = !IsDevelopment(),
+                SameSite = SameSiteMode.Strict
+            };
+
+            Response.Cookies.Delete("token", cookieOptions);
+            Response.Cookies.Delete("refreshToken", cookieOptions);
         }
 
         private bool IsDevelopment()
@@ -226,11 +322,17 @@ namespace Backend.Controllers
 
         private string? GetCookieDomain()
         {
-            // In development, don't set domain (localhost doesn't need it)
             if (IsDevelopment()) return null;
+            return _configuration["CookieDomain"];
+        }
 
-            // In production, set to your domain
-            return _configuration["CookieDomain"]; // e.g., ".pharmadesk.com"
+        private string? GetIpAddress()
+        {
+            if (Request.Headers.ContainsKey("X-Forwarded-For"))
+            {
+                return Request.Headers["X-Forwarded-For"].FirstOrDefault();
+            }
+            return HttpContext.Connection.RemoteIpAddress?.MapToIPv4().ToString();
         }
     }
 }

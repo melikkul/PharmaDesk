@@ -1,0 +1,102 @@
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  border-radius: 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.warning {
+  background: linear-gradient(90deg, #fff3cd 0%, #ffe699 100%);
+  border-bottom: 2px solid #f0c000;
+  color: #856404;
+}
+
+.error {
+  background: linear-gradient(90deg, #f8d7da 0%, #f5c6cb 100%);
+  border-bottom: 2px solid #e74c3c;
+  color: #721c24;
+}
+
+.info {
+  background: linear-gradient(90deg, #d1ecf1 0%, #bee5eb 100%);
+  border-bottom: 2px solid #17a2b8;
+  color: #0c5460;
+}
+
+.content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.icon {
+  font-size: 1.25rem;
+}
+
+.message {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.actionButton {
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.warning .actionButton {
+  background: #856404;
+  color: white;
+}
+
+.warning .actionButton:hover {
+  background: #704f03;
+}
+
+.error .actionButton {
+  background: #c0392b;
+  color: white;
+}
+
+.error .actionButton:hover {
+  background: #a93226;
+}
+
+.info .actionButton {
+  background: #0c5460;
+  color: white;
+}
+
+.info .actionButton:hover {
+  background: #094048;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .banner {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 1rem;
+    text-align: center;
+  }
+
+  .content {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .actionButton {
+    width: 100%;
+    text-align: center;
+    padding: 0.75rem;
+  }
+}

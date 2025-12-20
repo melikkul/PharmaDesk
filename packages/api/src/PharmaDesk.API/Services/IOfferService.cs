@@ -71,6 +71,11 @@ namespace Backend.Services
         /// Release depot responsibility
         /// </summary>
         Task<bool> UnclaimDepotAsync(int offerId, long pharmacyId);
+        
+        /// <summary>
+        /// Convert PurchaseRequest to JointOrder
+        /// </summary>
+        Task<OfferResult> ConvertToJointOrderAsync(int offerId, ConvertToJointOrderDto request, long pharmacyId);
 
         // ═══════════════════════════════════════════════════════════════
         // Financial Operations (Provision/Capture Pattern)
@@ -83,8 +88,15 @@ namespace Backend.Services
         
         /// <summary>
         /// Finalize an offer (set Status = Passive, IsFinalized = true)
+        /// Remaining quantity is added to owner's account
         /// </summary>
         Task<OfferResult> FinalizeOfferAsync(int offerId, long pharmacyId);
+        
+        /// <summary>
+        /// Withdraw (revert) a finalized offer (set Status = Active, IsFinalized = false)
+        /// Only possible if payment hasn't been processed yet
+        /// </summary>
+        Task<OfferResult> WithdrawOfferAsync(int offerId, long pharmacyId);
         
         /// <summary>
         /// Get shipment labels with encrypted QR tokens for printing

@@ -3,7 +3,9 @@ using Backend.Dtos;
 using Backend.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using PharmaDesk.API.Hubs;
 using System.Security.Claims;
 
 namespace Backend.Controllers
@@ -15,11 +17,16 @@ namespace Backend.Controllers
     {
         private readonly AppDbContext _context;
         private readonly ILogger<CarrierShiftController> _logger;
+        private readonly IHubContext<LocationHub> _locationHub;
 
-        public CarrierShiftController(AppDbContext context, ILogger<CarrierShiftController> logger)
+        public CarrierShiftController(
+            AppDbContext context, 
+            ILogger<CarrierShiftController> logger,
+            IHubContext<LocationHub> locationHub)
         {
             _context = context;
             _logger = logger;
+            _locationHub = locationHub;
         }
 
         private int GetCarrierId()
@@ -176,8 +183,9 @@ namespace Backend.Controllers
             if (carrierId == 0)
                 return Unauthorized(new { error = "Geçersiz kullanıcı" });
 
-            // Find active shift
+            // Find active shift with carrier info
             var activeShift = await _context.CarrierShifts
+                .Include(s => s.Carrier)
                 .Where(s => s.CarrierId == carrierId && s.EndTime == null)
                 .FirstOrDefaultAsync();
 
@@ -186,12 +194,32 @@ namespace Backend.Controllers
                 return BadRequest(new { error = "Aktif mesai bulunamadı" });
             }
 
-            // Update location
+            // Update location in DB
             activeShift.LastLatitude = request.Latitude;
             activeShift.LastLongitude = request.Longitude;
             activeShift.LastLocationUpdate = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // ═══════════════════════════════════════════════════════════
+            // BROADCAST to SignalR - Real-time update for tracking
+            // ═══════════════════════════════════════════════════════════
+            var locationInfo = new CarrierLocationInfo
+            {
+                CarrierId = carrierId,
+                CarrierName = $"{activeShift.Carrier?.FirstName} {activeShift.Carrier?.LastName}".Trim(),
+                Latitude = request.Latitude,
+                Longitude = request.Longitude,
+                LastUpdate = DateTime.UtcNow,
+                IsOnline = true,
+                IsOnShift = true,
+                ShiftStartTime = activeShift.StartTime
+            };
+
+            // Broadcast to all admins/users watching tracking
+            await _locationHub.Clients.Group("Admins").SendAsync("ReceiveLocationUpdate", locationInfo);
+            
+            _logger.LogDebug("Carrier {CarrierId} location broadcasted: {Lat}, {Lng}", carrierId, request.Latitude, request.Longitude);
 
             return Ok(new { success = true });
         }

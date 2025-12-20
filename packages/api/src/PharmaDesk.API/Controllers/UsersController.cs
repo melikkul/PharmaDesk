@@ -58,7 +58,10 @@ namespace Backend.Controllers
                 ProfileImagePath = x.ProfileImagePath,
                 PharmacistFirstName = user.FirstName, // Eczacı adı
                 PharmacistLastName = user.LastName,   // Eczacı soyadı
-                CreatedAt = x.CreatedAt
+                CreatedAt = x.CreatedAt,
+                // 🆕 SaaS Subscription Fields - for frontend access control
+                SubscriptionStatus = x.SubscriptionStatus.ToString(),
+                SubscriptionExpireDate = x.SubscriptionExpireDate
             });
         }
 
@@ -110,6 +113,31 @@ namespace Backend.Controllers
             profile.About = req.About ?? profile.About;
 
             await _db.SaveChangesAsync();
+            return NoContent();
+        }
+
+        [HttpPut("me/password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest req)
+        {
+            var idClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(idClaim) || !int.TryParse(idClaim, out var uid))
+                return Unauthorized();
+
+            var user = await _identityDb.IdentityUsers.FindAsync(uid);
+            if (user == null) return NotFound();
+
+            // Verify current password
+            if (!BCrypt.Net.BCrypt.Verify(req.CurrentPassword, user.PasswordHash))
+                return BadRequest(new { message = "Mevcut şifre hatalı." });
+
+            // Validate new password
+            if (string.IsNullOrEmpty(req.NewPassword) || req.NewPassword.Length < 6)
+                return BadRequest(new { message = "Yeni şifre en az 6 karakter olmalı." });
+
+            // Update password hash
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(req.NewPassword);
+            await _identityDb.SaveChangesAsync();
+
             return NoContent();
         }
 
@@ -250,15 +278,28 @@ namespace Backend.Controllers
                     LastName = u.LastName,
                     GLN = u.GLN,
                     CreatedAt = u.CreatedAt,
-                    PharmacyId = u.PharmacyId
+                    PharmacyId = u.PharmacyId,
+                    IsApproved = u.IsApproved,
+                    Role = u.Role
                 })
                 .ToListAsync();
 
-            // Fetch pharmacy names for each user
+            // Fetch pharmacy names and groups for each user
             var result = new List<object>();
             foreach (var user in users)
             {
                 var pharmacy = await _db.PharmacyProfiles.FindAsync(user.PharmacyId);
+                
+                // Fetch user's groups
+                var userGroups = await _db.PharmacyGroups
+                    .Where(pg => pg.PharmacyProfileId == user.PharmacyId && pg.IsActive)
+                    .Include(pg => pg.Group)
+                    .Select(pg => new { 
+                        id = pg.GroupId, 
+                        name = pg.Group.Name 
+                    })
+                    .ToListAsync();
+                
                 result.Add(new
                 {
                     user.Id,
@@ -270,7 +311,10 @@ namespace Backend.Controllers
                     City = pharmacy?.City ?? "N/A",
                     District = pharmacy?.District ?? "N/A",
                     user.CreatedAt,
-                    PharmacyId = user.PharmacyId.ToString() // Serialize as string to avoid JS precision loss
+                    PharmacyId = user.PharmacyId.ToString(), // Serialize as string to avoid JS precision loss
+                    user.IsApproved,
+                    user.Role,
+                    Groups = userGroups
                 });
             }
 

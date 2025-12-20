@@ -10,6 +10,7 @@ export interface DashboardData {
   balanceHistory: any[];
   transfers: any[];
   shipments: any[];
+  recentOrders: any[]; // Yeni: SİPARİŞLERİM kartı için
 }
 
 /**

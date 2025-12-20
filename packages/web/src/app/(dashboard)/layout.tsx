@@ -3,7 +3,7 @@
 
 import React, { useEffect } from 'react'; // React.memo için 'React' import edildi
 import './dashboard/dashboard.css'; // Global dashboard stilleri
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 // Ana Bileşenler
 import Sidebar from '@/components/Sidebar';
@@ -17,6 +17,7 @@ import NotificationModal from '@/components/notifications/NotificationModal';
 import { ChatPanel } from '@/components/chat/ChatPanel';
 import { FloatingChatWindow } from '@/components/chat/FloatingChatWindow';
 import CartPanel from '@/components/cart/CartPanel';
+import SubscriptionBanner from '@/components/subscription/SubscriptionBanner';
 
 // Veri
 import { pharmacyData } from '@/lib/dashboardData';
@@ -83,12 +84,16 @@ export default function DashboardLayout({
   const panelValues = useDashboardPanels();
   const { user, logout, isAuthenticated, isLoading, token } = useAuth();
   const router = useRouter();
+  const pathname = usePathname(); // 🆕 For subscription page exception
   
   // Sidebar state for mobile
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false);
   
   // Balance state - fetch from API
   const [balance, setBalance] = React.useState<number>(0);
+  
+  // 🆕 Check if current page is subscription page (should NOT be blurred)
+  const isSubscriptionPage = pathname === '/abonelik';
 
   const toggleSidebar = () => {
     setIsSidebarOpen(prev => !prev);
@@ -163,9 +168,38 @@ export default function DashboardLayout({
                       onMenuClick={toggleSidebar}
                     />
 
-                    <main className="main-content">
-                      {children} {/* children (sayfalar) artık context'e erişebilir */}
-                    </main>
+                    {/* 🆕 Subscription Warning Banner */}
+                    <SubscriptionBanner 
+                      subscriptionStatus={user?.subscriptionStatus} 
+                      subscriptionExpireDate={user?.subscriptionExpireDate} 
+                    />
+
+                    {/* 🆕 Global Subscription Restriction for ALL pages EXCEPT /abonelik */}
+                    {((user?.subscriptionStatus === 'Cancelled' || user?.subscriptionStatus === 'PastDue') && !isSubscriptionPage) ? (
+                      <main className="main-content subscription-restricted-wrapper">
+                        <div className="subscription-restricted-content">
+                          {children}
+                        </div>
+                        <div className="subscription-restriction-overlay">
+                          <div className="restriction-icon">🔒</div>
+                          <h3>Abonelik Gerekli</h3>
+                          <p>
+                            {user?.subscriptionStatus === 'Cancelled' 
+                              ? 'Aboneliğiniz iptal edilmiştir.'
+                              : 'Ödemeniz gecikmiştir.'}
+                            <br />
+                            Platformu kullanmaya devam etmek için aboneliğinizi yenileyin.
+                          </p>
+                          <a href="/abonelik" className="action-button">
+                            Abonelik Yenile
+                          </a>
+                        </div>
+                      </main>
+                    ) : (
+                      <main className="main-content">
+                        {children}
+                      </main>
+                    )}
 
                     <SlidePanel
                       title="Bildirimler"

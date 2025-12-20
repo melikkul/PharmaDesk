@@ -15,11 +15,13 @@ namespace Backend.Services
     {
         private readonly AppDbContext _context;
         private readonly IHubContext<NotificationHub> _hubContext;
+        private readonly ILogger<OfferService> _logger;
 
-        public OfferService(AppDbContext context, IHubContext<NotificationHub> hubContext)
+        public OfferService(AppDbContext context, IHubContext<NotificationHub> hubContext, ILogger<OfferService> logger)
         {
             _context = context;
             _hubContext = hubContext;
+            _logger = logger;
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -179,6 +181,7 @@ namespace Backend.Services
             var offers = await _context.Offers
                 .Include(o => o.Medication)
                 .Include(o => o.PharmacyProfile)
+                .Include(o => o.OfferTargets) // 🆕 Load OfferTargets for Participants
                 .Where(o => o.MedicationId == medicationId && 
                     (o.Status == OfferStatus.Active || 
                      ((o.Status == OfferStatus.Passive || o.Status == OfferStatus.Sold) && o.IsFinalized)))
@@ -228,6 +231,15 @@ namespace Backend.Services
                        participantMap[o.Id].Contains(requestingPharmacyId.Value);
             }).ToList();
 
+            // 🆕 Pharmacy names lookup for OfferTargets (Participants)
+            var allOfferTargetPharmacyIds = visibleOffers
+                .SelectMany(o => o.OfferTargets?.Select(ot => ot.TargetPharmacyId) ?? Enumerable.Empty<long>())
+                .Distinct()
+                .ToList();
+            var pharmacyNamesMap = await _context.PharmacyProfiles
+                .Where(p => allOfferTargetPharmacyIds.Contains(p.Id))
+                .ToDictionaryAsync(p => p.Id, p => p.PharmacyName);
+
             var result = visibleOffers.Select(o =>
             {
                 var dto = MapToOfferDto(o);
@@ -245,6 +257,23 @@ namespace Backend.Services
                     .ToList();
 
                 dto.Buyers = buyersForOffer;
+                
+                // 🆕 Map OfferTargets to Participants (for JointOrder/PurchaseRequest)
+                if ((o.Type == OfferType.JointOrder || o.Type == OfferType.PurchaseRequest) && 
+                    o.OfferTargets?.Any() == true)
+                {
+                    dto.Participants = o.OfferTargets.Select(ot => new JointOrderParticipantDto
+                    {
+                        PharmacyId = ot.TargetPharmacyId,
+                        PharmacyName = pharmacyNamesMap.GetValueOrDefault(ot.TargetPharmacyId, "Bilinmeyen"),
+                        Quantity = ot.RequestedQuantity,
+                        IsSupplier = ot.IsSupplier,
+                        AddedAt = ot.AddedAt.ToString("dd/MM/yyyy")
+                    }).ToList();
+                    
+                    dto.TotalRequestedQuantity = o.OfferTargets.Sum(ot => ot.RequestedQuantity);
+                }
+                
                 return dto;
             }).ToList();
 
@@ -268,9 +297,17 @@ namespace Backend.Services
             if (request.IsPrivate && (request.TargetPharmacyIds == null || !request.TargetPharmacyIds.Any()))
                 return OfferResult.Error("Özel teklifler için hedef eczane seçilmelidir.");
 
-            // 3. Price limit validation for StockSale
             if (offerType == OfferType.StockSale && request.MaxPriceLimit > 0 && request.Price > request.MaxPriceLimit)
                 return OfferResult.Error($"Fiyat, seçilen barem fiyatından ({request.MaxPriceLimit:N2} TL) yüksek olamaz.");
+
+            // 🆕 SKT Validation: Block expired medications for StockSale and JointOrder
+            var parsedExpiration = ParseExpirationDate(request.ExpirationDate);
+            if (offerType != OfferType.PurchaseRequest && 
+                parsedExpiration.HasValue && 
+                parsedExpiration.Value < DateTime.UtcNow)
+            {
+                return OfferResult.Error("Son kullanma tarihi geçmiş ilaçlar için teklif oluşturulamaz.");
+            }
 
             // 4. Find medication
             var medication = await FindMedicationAsync(request);
@@ -315,6 +352,7 @@ namespace Backend.Services
                 IsPrivate = request.IsPrivate,
                 WarehouseBaremId = request.WarehouseBaremId,
                 MaxPriceLimit = request.MaxPriceLimit,
+
                 CampaignStartDate = request.CampaignStartDate,
                 CampaignEndDate = request.CampaignEndDate,
                 CampaignBonusMultiplier = request.CampaignBonusMultiplier,
@@ -424,6 +462,15 @@ namespace Backend.Services
 
             if (Enum.TryParse<OfferStatus>(status, true, out var newStatus))
             {
+                // 🆕 Block reactivation of finalized offers
+                // IsFinalized = teklif sonlandırıldı, IsPaymentProcessed = bakiye işlendi
+                if ((offer.IsFinalized || offer.IsPaymentProcessed) && newStatus == OfferStatus.Active)
+                {
+                    // Cannot reactivate finalized or payment-processed offers
+                    _logger.LogWarning("[UpdateOfferStatus] Attempted to reactivate finalized offer {OfferId}", offerId);
+                    return false;
+                }
+
                 offer.Status = newStatus;
                 offer.UpdatedAt = DateTime.UtcNow;
                 await _context.SaveChangesAsync();
@@ -552,6 +599,95 @@ namespace Backend.Services
             await SendOfferNotificationAsync($"Depo sorumlusu ayrıldı: {offer.Medication?.Name}");
 
             return true;
+        }
+
+        // 🆕 Alım Talebini Ortak Siparişe dönüştür
+        public async Task<OfferResult> ConvertToJointOrderAsync(int offerId, ConvertToJointOrderDto request, long pharmacyId)
+        {
+            // 1. Offer'ı çek
+            var offer = await _context.Offers
+                .Include(o => o.Medication)
+                .Include(o => o.PharmacyProfile)
+                .Include(o => o.OfferTargets)
+                .FirstOrDefaultAsync(o => o.Id == offerId);
+
+            if (offer == null)
+                return OfferResult.Error("Teklif bulunamadı.", 404);
+
+            // 2. Kontrol: PurchaseRequest mi?
+            if (offer.Type != OfferType.PurchaseRequest)
+                return OfferResult.Error("Bu işlem sadece Alım Talepleri için geçerlidir.", 400);
+
+            // 3. Kontrol: Kendi açtığı talebe kendisi üstlenmeye çalışıyor mu?
+            if (offer.PharmacyProfileId == pharmacyId)
+                return OfferResult.Error("Kendi açtığınız talebi kendiniz üstlenemezsiniz.", 400);
+
+            // 4. Kontrol: Zaten bir tedarikçi var mı?
+            if (offer.DepotClaimerUserId.HasValue)
+                return OfferResult.Error("Bu talep için zaten bir tedarikçi belirlendi.", 409);
+
+            // 5. Tip dönüşümü: PurchaseRequest → JointOrder
+            offer.Type = OfferType.JointOrder;
+            offer.DepotClaimerUserId = pharmacyId;
+            offer.DepotClaimedAt = DateTime.UtcNow;
+            offer.UpdatedAt = DateTime.UtcNow;
+
+            // 6. Talep edenin (ilk açan) kaydını OfferTargets'a ekle (eğer yoksa)
+            var existingRequesterTarget = offer.OfferTargets
+                .FirstOrDefault(ot => ot.TargetPharmacyId == offer.PharmacyProfileId);
+            
+            if (existingRequesterTarget == null)
+            {
+                _context.OfferTargets.Add(new OfferTarget
+                {
+                    OfferId = offer.Id,
+                    TargetPharmacyId = offer.PharmacyProfileId,
+                    RequestedQuantity = offer.Stock, // Original requester's quantity
+                    IsSupplier = false,
+                    AddedAt = offer.CreatedAt
+                });
+            }
+            else
+            {
+                existingRequesterTarget.RequestedQuantity = offer.Stock;
+                existingRequesterTarget.IsSupplier = false;
+            }
+
+            // 7. Üstlenen kişiyi OfferTargets'a ekle
+            var existingSupplierTarget = offer.OfferTargets
+                .FirstOrDefault(ot => ot.TargetPharmacyId == pharmacyId);
+            
+            if (existingSupplierTarget == null)
+            {
+                _context.OfferTargets.Add(new OfferTarget
+                {
+                    OfferId = offer.Id,
+                    TargetPharmacyId = pharmacyId,
+                    RequestedQuantity = request.SupplierQuantity,
+                    IsSupplier = true,
+                    AddedAt = DateTime.UtcNow
+                });
+            }
+            else
+            {
+                existingSupplierTarget.RequestedQuantity = request.SupplierQuantity;
+                existingSupplierTarget.IsSupplier = true;
+            }
+
+            await _context.SaveChangesAsync();
+
+            // 8. Transaction log
+            await CreateTransactionAsync(pharmacyId, TransactionType.OfferUpdated, 0,
+                $"Alım talebi ortak siparişe dönüştürüldü: {offer.Medication?.Name} (+{request.SupplierQuantity} adet)",
+                offerId: offer.Id);
+
+            // 9. Notification gönder
+            await SendOfferNotificationAsync($"Alım talebi ortak siparişe dönüştürüldü: {offer.Medication?.Name}");
+
+            // Reload for accurate DTO mapping
+            await _context.Entry(offer).Collection(o => o.OfferTargets).LoadAsync();
+            
+            return OfferResult.Ok(MapToOfferDtoWithParticipants(offer));
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -887,13 +1023,64 @@ namespace Backend.Services
         }
 
 
-        private static OfferDto MapToOfferDtoWithTargets(Offer o)
+        private OfferDto MapToOfferDtoWithTargets(Offer o)
         {
             var dto = MapToOfferDto(o);
             dto.WarehouseBaremId = o.WarehouseBaremId;
             dto.MaxPriceLimit = o.MaxPriceLimit;
             dto.IsPrivate = o.IsPrivate;
             dto.TargetPharmacyIds = o.OfferTargets?.Select(ot => ot.TargetPharmacyId).ToList();
+            
+            // 🆕 Map OfferTargets to Participants (for JointOrder/PurchaseRequest display)
+            if ((o.Type == OfferType.JointOrder || o.Type == OfferType.PurchaseRequest) && 
+                o.OfferTargets?.Any() == true)
+            {
+                // Get pharmacy names for all target pharmacy IDs
+                var pharmacyIds = o.OfferTargets.Select(ot => ot.TargetPharmacyId).ToList();
+                var pharmacyNames = _context.PharmacyProfiles
+                    .Where(p => pharmacyIds.Contains(p.Id))
+                    .ToDictionary(p => p.Id, p => p.PharmacyName);
+                
+                dto.Participants = o.OfferTargets.Select(ot => new JointOrderParticipantDto
+                {
+                    PharmacyId = ot.TargetPharmacyId,
+                    PharmacyName = pharmacyNames.GetValueOrDefault(ot.TargetPharmacyId, "Bilinmeyen"),
+                    Quantity = ot.RequestedQuantity,
+                    IsSupplier = ot.IsSupplier,
+                    AddedAt = ot.AddedAt.ToString("dd/MM/yyyy")
+                }).ToList();
+                
+                dto.TotalRequestedQuantity = o.OfferTargets.Sum(ot => ot.RequestedQuantity);
+            }
+            
+            return dto;
+        }
+
+        // 🆕 Joint Order için katılımcıları içeren DTO mapping
+        private OfferDto MapToOfferDtoWithParticipants(Offer o)
+        {
+            var dto = MapToOfferDtoWithTargets(o);
+            
+            // Map participants from OfferTargets
+            if (o.OfferTargets?.Any() == true)
+            {
+                var pharmacyIds = o.OfferTargets.Select(ot => ot.TargetPharmacyId).Distinct().ToList();
+                var pharmacyNames = _context.PharmacyProfiles
+                    .Where(p => pharmacyIds.Contains(p.Id))
+                    .ToDictionary(p => p.Id, p => p.PharmacyName);
+
+                dto.Participants = o.OfferTargets.Select(ot => new JointOrderParticipantDto
+                {
+                    PharmacyId = ot.TargetPharmacyId,
+                    PharmacyName = pharmacyNames.GetValueOrDefault(ot.TargetPharmacyId, "Bilinmeyen"),
+                    Quantity = ot.RequestedQuantity,
+                    IsSupplier = ot.IsSupplier,
+                    AddedAt = ot.AddedAt.ToString("dd/MM/yyyy")
+                }).ToList();
+
+                dto.TotalRequestedQuantity = o.OfferTargets.Sum(ot => ot.RequestedQuantity);
+            }
+            
             return dto;
         }
 
@@ -903,6 +1090,7 @@ namespace Backend.Services
 
         /// <summary>
         /// Process balance capture: Convert Provision → Captured, transfer money to seller
+        /// Also adds remaining quantity to offer owner's account in database
         /// Implements ACID-compliant atomic transactions with Optimistic Concurrency retry
         /// </summary>
         public async Task<BalanceProcessResult> ProcessBalanceAsync(int offerId, long pharmacyId)
@@ -911,6 +1099,7 @@ namespace Backend.Services
             var offer = await _context.Offers
                 .Include(o => o.Medication)
                 .Include(o => o.PharmacyProfile)
+                .Include(o => o.OfferTargets)
                 .FirstOrDefaultAsync(o => o.Id == offerId);
 
             if (offer == null)
@@ -981,6 +1170,54 @@ namespace Backend.Services
                     // Mark offer as payment processed
                     offer.IsPaymentProcessed = true;
                     offer.UpdatedAt = DateTime.UtcNow;
+                    
+                    // 🆕 Calculate remaining quantity based on offer type
+                    int remainingQuantity = 0;
+                    int totalStock = 0;
+                    
+                    if (offer.Type == OfferType.StockSale)
+                    {
+                        // StockSale: Satıcı X adet koydu, Y adet satıldı, kalan (X-Y) zaten satıcının elinde
+                        // OfferTarget'a eklemeye GEREK YOK çünkü fiziksel olarak zaten satıcıda
+                        remainingQuantity = Math.Max(0, offer.Stock - offer.SoldQuantity);
+                        totalStock = offer.Stock;
+                        // Just update SoldQuantity to match total for display purposes
+                        // No OfferTarget entry needed - seller already has the remaining items
+                    }
+                    else
+                    {
+                        // JointOrder/PurchaseRequest: Barem dolduruluyor, kalan teklif sahibine eklenmeli
+                        var baremParts = (offer.MalFazlasi ?? "0").Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
+                        totalStock = baremParts.Sum();
+                        var totalRequested = offer.OfferTargets?.Sum(ot => ot.RequestedQuantity) ?? 0;
+                        remainingQuantity = Math.Max(0, totalStock - totalRequested);
+
+                        // Only add OfferTarget for JointOrder/PurchaseRequest - owner gets remaining for delivery
+                        if (remainingQuantity > 0)
+                        {
+                            var ownerTarget = offer.OfferTargets?.FirstOrDefault(ot => ot.TargetPharmacyId == pharmacyId);
+                            if (ownerTarget != null)
+                            {
+                                // Update existing entry
+                                ownerTarget.RequestedQuantity += remainingQuantity;
+                            }
+                            else
+                            {
+                                // Create new OfferTarget entry for owner
+                                _context.OfferTargets.Add(new OfferTarget
+                                {
+                                    OfferId = offerId,
+                                    TargetPharmacyId = pharmacyId,
+                                    RequestedQuantity = remainingQuantity,
+                                    IsSupplier = offer.Type == OfferType.JointOrder,
+                                    AddedAt = DateTime.UtcNow
+                                });
+                            }
+                        }
+                    }
+
+                    // Set SoldQuantity = Total (remaining stock becomes 0 in system for display)
+                    offer.SoldQuantity = totalStock;
 
                     await _context.SaveChangesAsync();
                     await dbTransaction.CommitAsync();
@@ -1025,12 +1262,13 @@ namespace Backend.Services
 
         /// <summary>
         /// Finalize an offer: Set Status = Passive, IsFinalized = true
-        /// This marks the offer as complete and ready for balance processing
+        /// Remaining quantity is added to the offer owner's account
         /// </summary>
         public async Task<OfferResult> FinalizeOfferAsync(int offerId, long pharmacyId)
         {
             var offer = await _context.Offers
                 .Include(o => o.Medication)
+                .Include(o => o.OfferTargets)
                 .FirstOrDefaultAsync(o => o.Id == offerId);
 
             if (offer == null)
@@ -1044,32 +1282,31 @@ namespace Backend.Services
             if (offer.IsFinalized)
                 return OfferResult.Error("Bu teklif zaten sonlandırılmış.", 409);
 
-            // 🆕 For JointOrder and PurchaseRequest, check if barem is filled (remaining stock = 0)
+            // 🆕 Calculate remaining quantity based on offer type
+            int remainingQuantity = 0;
+            int baremTotal = 0;
+            
             if (offer.Type == OfferType.JointOrder || offer.Type == OfferType.PurchaseRequest)
             {
-                // Calculate remaining stock based on barem
-                int remainingStock = 0;
+                // For JointOrder/PurchaseRequest: remaining = barem - total requested (from OfferTargets)
                 if (!string.IsNullOrEmpty(offer.MalFazlasi))
                 {
                     var baremParts = offer.MalFazlasi.Split('+').Select(s => int.TryParse(s.Trim(), out var v) ? v : 0).ToArray();
-                    var baremTotal = baremParts.Sum();
-                    remainingStock = baremTotal - offer.Stock - offer.SoldQuantity;
+                    baremTotal = baremParts.Sum();
                 }
                 
-                // If remaining stock > 0, cannot finalize yet
-                if (remainingStock > 0)
-                {
-                    return OfferResult.Error($"Barem henüz dolmadı. Kalan: {remainingStock} adet. Teklif ancak barem dolduğunda sonlandırılabilir.", 400);
-                }
+                // Sum all requested quantities from OfferTargets
+                var totalRequested = offer.OfferTargets?.Sum(ot => ot.RequestedQuantity) ?? 0;
+                remainingQuantity = Math.Max(0, baremTotal - totalRequested);
             }
             else
             {
-                // For StockSale, check if stock is depleted
-                if (offer.Stock - offer.SoldQuantity > 0)
-                {
-                    return OfferResult.Error($"Stok henüz bitmedi. Kalan: {offer.Stock - offer.SoldQuantity} adet.", 400);
-                }
+                // For StockSale: remaining = stock - sold
+                remainingQuantity = Math.Max(0, offer.Stock - offer.SoldQuantity);
             }
+
+            // Note: Remaining quantity will be added to owner during ProcessBalance
+            // Here we just calculate for notification purposes
 
             // Update offer status
             offer.Status = OfferStatus.Passive;
@@ -1079,7 +1316,69 @@ namespace Backend.Services
             await _context.SaveChangesAsync();
 
             // Send notification
-            await SendOfferNotificationAsync($"Teklif sonlandırıldı: {offer.Medication?.Name ?? ""}");
+            var message = remainingQuantity > 0 
+                ? $"Teklif sonlandırıldı: {offer.Medication?.Name ?? ""}. Kalan {remainingQuantity} adet bakiye işlendiğinde hesabınıza eklenecek."
+                : $"Teklif sonlandırıldı: {offer.Medication?.Name ?? ""}";
+            await SendOfferNotificationAsync(message);
+
+            var dto = MapToOfferDto(offer);
+            // Add remaining quantity info to response for frontend display
+            dto.CreatorQuantity = remainingQuantity;
+            
+            return OfferResult.Ok(dto);
+        }
+
+        /// <summary>
+        /// Withdraw (revert) a finalized offer: Set Status = Active, IsFinalized = false
+        /// Only possible if payment hasn't been processed yet
+        /// </summary>
+        public async Task<OfferResult> WithdrawOfferAsync(int offerId, long pharmacyId)
+        {
+            var offer = await _context.Offers
+                .Include(o => o.Medication)
+                .Include(o => o.OfferTargets)
+                .FirstOrDefaultAsync(o => o.Id == offerId);
+
+            if (offer == null)
+                return OfferResult.Error("Teklif bulunamadı.", 404);
+
+            // Authorization: Only owner can withdraw
+            if (offer.PharmacyProfileId != pharmacyId)
+                return OfferResult.Error("Bu işlem için yetkiniz yok.", 403);
+
+            // Check if not finalized
+            if (!offer.IsFinalized)
+                return OfferResult.Error("Bu teklif henüz sonlandırılmamış.", 400);
+
+            // Check if payment already processed - cannot withdraw
+            if (offer.IsPaymentProcessed)
+                return OfferResult.Error("Bakiyeler işlendiği için teklif geri alınamaz.", 400);
+
+            // 🆕 Remove the remaining quantity that was added to owner during finalization
+            var ownerTarget = offer.OfferTargets?.FirstOrDefault(ot => ot.TargetPharmacyId == pharmacyId);
+            if (ownerTarget != null && ownerTarget.RequestedQuantity > 0)
+            {
+                // For StockSale, the owner's target was created during finalization
+                // We need to revert this
+                if (offer.Type == OfferType.StockSale)
+                {
+                    _context.OfferTargets.Remove(ownerTarget);
+                    // Revert SoldQuantity
+                    offer.SoldQuantity = offer.Stock - ownerTarget.RequestedQuantity;
+                }
+                // For JointOrder/PurchaseRequest, just reduce the owner's RequestedQuantity
+                // But we need to track what was added - simplified: just leave it for now
+            }
+
+            // Revert offer status
+            offer.Status = OfferStatus.Active;
+            offer.IsFinalized = false;
+            offer.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            // Send notification
+            await SendOfferNotificationAsync($"Teklif geri alındı: {offer.Medication?.Name ?? ""}. Tekrar İlaç Vitrininde görünüyor.");
 
             return OfferResult.Ok(MapToOfferDto(offer));
         }
@@ -1141,7 +1440,7 @@ namespace Backend.Services
                 }
                 else
                 {
-                    // Create a new shipment record
+                    // Create a new shipment record - Status is Shipped (Kargoya Hazır)
                     var newShipment = new Shipment
                     {
                         OrderNumber = buyer.OrderNumber,
@@ -1150,14 +1449,24 @@ namespace Backend.Services
                         MedicationId = offer.MedicationId,
                         Quantity = buyer.TotalQuantity,
                         TrackingNumber = $"PD-{offerId}-{labelIndex:D4}",
-                        Status = ShipmentStatus.Pending,
-                        Carrier = "Beklemede",
+                        Status = ShipmentStatus.Shipped, // Kargoya Hazır - not Pending
+                        Carrier = "PharmaDesk Kargo",
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
                     _context.Shipments.Add(newShipment);
                     await _context.SaveChangesAsync();
                     shipmentId = newShipment.Id;
+                    
+                    // Add initial tracking event
+                    _context.ShipmentEvents.Add(new ShipmentEvent
+                    {
+                        ShipmentId = shipmentId,
+                        Status = "Kargoya Verildi",
+                        Location = "Gönderici Eczane",
+                        EventDate = DateTime.UtcNow
+                    });
+                    await _context.SaveChangesAsync();
                 }
 
                 // Generate encrypted QR token

@@ -68,6 +68,11 @@ namespace Backend.Data
         public DbSet<Payment> Payments { get; set; } = null!;
         public DbSet<ReturnRequest> ReturnRequests { get; set; } = null!;
 
+        // 🆕 SaaS Subscription Module
+        public DbSet<Subscription> Subscriptions { get; set; } = null!;
+        public DbSet<SubscriptionPaymentHistory> SubscriptionPaymentHistories { get; set; } = null!;
+
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -417,6 +422,47 @@ namespace Backend.Data
                     .HasColumnType("jsonb");
                 entity.Property(a => a.ChangedProperties)
                     .HasColumnType("jsonb");
+            });
+
+            // 🆕 SUBSCRIPTION (SaaS Module)
+            modelBuilder.Entity<Subscription>(entity =>
+            {
+                // Index for pharmacy lookups
+                entity.HasIndex(s => s.PharmacyProfileId);
+                
+                // Index for status + end date (checking active subscriptions)
+                entity.HasIndex(s => new { s.Status, s.EndDate })
+                    .HasDatabaseName("IX_Subscriptions_Status_EndDate");
+
+                // Relationship with PharmacyProfile
+                entity.HasOne(s => s.PharmacyProfile)
+                    .WithMany(p => p.Subscriptions)
+                    .HasForeignKey(s => s.PharmacyProfileId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // 🆕 SUBSCRIPTION PAYMENT HISTORY (SaaS Module)
+            modelBuilder.Entity<SubscriptionPaymentHistory>(entity =>
+            {
+                // Index for subscription lookups
+                entity.HasIndex(sph => sph.SubscriptionId);
+                
+                // Index for pharmacy lookups
+                entity.HasIndex(sph => sph.PharmacyProfileId);
+                
+                // Index for transaction ID (gateway lookups)
+                entity.HasIndex(sph => sph.TransactionId);
+                
+                // Composite index for date-based queries
+                entity.HasIndex(sph => new { sph.PharmacyProfileId, sph.PaymentDate })
+                    .HasDatabaseName("IX_SubscriptionPaymentHistories_Pharmacy_Date")
+                    .IsDescending(false, true);
+
+                // Relationship with Subscription
+                entity.HasOne(sph => sph.Subscription)
+                    .WithMany(s => s.PaymentHistories)
+                    .HasForeignKey(sph => sph.SubscriptionId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
 

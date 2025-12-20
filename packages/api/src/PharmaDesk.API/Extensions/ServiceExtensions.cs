@@ -150,21 +150,21 @@ namespace PharmaDesk.API.Extensions
         {
             services.AddRateLimiter(options =>
             {
-                // Global rate limit: 100 requests per minute per IP
+                // Global rate limit: 1000 requests per minute per IP (increased for testing)
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
                         factory: _ => new FixedWindowRateLimiterOptions
                         {
                             AutoReplenishment = true,
-                            PermitLimit = 100,
+                            PermitLimit = 1000,  // Increased from 100 for testing
                             Window = TimeSpan.FromMinutes(1)
                         }));
 
-                // Custom policy for auth endpoints (stricter: 10 requests per minute)
+                // Custom policy for auth endpoints (100 requests per minute for testing)
                 options.AddFixedWindowLimiter("auth", opt =>
                 {
-                    opt.PermitLimit = 10;
+                    opt.PermitLimit = 100;  // Increased from 10 for testing
                     opt.Window = TimeSpan.FromMinutes(1);
                     opt.AutoReplenishment = true;
                 });
@@ -216,6 +216,9 @@ namespace PharmaDesk.API.Extensions
             
             // 🆕 Register CryptoService (AES-256 for QR shipment tokens)
             services.AddSingleton<ICryptoService, CryptoService>();
+            
+            // 🆕 Register SubscriptionService (SaaS subscription management)
+            services.AddScoped<ISubscriptionService, SubscriptionService>();
             
             // Add memory cache for barem data caching
             services.AddMemoryCache();

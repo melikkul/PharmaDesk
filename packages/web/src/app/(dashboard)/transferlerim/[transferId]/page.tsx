@@ -4,13 +4,42 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { ShipmentItem, TrackingEvent } from '@/lib/dashboardData';
 
 // Bileşenleri ve Stilleri import edelim
 import SettingsCard from '@/components/settings/SettingsCard';
 import '@/app/(dashboard)/dashboard/dashboard.css';
-import raporStyles from '@/app/(dashboard)/raporlar/raporDetay.module.css'; // Geri butonu ve başlık için
-import detayStyles from './transferDetay.module.css'; // Bu sayfaya özel stiller
+import raporStyles from '@/app/(dashboard)/raporlar/raporDetay.module.css';
+import detayStyles from './transferDetay.module.css';
+
+// Tracking bileşenleri
+import { useTrackingHub } from '@/hooks/useTrackingHub';
+
+// Dynamic import for SSR-safe Leaflet map
+const UserTrackingMap = dynamic(
+  () => import('@/components/tracking/UserTrackingMap'),
+  { ssr: false, loading: () => <div style={{ height: '300px', background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Harita yükleniyor...</div> }
+);
+
+// Tracking status type
+interface TrackingStatus {
+  shipmentId: number;
+  carrierId: number | null;
+  carrierName: string | null;
+  carrierPhone: string | null;
+  carrierLocation: {
+    latitude: number;
+    longitude: number;
+    lastUpdate: string;
+  } | null;
+  currentStopCount: number;
+  myStopOrder: number;
+  remainingStops: number;
+  estimatedArrival: string | null;
+  shipmentStatus: string;
+  isLiveTrackingAvailable: boolean;
+}
 
 // İkonlar
 const BackIcon = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>;
@@ -26,6 +55,35 @@ export default function TransferDetayPage() {
 
   const [shipment, setShipment] = useState<ShipmentItem | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  
+  // ═══════════════════════════════════════════════════════════════
+  // TRACKING STATE
+  // ═══════════════════════════════════════════════════════════════
+  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  
+  // Eczane konumu (teslimat adresi) - şimdilik mock, gerçek implementasyonda API'den gelecek
+  const pharmacyLocation = useMemo(() => {
+    // TODO: Bu bilgi API'den shipment detaylarıyla birlikte gelmeli
+    // Şimdilik kurye konumunun yakınında bir mock konum kullanalım
+    if (trackingStatus?.carrierLocation) {
+      return {
+        latitude: trackingStatus.carrierLocation.latitude + 0.008, // Yaklaşık 800m ileride
+        longitude: trackingStatus.carrierLocation.longitude + 0.005,
+        name: shipment?.counterparty || 'Eczane'
+      };
+    }
+    return null;
+  }, [trackingStatus?.carrierLocation, shipment?.counterparty]);
+  
+  // SignalR hook for real-time updates (only enabled when Rule of 5 applies)
+  // Pass initial location from API so marker shows immediately
+  const { carrierLocation: liveLocation, connected: signalRConnected } = useTrackingHub({
+    shipmentId: trackingStatus?.shipmentId || 0,
+    carrierId: trackingStatus?.carrierId || null,
+    enabled: trackingStatus?.isLiveTrackingAvailable || false,
+    initialLocation: trackingStatus?.carrierLocation || null
+  });
 
   // Fetch shipment data from API
   useEffect(() => {
@@ -41,7 +99,7 @@ export default function TransferDetayPage() {
         if (response.ok) {
           const data = await response.json();
           // Map API response to ShipmentItem format
-          setShipment({
+          const mappedShipment: ShipmentItem = {
             id: data.id,
             orderNumber: data.orderNumber || `ORD-${data.id}`,
             productName: data.productName || 'Bilinmiyor',
@@ -49,11 +107,20 @@ export default function TransferDetayPage() {
             trackingNumber: data.trackingNumber || 'N/A',
             date: data.updatedAt || data.createdAt || new Date().toISOString(),
             transferType: data.transferType || 'outbound',
-            counterparty: data.counterpartyName || 'Bilinmiyor',
+            counterparty: data.counterpartyName || data.counterparty || 'Bilinmiyor',
             shippingProvider: data.shippingProvider || 'Bilinmiyor',
             status: data.status || 'pending',
             trackingHistory: data.trackingHistory || []
-          });
+          };
+          setShipment(mappedShipment);
+          
+          // ═══════════════════════════════════════════════════════════
+          // TRACKING: Fetch if status is in_transit (shipped, 1, in_transit, InTransit)
+          // ═══════════════════════════════════════════════════════════
+          const statusStr = String(data.status).toLowerCase();
+          if (statusStr === 'shipped' || statusStr === 'in_transit' || statusStr === '1' || statusStr === 'intransit') {
+            fetchTrackingStatus(data.id, token);
+          }
         } else if (response.status === 404) {
           setShipment(null);
         } else {
@@ -70,6 +137,28 @@ export default function TransferDetayPage() {
     fetchShipment();
   }, [transferId]);
 
+  // ═══════════════════════════════════════════════════════════════
+  // TRACKING STATUS FETCH
+  // ═══════════════════════════════════════════════════════════════
+  const fetchTrackingStatus = async (shipmentId: number, token: string | null) => {
+    setTrackingLoading(true);
+    try {
+      const response = await fetch(`/api/shipments/${shipmentId}/tracking-status`, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTrackingStatus(data);
+      } else {
+        console.log('Tracking status not available:', response.status);
+      }
+    } catch (err) {
+      console.error('Tracking status fetch error:', err);
+    } finally {
+      setTrackingLoading(false);
+    }
+  };
+
   // Duruma göre ikon döndüren yardımcı fonksiyon
   const getIconForEvent = (status: string) => {
     if (status.includes('Teslim Edildi')) return <CheckIcon />;
@@ -84,6 +173,28 @@ export default function TransferDetayPage() {
     return shipment.trackingHistory.length - 1;
   }, [shipment]);
 
+  // Check if shipment is in transit
+  const isInTransit = useMemo(() => {
+    if (!shipment) return false;
+    const status = String(shipment.status).toLowerCase();
+    // shipped = InTransit (status 1), in_transit, intransit are all valid
+    return status === 'in_transit' || status === '1' || status === 'intransit' || status === 'shipped';
+  }, [shipment]);
+
+  // Get status badge info
+  const getStatusBadge = () => {
+    if (!shipment) return { text: 'Bilinmiyor', color: '#6b7280', icon: '📦' };
+    const status = String(shipment.status).toLowerCase();
+    if (status === 'delivered' || status === '3') return { text: 'Teslim Edildi', color: '#10b981', icon: '✅' };
+    if (status === 'in_transit' || status === '2' || status === 'intransit') return { text: 'Yolda', color: '#f59e0b', icon: '🚚' };
+    if (status === 'shipped' || status === '1') return { text: 'Kargoda', color: '#3b82f6', icon: '📦' };
+    if (status === 'pending' || status === '0') return { text: 'Hazırlanıyor', color: '#6366f1', icon: '⏳' };
+    if (status === 'cancelled') return { text: 'İptal', color: '#ef4444', icon: '❌' };
+    return { text: status, color: '#6b7280', icon: '📦' };
+  };
+
+  const statusBadge = getStatusBadge();
+
   if (shipment === undefined) {
     return <div>Yükleniyor...</div>;
   }
@@ -95,22 +206,48 @@ export default function TransferDetayPage() {
   // Alış/Satış durumuna göre etiketleri belirle
   const isOutbound = shipment.transferType === 'outbound';
   const counterpartyLabel = isOutbound ? "Alıcı Eczane" : "Gönderici Eczane";
-  const statusLabel = isOutbound ? "Giden Kargo" : "Gelen Kargo";
 
   return (
     <div className={raporStyles.pageContainer}>
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* HEADER - Tek başlık */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
       <div className={raporStyles.pageHeader}>
-        <h1 className={raporStyles.pageTitle}>Kargo Takip Detayı</h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <h1 className={raporStyles.pageTitle}>
+            📦 Teslimat Detayı
+          </h1>
+          <span 
+            style={{ 
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '6px 14px', 
+              borderRadius: '20px', 
+              backgroundColor: statusBadge.color + '20',
+              color: statusBadge.color,
+              fontWeight: 600,
+              fontSize: '14px'
+            }}
+          >
+            <span>{statusBadge.icon}</span>
+            {statusBadge.text}
+          </span>
+        </div>
         <Link href="/transferlerim" className={raporStyles.backButton}>
           <BackIcon />
-          <span>Tüm Transferlere Geri Dön</span>
+          <span>Tüm Transferler</span>
         </Link>
       </div>
 
+      {/* ═══════════════════════════════════════════════════════════════ */}
+      {/* MAIN GRID - 2 sütun */}
+      {/* ═══════════════════════════════════════════════════════════════ */}
       <div className={detayStyles.detailGrid}>
-        {/* Sol Sütun: Sipariş Bilgileri */}
+        
+        {/* SOL SÜTUN: Sipariş Bilgileri */}
         <SettingsCard
-          title={statusLabel}
+          title="Sipariş Detayları"
           description={`Sipariş No: ${shipment.orderNumber}`}
         >
           <div className={detayStyles.infoList}>
@@ -119,12 +256,10 @@ export default function TransferDetayPage() {
               <span className={detayStyles.infoValue}>{shipment.productName}</span>
             </div>
             
-            {/* ----- YENİ EKLENEN SATIR ----- */}
             <div className={detayStyles.infoItem}>
               <span className={detayStyles.infoLabel}>Adet</span>
               <span className={detayStyles.infoValue}>{shipment.quantity} adet</span>
             </div>
-            {/* ----- YENİ SATIR SONU ----- */}
 
             <div className={detayStyles.infoItem}>
               <span className={detayStyles.infoLabel}>{counterpartyLabel}</span>
@@ -142,48 +277,173 @@ export default function TransferDetayPage() {
               <span className={detayStyles.infoLabel}>Son Güncelleme</span>
               <span className={detayStyles.infoValue}>{formatDate(shipment.date)}</span>
             </div>
+
+            {/* Kurye Bilgisi - eğer varsa */}
+            {trackingStatus?.carrierName && (
+              <>
+                <div className={detayStyles.infoDivider}></div>
+                <div className={detayStyles.infoItem}>
+                  <span className={detayStyles.infoLabel}>🚚 Kurye</span>
+                  <span className={detayStyles.infoValue}>{trackingStatus.carrierName}</span>
+                </div>
+                {trackingStatus.carrierPhone && (
+                  <div className={detayStyles.infoItem}>
+                    <span className={detayStyles.infoLabel}>📱 Telefon</span>
+                    <a href={`tel:${trackingStatus.carrierPhone}`} className={detayStyles.infoValue} style={{ color: '#3b82f6' }}>
+                      {trackingStatus.carrierPhone}
+                    </a>
+                  </div>
+                )}
+                {trackingStatus.estimatedArrival && (
+                  <div className={detayStyles.infoItem}>
+                    <span className={detayStyles.infoLabel}>⏱️ Tahmini Varış</span>
+                    <span className={detayStyles.infoValue} style={{ fontWeight: 600, color: '#10b981' }}>
+                      ~{trackingStatus.estimatedArrival}
+                    </span>
+                  </div>
+                )}
+                {trackingStatus.remainingStops > 0 && (
+                  <div className={detayStyles.infoItem}>
+                    <span className={detayStyles.infoLabel}>📍 Sıra</span>
+                    <span className={detayStyles.infoValue}>
+                      Önünüzde {trackingStatus.remainingStops} teslimat var
+                    </span>
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </SettingsCard>
 
-        {/* Sağ Sütun: Kargo Geçmişi */}
-        <SettingsCard
-          title="Kargo Geçmişi"
-          description="Siparişinizin anlık durumunu takip edin."
-        >
-          <div className={detayStyles.trackingTimeline}>
-            {shipment.trackingHistory && shipment.trackingHistory.map((event, index) => (
-              <div
-                key={index}
-                className={`
-                  ${detayStyles.timelineItem} 
-                  ${index === activeStepIndex ? detayStyles.active : ''} 
-                  ${index < activeStepIndex ? detayStyles.completed : ''}
-                `}
-              >
-                <div className={detayStyles.timelineIcon}>
-                  {getIconForEvent(event.status)}
+        {/* SAĞ SÜTUN: Kargo Geçmişi + Harita */}
+        <div className={detayStyles.rightColumn}>
+          {/* Kargo Geçmişi */}
+          <SettingsCard
+            title="Kargo Geçmişi"
+            description="Siparişinizin takip durumu"
+          >
+            <div className={detayStyles.trackingTimeline}>
+              {shipment.trackingHistory && shipment.trackingHistory.map((event, index) => (
+                <div
+                  key={index}
+                  className={`
+                    ${detayStyles.timelineItem} 
+                    ${index === activeStepIndex ? detayStyles.active : ''} 
+                    ${index < activeStepIndex ? detayStyles.completed : ''}
+                  `}
+                >
+                  <div className={detayStyles.timelineIcon}>
+                    {getIconForEvent(event.status)}
+                  </div>
+                  <div className={detayStyles.timelineContent}>
+                    <strong>{event.status}</strong>
+                    <span>{formatEventDate(event.date)}</span>
+                    <p>{event.location}</p>
+                  </div>
                 </div>
-                <div className={detayStyles.timelineContent}>
-                  <strong>{event.status}</strong>
-                  <span>{event.date}</span>
-                  <p>{event.location}</p>
+              ))}
+            </div>
+          </SettingsCard>
+
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {/* HARİTA veya SIRA BİLGİSİ - Rule of 5 */}
+          {/* ═══════════════════════════════════════════════════════════ */}
+          {isInTransit && trackingStatus && (
+            <div className={detayStyles.mapSection}>
+              {/* CANLI TAKİP - Sadece ilk 5 sıradaki eczaneler için */}
+              {trackingStatus.isLiveTrackingAvailable ? (
+                <>
+                  <div className={detayStyles.mapHeader}>
+                    <h3>
+                      📍 Canlı Konum Takibi
+                    </h3>
+                    <div className={detayStyles.headerRight}>
+                      {(liveLocation || trackingStatus.carrierLocation) && (
+                        <span className={detayStyles.lastUpdateText}>
+                          Son güncelleme: {new Date((liveLocation || trackingStatus.carrierLocation)!.lastUpdate).toLocaleTimeString('tr-TR')}
+                        </span>
+                      )}
+                      <span className={detayStyles.connectionStatus}>
+                        <span className={`${detayStyles.statusDot} ${signalRConnected ? detayStyles.connected : ''}`}></span>
+                        {signalRConnected ? 'Canlı' : 'Bağlanıyor...'}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {trackingLoading ? (
+                    <div className={detayStyles.mapLoading}>
+                      <div className={detayStyles.spinner}></div>
+                      <p>Konum yükleniyor...</p>
+                    </div>
+                  ) : (
+                    <UserTrackingMap 
+                      carrierId={trackingStatus.carrierId}
+                      carrierLocation={liveLocation || trackingStatus.carrierLocation}
+                      carrierName={trackingStatus.carrierName || 'Kurye'}
+                      pharmacyLocation={pharmacyLocation}
+                    />
+                  )}
+                </>
+              ) : (
+                /* SIRA BİLGİSİ - İlk 5'te olmayan eczaneler için */
+                <div className={detayStyles.queueInfoPanel}>
+                  <div className={detayStyles.queueIcon}>📦</div>
+                  <h4>Siparişiniz Yolda</h4>
+                  <p className={detayStyles.queueNumber}>
+                    Önünüzde <strong>{trackingStatus.remainingStops}</strong> teslimat var
+                  </p>
+                  
+                  {/* Progress Bar */}
+                  <div className={detayStyles.queueProgress}>
+                    <div 
+                      className={detayStyles.queueProgressBar}
+                      style={{ width: `${Math.max(5, Math.min(95, (1 - trackingStatus.remainingStops / 20) * 100))}%` }}
+                    />
+                  </div>
+                  
+                  <p className={detayStyles.queueNote}>
+                    Sıranız yaklaştığında (son 5 teslimat) canlı konum takibi aktif olacaktır.
+                  </p>
+                  
+                  {trackingStatus.estimatedArrival && (
+                    <p className={detayStyles.queueEta}>
+                      Tahmini varış: <strong>~{trackingStatus.estimatedArrival}</strong>
+                    </p>
+                  )}
+                  
+                  {trackingStatus.carrierName && (
+                    <p className={detayStyles.queueCarrier}>
+                      🚚 Kurye: {trackingStatus.carrierName}
+                    </p>
+                  )}
                 </div>
-              </div>
-            ))}
-          </div>
-        </SettingsCard>
+              )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-// Tarihi formatlamak için (kopyalandı)
+// Tarihi formatlamak için
 const formatDate = (dateStr: string): string => {
   const date = new Date(dateStr);
   return date.toLocaleString('tr-TR', { 
     day: '2-digit', 
     month: 'long', 
     year: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
+};
+
+// Event tarihi için kısa format
+const formatEventDate = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  return date.toLocaleString('tr-TR', { 
+    day: '2-digit', 
+    month: 'short',
     hour: '2-digit', 
     minute: '2-digit' 
   });

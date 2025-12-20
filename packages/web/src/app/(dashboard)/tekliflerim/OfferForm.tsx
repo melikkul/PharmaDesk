@@ -954,11 +954,17 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
                   onFocus={() => { if (productSearchTerm.length > 0) setIsAutocompleteOpen(true); }}
                   onBlur={() => {
                     onBlur();
-                    // 🆕 Flag-based check - NO setTimeout for immediate response
-                    if (!isSuggestionClicked) {
+                    // 🆕 Auto-select first suggestion on blur if user didn't manually select
+                    setTimeout(() => {
+                      if (!isSuggestionClicked && suggestions.length > 0 && !selectedMedicationId) {
+                        // Auto-select first suggestion
+                        const firstSuggestion = suggestions[0];
+                        console.log('🔄 Auto-selecting first suggestion:', firstSuggestion.name);
+                        handleSelectSuggestion(firstSuggestion);
+                      }
                       setIsAutocompleteOpen(false);
-                    }
-                    setIsSuggestionClicked(false); // Reset flag
+                      setIsSuggestionClicked(false); // Reset flag
+                    }, 200); // Small delay to allow manual click to register first
                   }}
                   placeholder="İlaç adı yazarak arayın..."
                   disabled={isEditMode}
@@ -1298,6 +1304,8 @@ const OfferForm: React.FC<OfferFormProps> = ({ medication, onSave, isSaving, ini
               </div>
             )}
           </div>
+
+
 
           {/* Son Kullanma Tarihi - Sadece Stok Satışı için (Ortak Sipariş depodan, Alım Talebi ise talep olduğu için SKT yok) */}
           {offerType === 'stockSale' && (

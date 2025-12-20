@@ -12,7 +12,7 @@ export const offerService = {
     return response.json();
   },
 
-  getOfferById: async (token: string, id: string): Promise<Offer> => {
+  getOfferById: async (token: string, id: string): Promise<Offer | null> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${id}`, {
       credentials: 'include',
       headers: {
@@ -20,7 +20,11 @@ export const offerService = {
       },
     });
     if (!response.ok) {
-      const errorText = await response.text();
+      // 404 is expected for non-existent or non-owned offers - return null silently
+      if (response.status === 404 || response.status === 403) {
+        return null;
+      }
+      // For other errors, still throw
       const error: any = new Error(`Failed to fetch offer: ${response.status} ${response.statusText}`);
       error.status = response.status;
       throw error;
@@ -175,6 +179,24 @@ export const offerService = {
     return response.json();
   },
 
+  // 🆕 Teklifi geri al
+  withdrawOffer: async (token: string, offerId: number): Promise<{ message: string; offer: any }> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/withdraw`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to withdraw offer');
+    }
+
+    return response.json();
+  },
+
   // 🆕 Bakiyeleri işle (Process Balance / Capture)
   processBalance: async (token: string, offerId: number): Promise<{ message: string; capturedAmount: number; transactionCount: number }> => {
     const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/process-balance`, {
@@ -205,6 +227,30 @@ export const offerService = {
     if (!response.ok) {
       const errorData = await response.json();
       throw new Error(errorData.message || 'Failed to get shipment labels');
+    }
+
+    return response.json();
+  },
+
+  // 🆕 Alım Talebini Ortak Siparişe dönüştür
+  convertToJointOrder: async (
+    token: string, 
+    offerId: number, 
+    supplierQuantity: number
+  ): Promise<{ message: string; offer: any }> => {
+    const response = await fetch(`${API_BASE_URL}/api/offers/${offerId}/convert-to-joint`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
+      },
+      body: JSON.stringify({ supplierQuantity }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Dönüştürme başarısız');
     }
 
     return response.json();

@@ -16,10 +16,20 @@ export interface User {
 }
 
 export interface LoginResponse {
-  token: string;
+  /** Short-lived access token (15 minutes) */
+  accessToken: string;
+  /** Long-lived refresh token (stored as HttpOnly cookie by backend) */
+  refreshToken?: string;
+  /** Access token expiry in seconds (default 900) */
+  expiresIn: number;
+  /** @deprecated Use accessToken instead */
+  token?: string;
   user: User;
   isFirstLogin: boolean;
   error?: string;
+  /** For registration - indicates pending admin approval */
+  pendingApproval?: boolean;
+  message?: string;
 }
 
 export interface PharmacyProfile {
@@ -164,6 +174,16 @@ export interface Offer {
   // 🆕 Finalization tracking (for Provision/Capture Pattern)
   isFinalized?: boolean;
   isPaymentProcessed?: boolean;
+  
+  // 🆕 Participants list (JointOrder/PurchaseRequest)
+  participants?: Array<{
+    pharmacyId: number;
+    pharmacyName: string;
+    quantity: number;
+    isSupplier: boolean;
+    addedAt?: string;
+  }>;
+  totalRequestedQuantity?: number;
 }
 
 // 🆕 Shipment Label for QR code printing

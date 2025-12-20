@@ -27,28 +27,35 @@ namespace PharmaDesk.Infrastructure.Migrations
                 defaultValue: 0u);
             */
 
-            /*
-            migrationBuilder.AddColumn<bool>(
-                name: "IsFinalized",
-                table: "Offers",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
+            // Add IsFinalized column to Offers (idempotent with Sql check)
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Offers' AND column_name='IsFinalized') THEN
+                        ALTER TABLE ""Offers"" ADD COLUMN ""IsFinalized"" BOOLEAN NOT NULL DEFAULT false;
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.AddColumn<bool>(
-                name: "IsPaymentProcessed",
-                table: "Offers",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
+            // Add IsPaymentProcessed column to Offers
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='Offers' AND column_name='IsPaymentProcessed') THEN
+                        ALTER TABLE ""Offers"" ADD COLUMN ""IsPaymentProcessed"" BOOLEAN NOT NULL DEFAULT false;
+                    END IF;
+                END $$;
+            ");
 
-            migrationBuilder.AddColumn<bool>(
-                name: "IsDepotFulfillment",
-                table: "CartItems",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
-            */
+            // Add IsDepotFulfillment column to CartItems
+            migrationBuilder.Sql(@"
+                DO $$ 
+                BEGIN 
+                    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='CartItems' AND column_name='IsDepotFulfillment') THEN
+                        ALTER TABLE ""CartItems"" ADD COLUMN ""IsDepotFulfillment"" BOOLEAN NOT NULL DEFAULT false;
+                    END IF;
+                END $$;
+            ");
 
             migrationBuilder.AddColumn<string>(
                 name: "Username",

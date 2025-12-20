@@ -33,39 +33,49 @@ export default function Form() {
   }, [searchParams]);
 
   const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setErrorMessage("");
-    setSuccessMessage("");
+  e.preventDefault();
+  setErrorMessage("");
+  setSuccessMessage("");
 
-    if (!email.trim() || !password.trim()) {
-      setErrorMessage("Lütfen tüm alanları doldurunuz.");
-      return;
+  if (!email.trim() || !password.trim()) {
+    setErrorMessage("Lütfen tüm alanları doldurunuz.");
+    return;
+  }
+
+  try {
+    const data = await authService.login(email, password, rememberMe);
+
+    // Construct user object from response
+    console.log('[Login] API Response data.user:', data.user);
+    
+    const userData = {
+        ...data.user,
+        pharmacyId: data.user.pharmacyId,
+        username: data.user.email,
+        isFirstLogin: data.isFirstLogin
+    };
+    
+    console.log('[Login] Constructed userData:', userData);
+    console.log('[Login] userData.pharmacyId:', userData.pharmacyId);
+    
+    login(data.accessToken || data.token || '', userData, rememberMe);
+    // Force full page reload as requested
+    window.location.href = "/dashboard";
+  } catch (error: any) {
+    // Check if this is a pending approval error - show with warning style
+    const isPendingApproval = error.message?.includes("yönetici onayı");
+    if (isPendingApproval) {
+      setSuccessMessage(""); // Clear any success message
     }
-
-    try {
-      const data = await authService.login(email, password);
-
-      // Construct user object from response
-      console.log('[Login] API Response data.user:', data.user);
-      
-      const userData = {
-          ...data.user,
-          pharmacyId: data.user.pharmacyId, // Use normalized pharmacyId
-          username: data.user.email, // Use email as username for routing
-          isFirstLogin: data.isFirstLogin
-      };
-      
-      console.log('[Login] Constructed userData:', userData);
-      console.log('[Login] userData.pharmacyId:', userData.pharmacyId);
-      
-      login(data.token, userData, rememberMe);
-      // Force full page reload as requested
-      window.location.href = "/dashboard";
-    } catch (error: any) {
-      // console.error("Login error:", error);
+    // More user-friendly error message for login failures
+    const isAuthError = error.message?.includes("Invalid") || error.message?.includes("Unauthorized") || error.status === 401;
+    if (isAuthError) {
+      setErrorMessage("Email veya şifre hatalı. Kayıtlı değilseniz lütfen kayıt olun.");
+    } else {
       setErrorMessage(error.message || "Giriş yapılamadı.");
     }
-  };
+  }
+};
 
   return (
     <div className="container">

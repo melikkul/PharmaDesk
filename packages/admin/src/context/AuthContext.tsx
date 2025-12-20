@@ -21,11 +21,49 @@ interface AuthContextType {
 }
 
 // API istekleri için merkezi bir Axios instance'ı oluşturuyoruz.
-// Docker ortamında backend servisine erişmek için servis adını kullanabiliriz.
+// BaseURL boş bırakılır ki istekler Next.js proxy üzerinden gitsin
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8081',
+  baseURL: '', // Next.js rewrite proxy kullanır
   withCredentials: true, // HttpOnly cookie desteği için gerekli
 });
+
+// Request interceptor - her istekte token'ı kontrol et ve ekle
+api.interceptors.request.use(
+  (config) => {
+    // Token'ı storage'dan al (her istekte güncel kontrolü yapar)
+    const storedToken = localStorage.getItem('admin_token') || sessionStorage.getItem('admin_token');
+    if (storedToken && config.headers) {
+      config.headers['Authorization'] = `Bearer ${storedToken}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Response interceptor - 401 hatalarında login'e yönlendir
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    // If 401, clear tokens and redirect to login
+    if (error.response?.status === 401) {
+      // Clear tokens
+      localStorage.removeItem('admin_token');
+      localStorage.removeItem('admin_user');
+      sessionStorage.removeItem('admin_token');
+      sessionStorage.removeItem('admin_user');
+      
+      // Redirect to login (avoid infinite loop by checking current path)
+      if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 
 // AuthContext'i oluşturuyoruz. Başlangıç değeri undefined olacak.
 const AuthContext = createContext<AuthContextType | undefined>(undefined); 
@@ -62,25 +100,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const login = useCallback(async (email: string, password: string, rememberMe: boolean = true) => {
     try {
-      const response = await api.post('/api/admin/login', { email, password });
-      const { token, user } = response.data;
+      const response = await api.post('/api/admin/login', { email, password, rememberMe });
+      // Support both accessToken (new) and token (legacy) response formats
+      const accessToken = response.data.accessToken || response.data.token;
+      const user = response.data.user;
 
-      if (token && user) {
+      if (accessToken && user) {
         if (rememberMe) {
-          localStorage.setItem('admin_token', token);
+          localStorage.setItem('admin_token', accessToken);
           localStorage.setItem('admin_user', JSON.stringify(user));
           sessionStorage.removeItem('admin_token');
           sessionStorage.removeItem('admin_user');
         } else {
-          sessionStorage.setItem('admin_token', token);
+          sessionStorage.setItem('admin_token', accessToken);
           sessionStorage.setItem('admin_user', JSON.stringify(user));
           localStorage.removeItem('admin_token');
           localStorage.removeItem('admin_user');
         }
         
-        setToken(token);
+        setToken(accessToken);
         setUser(user);
-        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         router.push('/dashboard');
       } else {
         throw new Error('Login failed: No token or user data received.');

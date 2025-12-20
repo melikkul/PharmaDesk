@@ -2,10 +2,38 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/store/AuthContext';
 import { orderService } from '@/services/orderService';
 import { Order } from '@/types';
 import styles from './orderDetail.module.css';
+import TrackingStatusCard from '@/components/tracking/TrackingStatusCard';
+import { useTrackingHub } from '@/hooks/useTrackingHub';
+
+// Dynamic import for SSR-safe Leaflet map
+const UserTrackingMap = dynamic(
+  () => import('@/components/tracking/UserTrackingMap'),
+  { ssr: false, loading: () => <div className={styles.mapLoading}>Harita yükleniyor...</div> }
+);
+
+// Tracking status type
+interface TrackingStatus {
+  shipmentId: number;
+  carrierId: number | null;
+  carrierName: string | null;
+  carrierPhone: string | null;
+  carrierLocation: {
+    latitude: number;
+    longitude: number;
+    lastUpdate: string;
+  } | null;
+  currentStopCount: number;
+  myStopOrder: number;
+  remainingStops: number;
+  estimatedArrival: string | null;
+  shipmentStatus: string;
+  isLiveTrackingAvailable: boolean;
+}
 
 const KDV_RATE = 0.10;
 
@@ -31,11 +59,29 @@ export default function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  
+  // Tracking state
+  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus | null>(null);
+  const [trackingLoading, setTrackingLoading] = useState(false);
+  
+  // SignalR hook for real-time updates (only enabled when Rule of 5 applies)
+  const { carrierLocation: liveLocation, connected: signalRConnected } = useTrackingHub({
+    shipmentId: trackingStatus?.shipmentId || 0,
+    carrierId: trackingStatus?.carrierId || null,
+    enabled: trackingStatus?.isLiveTrackingAvailable || false
+  });
 
   useEffect(() => {
     if (!token) { router.push('/login'); return; }
     fetchOrderDetail();
   }, [token, id]);
+  
+  // Fetch tracking status when order is in transit
+  useEffect(() => {
+    if (order && (order as any).shipmentId && order.status?.toLowerCase().includes('transit')) {
+      fetchTrackingStatus((order as any).shipmentId);
+    }
+  }, [order]);
 
   const fetchOrderDetail = async () => {
     setLoading(true);
@@ -49,6 +95,23 @@ export default function OrderDetailPage() {
       setError('Sipariş detayı yüklenirken hata oluştu');
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchTrackingStatus = async (shipmentId: number) => {
+    setTrackingLoading(true);
+    try {
+      const response = await fetch(`/api/shipments/${shipmentId}/tracking-status`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setTrackingStatus(data);
+      }
+    } catch (err) {
+      console.error('Tracking status fetch error:', err);
+    } finally {
+      setTrackingLoading(false);
     }
   };
 
@@ -349,6 +412,72 @@ export default function OrderDetailPage() {
             <tfoot><tr><td colSpan={4} className={styles.totalLabel}>Genel Toplam</td><td className={styles.totalValue}>{formatCurrency(order.totalAmount)}</td></tr></tfoot>
           </table>
         </div>
+        
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {/* KARGO TAKİP BÖLÜMÜ (Rule of 5 Visibility) */}
+        {/* ═══════════════════════════════════════════════════════════════ */}
+        {trackingStatus && (
+          <div className={styles.trackingSection}>
+            <h3 className={styles.sectionTitle}>📦 Kargo Takibi</h3>
+            
+            {/* Status Card */}
+            <TrackingStatusCard status={trackingStatus} />
+            
+            {/* Live Map or Queue Info based on Rule of 5 */}
+            {trackingStatus.isLiveTrackingAvailable ? (
+              <div className={styles.liveTrackingContainer}>
+                <div className={styles.liveHeader}>
+                  <span className={styles.liveIndicator}>
+                    <span className={styles.liveDot}></span>
+                    {signalRConnected ? 'Canlı Takip Aktif' : 'Bağlanıyor...'}
+                  </span>
+                  <span className={styles.approachingMessage}>
+                    🎉 Kurye yaklaşıyor! Sırada {trackingStatus.remainingStops} kişi var.
+                  </span>
+                </div>
+                <UserTrackingMap 
+                  carrierId={trackingStatus.carrierId}
+                  carrierLocation={liveLocation || trackingStatus.carrierLocation}
+                  carrierName={trackingStatus.carrierName || 'Kurye'}
+                />
+              </div>
+            ) : (
+              <div className={styles.queueInfoContainer}>
+                <div className={styles.blurredMapPlaceholder}>
+                  <div className={styles.blurLayer}></div>
+                  <div className={styles.queueMessage}>
+                    <span className={styles.queueIcon}>📦</span>
+                    <h4>Siparişiniz Dağıtımda</h4>
+                    <p>Önünüzde <strong>{trackingStatus.remainingStops}</strong> teslimat var.</p>
+                    <p className={styles.queueSubtext}>
+                      Sıranız yaklaştığında (son 5 teslimat) canlı takip aktif olacaktır.
+                    </p>
+                    {/* Progress Bar */}
+                    <div className={styles.progressContainer}>
+                      <div 
+                        className={styles.progressBar} 
+                        style={{ width: `${Math.max(5, Math.min(100, (1 - trackingStatus.remainingStops / 20) * 100))}%` }}
+                      ></div>
+                    </div>
+                    {trackingStatus.estimatedArrival && (
+                      <p className={styles.etaText}>
+                        Tahmini varış: <strong>~{trackingStatus.estimatedArrival}</strong>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* Loading state for tracking */}
+        {trackingLoading && (
+          <div className={styles.trackingLoading}>
+            <div className={styles.spinner}></div>
+            <p>Takip bilgisi yükleniyor...</p>
+          </div>
+        )}
       </div>
     </div>
   );

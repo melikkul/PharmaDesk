@@ -60,6 +60,9 @@ const ProfileDropdown: React.FC<ProfileDropdownProps> = ({ user, onClose, onLogo
           <Link href="/ayarlar/eczane" onClick={onClose}><PharmacyIcon /> Eczane Profili</Link>
         </li>
         <li>
+          <Link href="/abonelik" onClick={onClose}>💳 Abonelik İşlemleri</Link>
+        </li>
+        <li>
           <Link href="/ayarlar" onClick={onClose}><SettingsIcon /> Genel Ayarlar</Link>
         </li>
       </ul>

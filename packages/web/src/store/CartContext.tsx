@@ -309,6 +309,18 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       const response = await cartService.addToCart(token, offerId, quantityToAdd);
       await fetchCart(); // Sepeti yeniden yükle
       
+      // 🆕 Eğer isDepotSelfOrder true ise, yeni eklenen cart item için setDepotFulfillment çağır
+      if (isDepotSelfOrder) {
+        // Yeni eklenen cart item'ı bul (offerId ile match)
+        const cart = await cartService.getCart(token);
+        const newCartItem = cart.cartItems.find(ci => ci.offerId === offerId);
+        if (newCartItem) {
+          await cartService.setDepotFulfillment(token, newCartItem.id, true);
+          await fetchCart(); // State'i güncelle
+          console.log('[addToCart] setDepotFulfillment called for cartItem:', newCartItem.id);
+        }
+      }
+      
       // 🆕 Stok yetersizliği nedeniyle miktar güncellendiyse uyarı göster
       if (response.adjustedQuantity !== undefined && response.adjustedQuantity < quantityToAdd) {
         toast.warning(

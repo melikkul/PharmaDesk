@@ -66,7 +66,7 @@ services:
       AllianceHealthcare__Password: "94030067"
       # Application Settings
       DATABASE_URL: postgresql://pharmadesk_user:melik123@db:5432/pharmadesk_db
-      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://192.168.1.3:3000,http://192.168.1.3:3002"
+      ALLOWED_ORIGINS: "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://192.168.1.206:3000,http://192.168.1.206:3002,http://192.168.1.206:8081"
       ADMIN_DEFAULT_PASSWORD: "melik123"
       SCRAPPER_SERVICE_URL: "http://scrapper-service:8000"
     depends_on:
@@ -104,7 +104,7 @@ services:
       - API_BASE_URL=http://backend:8081
       # Browser-side requests için (client tarafından erişilebilir olmalı)
       # 📱 MOBILE ACCESS: Using local IP instead of localhost
-      - NEXT_PUBLIC_API_URL=http://192.168.1.3:8081
+      - NEXT_PUBLIC_API_URL=http://192.168.1.206:8081
 
   frontend-admin:
     build: 
@@ -147,8 +147,8 @@ services:
       - /app/.next
     environment:
       - API_BASE_URL=http://backend:8081
-      # Browser-side API URL (must be accessible from host machine)
-      - NEXT_PUBLIC_API_URL=http://localhost:8081
+      # Use Next.js proxy for browser-side API calls (empty = use proxy)
+      - NEXT_PUBLIC_API_URL=
 
 networks:
   pharmanet:

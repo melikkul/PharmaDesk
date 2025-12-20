@@ -6,18 +6,23 @@ import { LoginResponse } from '../types';
 export const authService = {
   /**
    * Login - Cookie is now set by backend as HttpOnly
+   * @param rememberMe If true, refresh token will be valid for 30 days, otherwise 24 hours
    */
-  login: async (email: string, password: string): Promise<LoginResponse> => {
+  login: async (email: string, password: string, rememberMe: boolean = false): Promise<LoginResponse> => {
     const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       credentials: "include", // 🔒 Send cookies with request
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, rememberMe }),
     });
 
     const data = await res.json();
 
     if (!res.ok) {
+      // Check for pending approval error
+      if (res.status === 403 && data.code === "PENDING_APPROVAL") {
+        throw new Error("Hesabınız oluşturuldu ancak yönetici onayı bekleniyor. Lütfen daha sonra tekrar deneyin.");
+      }
       throw new Error(data.error || "Giriş yapılamadı.");
     }
 
@@ -33,7 +38,33 @@ export const authService = {
   },
 
   /**
-   * Logout - Clears the HttpOnly cookie
+   * Refresh the access token using the refresh token cookie
+   * Returns new access token or null if refresh failed
+   */
+  refreshToken: async (): Promise<{ accessToken: string; expiresIn: number } | null> => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: "POST",
+        credentials: "include", // 🔒 Send cookies with request
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!res.ok) {
+        return null;
+      }
+
+      const data = await res.json();
+      return {
+        accessToken: data.accessToken,
+        expiresIn: data.expiresIn,
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  /**
+   * Logout - Clears the HttpOnly cookie and revokes refresh token
    */
   logout: async (): Promise<void> => {
     try {

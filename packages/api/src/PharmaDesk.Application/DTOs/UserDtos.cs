@@ -20,6 +20,10 @@ namespace Backend.Dtos
         public string? PharmacistFirstName { get; set; } // Eczacı Adı
         public string? PharmacistLastName { get; set; }  // Eczacı Soyadı
         public DateTime CreatedAt { get; set; }
+        
+        // 🆕 SaaS Subscription Fields
+        public string? SubscriptionStatus { get; set; } // Active, Trial, PastDue, Cancelled
+        public DateTime? SubscriptionExpireDate { get; set; }
     }
 
     public class UpdateProfileRequest
@@ -34,5 +38,11 @@ namespace Backend.Dtos
         public string? PharmacyName { get; set; }
         public string? ProfileImagePath { get; set; }
         public string? About { get; set; } // YENİ
+    }
+
+    public class ChangePasswordRequest
+    {
+        public string CurrentPassword { get; set; } = string.Empty;
+        public string NewPassword { get; set; } = string.Empty;
     }
 }

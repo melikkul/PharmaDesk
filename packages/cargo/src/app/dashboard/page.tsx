@@ -32,7 +32,6 @@ export default function DashboardPage() {
     // Wake Lock reference
     // State for confirmation modal
     const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [permissionError, setPermissionError] = useState(false);
 
     const [wakeLock, setWakeLock] = useState<WakeLockSentinel | null>(null);
     
@@ -216,49 +215,27 @@ export default function DashboardPage() {
         }
     };
 
-    // Handle toggle click - opens modal or ends shift directly
+    // Handle toggle click - show confirmation modal or end shift directly
     const handleShiftToggleClick = () => {
         if (!isOnShift) {
+            // Show confirmation modal
             setShowConfirmModal(true);
         } else {
+            // Ending shift - no confirmation needed
             executeShiftToggle();
         }
     };
 
-    // Actual toggle logic
+    // Actual toggle logic - called after modal confirmation
     const executeShiftToggle = async () => {
         setShowConfirmModal(false); // Close modal if open
         
-        // Check permissions before starting shift
-        if (!isOnShift) {
-            try {
-                console.log('🔒 Checking permissions...');
-                // 1. Check Camera Permission
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-                stream.getTracks().forEach(track => track.stop()); // Release immediately
-
-                // 2. Check Location Permission & Get Initial Position
-                // We do this via Promise to catch denial
-                await new Promise<GeolocationPosition>((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 10000 // Give user time to click 'Allow'
-                    });
-                });
-                console.log('✅ Permissions granted');
-            } catch (permError) {
-                console.warn('❌ Permissions denied:', permError);
-                setPermissionError(true);
-                return; // ABORT
-            }
-        }
-
         try {
             setShiftLoading(true);
             setShiftError(null);
             
             if (!isOnShift) {
-                // Starting shift - first get fresh location
+                // Starting shift - get fresh location
                 let currentLat = latitude;
                 let currentLng = longitude;
                 
@@ -421,45 +398,6 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {/* Permission Error Modal */}
-            {permissionError && (
-                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                    <div className="bg-gray-800 rounded-2xl max-w-sm w-full p-6 shadow-xl border border-red-500/30 animate-in fade-in zoom-in duration-200">
-                        <div className="flex items-center gap-3 mb-4 text-red-400">
-                            <span className="text-3xl">⚠️</span>
-                            <h3 className="text-xl font-bold text-white">İzin Gerekli</h3>
-                        </div>
-                        
-                        <div className="space-y-4 mb-6">
-                            <p className="text-white/80">Mesai başlatmak için <b>Konum</b> ve <b>Kamera</b> izinlerine ihtiyacımız var.</p>
-                            
-                            <div className="bg-red-500/10 p-3 rounded-lg border border-red-500/20">
-                                <p className="text-sm text-red-200 mb-2 font-bold">Nasıl İzin Verilir?</p>
-                                <ol className="list-decimal list-inside text-sm text-white/70 space-y-1">
-                                    <li>Tarayıcı adres çubuğundaki 🔒 kilit veya ayar ikonuna tıklayın.</li>
-                                    <li>"İzinler" kısmından Konum ve Kamera'yı "İzin Ver" veya "Sıfırla" yapın.</li>
-                                    <li>Sayfayı yenileyin.</li>
-                                </ol>
-                            </div>
-                        </div>
-                        
-                        <div className="flex gap-3">
-                            <button
-                                onClick={() => setPermissionError(false)}
-                                className="flex-1 px-4 py-3 rounded-xl bg-white/10 text-white font-medium hover:bg-white/20 transition-colors"
-                            >
-                                Kapat
-                            </button>
-                            <button
-                                onClick={() => window.location.reload()}
-                                className="flex-1 px-4 py-3 rounded-xl bg-red-600 text-white font-bold hover:bg-red-500 transition-colors shadow-lg shadow-red-500/20"
-                            >
-                                Sayfayı Yenile
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
             {/* Header with Profile */}
             <div className="max-w-4xl mx-auto mb-6">
                 <div className="card">
@@ -622,10 +560,12 @@ export default function DashboardPage() {
                             </div>
                         ) : (
                             <div className="space-y-3">
-                                {assignedShipments.map((shipment) => {
+                                {assignedShipments.map((shipment, index) => {
                                     const status = getStatusBadge(shipment.status);
                                     const isDelivered = shipment.status === 'delivered';
                                     const isNext = nextPharmacy?.id === shipment.id;
+                                    const queuePosition = index + 1; // 1-indexed
+                                    const isInTop5 = queuePosition <= 5 && !isDelivered;
                                     
                                     return (
                                         <div 
@@ -638,6 +578,15 @@ export default function DashboardPage() {
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                                        {/* Sıra numarası */}
+                                                        {!isDelivered && (
+                                                            <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                                isInTop5 ? 'bg-green-500 text-white' : 'bg-white/20 text-white/70'
+                                                            }`}>
+                                                                {queuePosition}
+                                                            </span>
+                                                        )}
+                                                        
                                                         <span className={`${status.bg} ${status.color} text-xs px-2 py-1 rounded-full font-medium`}>
                                                             {status.icon} {status.text}
                                                         </span>
@@ -659,6 +608,19 @@ export default function DashboardPage() {
                                                         <a href={`tel:${shipment.pharmacyPhone}`} className="text-white/50 text-xs hover:text-primary-400">
                                                             📞 {shipment.pharmacyPhone}
                                                         </a>
+                                                    )}
+                                                    
+                                                    {/* Canlı Takip Badge - İlk 5 için */}
+                                                    {isInTop5 && (
+                                                        <div className="mt-2 flex items-center gap-2">
+                                                            <span className="inline-flex items-center gap-1.5 bg-green-500/20 text-green-400 text-xs px-2.5 py-1 rounded-full">
+                                                                <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                                                                Canlı Takip Aktif
+                                                            </span>
+                                                            <span className="text-white/40 text-xs">
+                                                                Eczane konumunuzu görebilir
+                                                            </span>
+                                                        </div>
                                                     )}
                                                 </div>
                                                 {/* Status indicator on the right */}

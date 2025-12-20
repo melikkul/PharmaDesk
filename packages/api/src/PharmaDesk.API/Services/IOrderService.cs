@@ -120,5 +120,6 @@ namespace Backend.Services
         public decimal UnitPrice { get; set; }
         public decimal TotalPrice { get; set; }
         public int? OfferId { get; set; }
+        public decimal ProfitAmount { get; set; } // Kar miktarı
     }
 }

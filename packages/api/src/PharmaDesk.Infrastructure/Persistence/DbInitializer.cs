@@ -172,6 +172,7 @@ namespace PharmaDesk.Infrastructure.Persistence
                             ""LastName"" VARCHAR(50) NOT NULL,
                             ""PharmacyId"" BIGINT NOT NULL,
                             ""IsFirstLogin"" BOOLEAN NOT NULL DEFAULT TRUE,
+                            ""IsApproved"" BOOLEAN NOT NULL DEFAULT TRUE,
                             ""Role"" TEXT,
                             ""LastLoginDate"" TIMESTAMP WITH TIME ZONE,
                             ""Status"" INTEGER NOT NULL DEFAULT 0,
@@ -188,6 +189,32 @@ namespace PharmaDesk.Infrastructure.Persistence
                     logger.LogInformation("IdentityUsers table already exists.");
                 }
                 
+                // Ensure RefreshTokens table exists
+                try
+                {
+                    await identityDb.Database.ExecuteSqlRawAsync(@"
+                        CREATE TABLE IF NOT EXISTS ""RefreshTokens"" (
+                            ""Id"" SERIAL PRIMARY KEY,
+                            ""UserId"" INTEGER NOT NULL,
+                            ""TokenHash"" VARCHAR(88) NOT NULL,
+                            ""CreatedAt"" TIMESTAMP WITH TIME ZONE NOT NULL,
+                            ""ExpiresAt"" TIMESTAMP WITH TIME ZONE NOT NULL,
+                            ""IsRevoked"" BOOLEAN NOT NULL DEFAULT FALSE,
+                            ""RevokedAt"" TIMESTAMP WITH TIME ZONE,
+                            ""ReplacedByTokenHash"" VARCHAR(88),
+                            ""CreatedByIp"" VARCHAR(45),
+                            ""RevokedByIp"" VARCHAR(45),
+                            CONSTRAINT ""FK_RefreshTokens_IdentityUsers_UserId"" FOREIGN KEY (""UserId"") REFERENCES ""IdentityUsers""(""Id"") ON DELETE CASCADE
+                        );
+                        CREATE INDEX IF NOT EXISTS ""IX_RefreshTokens_UserId"" ON ""RefreshTokens"" (""UserId"");
+                        CREATE INDEX IF NOT EXISTS ""IX_RefreshTokens_TokenHash"" ON ""RefreshTokens"" (""TokenHash"");
+                    ");
+                    logger.LogInformation("RefreshTokens table ensured.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not ensure RefreshTokens table - may already exist");
+                }
                
                 // Seed data
                 var configuration = services.GetRequiredService<IConfiguration>();

@@ -26,11 +26,19 @@ public class NotificationHub : Hub
     public override async Task OnConnectedAsync()
     {
         var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        var pharmacyIdClaim = Context.User?.FindFirst("PharmacyId")?.Value;
 
         if (!string.IsNullOrEmpty(userId))
         {
             // Add user to their personal group
             await Groups.AddToGroupAsync(Context.ConnectionId, userId);
+            
+            // 🆕 Add user to pharmacy group for subscription notifications
+            if (!string.IsNullOrEmpty(pharmacyIdClaim))
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"pharmacy_{pharmacyIdClaim}");
+                _logger.LogInformation($"User {userId} added to pharmacy group: pharmacy_{pharmacyIdClaim}");
+            }
             
             // Track online user
             _onlineUsers[userId] = Context.ConnectionId;

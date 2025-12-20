@@ -242,6 +242,36 @@ namespace Backend.Controllers
             return Ok(new { message = "Depo sorumluluğundan ayrıldınız." });
         }
 
+        /// <summary>
+        /// POST /api/offers/{id}/convert-to-joint - Alım Talebini Ortak Siparişe dönüştür
+        /// Başka bir kullanıcı tarafından çağrılır, talep sahibi değil
+        /// </summary>
+        [HttpPost("{id}/convert-to-joint")]
+        public async Task<ActionResult> ConvertToJointOrder(int id, [FromBody] ConvertToJointOrderDto request)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (!pharmacyId.HasValue)
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
+
+            var result = await _offerService.ConvertToJointOrderAsync(id, request, pharmacyId.Value);
+
+            if (!result.Success)
+            {
+                return result.ErrorCode switch
+                {
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    409 => Conflict(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
+            }
+
+            return Ok(new
+            {
+                message = "Alım talebi başarıyla ortak siparişe dönüştürüldü.",
+                offer = result.Offer
+            });
+        }
+
         // ═══════════════════════════════════════════════════════════════
         // Financial Operations (Provision/Capture Pattern)
         // ═══════════════════════════════════════════════════════════════
@@ -305,6 +335,38 @@ namespace Backend.Controllers
             return Ok(new
             {
                 message = "Teklif başarıyla sonlandırıldı.",
+                offer = result.Offer
+            });
+        }
+
+        /// <summary>
+        /// POST /api/offers/{id}/withdraw - Teklifi geri al
+        /// Satıcı tarafından çağrılır, teklifi tekrar Active durumuna geçirir
+        /// Sadece bakiye işlenmemişse geri alınabilir
+        /// </summary>
+        [HttpPost("{id}/withdraw")]
+        public async Task<ActionResult> WithdrawOffer(int id)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (!pharmacyId.HasValue)
+                return Unauthorized(new { message = "Eczane profili bulunamadı." });
+
+            var result = await _offerService.WithdrawOfferAsync(id, pharmacyId.Value);
+
+            if (!result.Success)
+            {
+                return result.ErrorCode switch
+                {
+                    403 => Forbid(),
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    409 => Conflict(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
+            }
+
+            return Ok(new
+            {
+                message = "Teklif başarıyla geri alındı. Tekrar İlaç Vitrininde görünüyor.",
                 offer = result.Offer
             });
         }

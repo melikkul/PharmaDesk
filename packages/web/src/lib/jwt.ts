@@ -10,6 +10,9 @@ export interface JWTPayload {
   pharmacyId?: number;
   exp?: number;
   iat?: number;
+  // 🆕 SaaS Subscription Claims
+  SubscriptionStatus?: string;
+  SubscriptionExpireDate?: string;
   [key: string]: any;
 }
 
@@ -25,7 +28,6 @@ export function parseJWT(token: string): JWTPayload | null {
     const parts = token.split('.');
     
     if (parts.length !== 3) {
-      console.error('Invalid JWT format: expected 3 parts');
       return null;
     }
 
@@ -43,7 +45,6 @@ export function parseJWT(token: string): JWTPayload | null {
 
     return JSON.parse(jsonPayload) as JWTPayload;
   } catch (error) {
-    console.error('Failed to parse JWT:', error);
     return null;
   }
 }
@@ -94,3 +95,91 @@ export function getUserIdFromToken(token: string): string | null {
 
   return payload.sub || payload.userId || payload.UserId || null;
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 🆕 SaaS Subscription Functions
+// ═══════════════════════════════════════════════════════════════
+
+/**
+ * Extract subscription status from JWT token
+ * @param token - JWT token string
+ * @returns Subscription status ('Active', 'Trial', 'PastDue', 'Cancelled') or 'Trial' as default
+ */
+export function getSubscriptionStatusFromToken(token: string): string {
+  const payload = parseJWT(token);
+  
+  if (!payload) {
+    return 'Trial';
+  }
+
+  return payload.SubscriptionStatus || 'Trial';
+}
+
+/**
+ * Check if user has active subscription based on JWT claims
+ * @param token - JWT token string
+ * @returns true if subscription is active, false otherwise
+ */
+export function isSubscriptionActive(token: string): boolean {
+  const status = getSubscriptionStatusFromToken(token);
+  return status === 'Active';
+}
+
+/**
+ * Get subscription expiry date from JWT token
+ * @param token - JWT token string
+ * @returns Date object or null if not found
+ */
+export function getSubscriptionExpireDate(token: string): Date | null {
+  const payload = parseJWT(token);
+  
+  if (!payload || !payload.SubscriptionExpireDate) {
+    return null;
+  }
+
+  try {
+    return new Date(payload.SubscriptionExpireDate);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Check if subscription requires action (about to expire or inactive)
+ * @param token - JWT token string
+ * @returns Object with status details
+ */
+export function getSubscriptionDetails(token: string): {
+  status: string;
+  isActive: boolean;
+  expireDate: Date | null;
+  daysRemaining: number | null;
+  needsAction: boolean;
+} {
+  const status = getSubscriptionStatusFromToken(token);
+  const expireDate = getSubscriptionExpireDate(token);
+  const isActive = status === 'Active';
+  
+  let daysRemaining: number | null = null;
+  let needsAction = !isActive;
+  
+  if (expireDate && isActive) {
+    const now = new Date();
+    const diff = expireDate.getTime() - now.getTime();
+    daysRemaining = Math.ceil(diff / (1000 * 60 * 60 * 24));
+    
+    // Needs action if less than 7 days remaining
+    if (daysRemaining <= 7) {
+      needsAction = true;
+    }
+  }
+  
+  return {
+    status,
+    isActive,
+    expireDate,
+    daysRemaining,
+    needsAction
+  };
+}
+

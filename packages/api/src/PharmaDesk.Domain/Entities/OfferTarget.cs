@@ -16,6 +16,13 @@ namespace Backend.Models
         // Additional metadata
         public DateTime AddedAt { get; set; } = DateTime.UtcNow;
 
+        // 🆕 Joint Order Conversion için
+        /// <summary>Bu katılımcının talep ettiği/ekleyeceği adet</summary>
+        public int RequestedQuantity { get; set; } = 0;
+        
+        /// <summary>Bu kullanıcı tedarikçi/sorumlu mu? (Depodan sipariş veren)</summary>
+        public bool IsSupplier { get; set; } = false;
+
         // Navigation properties
         [ForeignKey(nameof(OfferId))]
         public Offer Offer { get; set; } = null!;

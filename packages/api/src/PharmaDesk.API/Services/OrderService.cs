@@ -202,11 +202,52 @@ namespace Backend.Services
                         // 🆕 Handle depot fulfillment: Convert PurchaseRequest to JointOrder
                         if (cartItem.IsDepotFulfillment && cartItem.Offer.Type == OfferType.PurchaseRequest)
                         {
+                            // Store original owner before swap
+                            var originalOwnerId = cartItem.Offer.PharmacyProfileId;
+                            var originalOwnerStock = cartItem.Offer.Stock;
+                            
                             cartItem.Offer.Type = OfferType.JointOrder;
                             cartItem.Offer.DepotClaimerUserId = buyerPharmacyId;
                             cartItem.Offer.DepotClaimedAt = DateTime.UtcNow;
                             // 🆕 Transfer ownership: Depot claimer becomes the new owner/organizer
                             cartItem.Offer.PharmacyProfileId = buyerPharmacyId;
+                            
+                            // 🆕 Add original requester to OfferTargets (if not exists)
+                            var existingOriginalTarget = await _context.OfferTargets
+                                .FirstOrDefaultAsync(ot => ot.OfferId == cartItem.OfferId && ot.TargetPharmacyId == originalOwnerId);
+                            
+                            if (existingOriginalTarget == null)
+                            {
+                                _context.OfferTargets.Add(new OfferTarget
+                                {
+                                    OfferId = cartItem.OfferId,
+                                    TargetPharmacyId = originalOwnerId,
+                                    RequestedQuantity = originalOwnerStock, // Original requester's quantity
+                                    IsSupplier = false,
+                                    AddedAt = cartItem.Offer.CreatedAt
+                                });
+                            }
+                            
+                            // 🆕 Add depot claimer (current user) to OfferTargets as supplier
+                            var existingClaimerTarget = await _context.OfferTargets
+                                .FirstOrDefaultAsync(ot => ot.OfferId == cartItem.OfferId && ot.TargetPharmacyId == buyerPharmacyId);
+                            
+                            if (existingClaimerTarget == null)
+                            {
+                                _context.OfferTargets.Add(new OfferTarget
+                                {
+                                    OfferId = cartItem.OfferId,
+                                    TargetPharmacyId = buyerPharmacyId,
+                                    RequestedQuantity = cartItem.Quantity, // Depot claimer's contribution
+                                    IsSupplier = true,
+                                    AddedAt = DateTime.UtcNow
+                                });
+                            }
+                            else
+                            {
+                                existingClaimerTarget.RequestedQuantity += cartItem.Quantity;
+                                existingClaimerTarget.IsSupplier = true;
+                            }
                         }
 
                         var orderItem = new OrderItem
@@ -598,7 +639,8 @@ namespace Backend.Services
                     Quantity = oi.Quantity,
                     UnitPrice = oi.UnitPrice,
                     TotalPrice = oi.Quantity * oi.UnitPrice, // Calculated
-                    OfferId = oi.OfferId
+                    OfferId = oi.OfferId,
+                    ProfitAmount = oi.ProfitAmount // Kar miktarı
                 }).ToList() ?? new List<OrderItemDto>()
             };
         }

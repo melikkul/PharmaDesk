@@ -138,6 +138,32 @@ namespace Backend.Controllers
         }
 
         /// <summary>
+        /// GET /api/shipments/{id}/tracking-status
+        /// Eczane kullanıcıları için kargo takip durumu (Kuyruk Bazlı Görünürlük)
+        /// Returns carrier location, queue position, and estimated arrival
+        /// </summary>
+        [HttpGet("{id}/tracking-status")]
+        public async Task<ActionResult<TrackingStatusDto>> GetTrackingStatus(int id)
+        {
+            var pharmacyId = GetPharmacyIdFromToken();
+            if (pharmacyId == null)
+                return Unauthorized(new { message = "Pharmacy not found" });
+
+            var result = await _shipmentService.GetTrackingStatusAsync(id, pharmacyId.Value);
+            
+            if (!result.Success)
+            {
+                return result.ErrorCode switch
+                {
+                    404 => NotFound(new { message = result.ErrorMessage }),
+                    _ => BadRequest(new { message = result.ErrorMessage })
+                };
+            }
+            
+            return Ok(result.Data);
+        }
+
+        /// <summary>
         /// GET /api/shipments/{id}/qr-token - Test için QR token üret
         /// Only for development/testing purposes
         /// </summary>

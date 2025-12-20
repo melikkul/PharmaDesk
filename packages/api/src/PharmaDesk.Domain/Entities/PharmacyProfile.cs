@@ -43,6 +43,13 @@ namespace Backend.Models
         [Column(TypeName = "decimal(18,2)")]
         public decimal Balance { get; set; } = 15000; // Cüzdan bakiyesi - varsayılan 15000 ₺
         
+        /// <summary>
+        /// 🆕 Bakiye alt limiti (negatif olabilir, örn: -500)
+        /// Kullanıcı bu limitin altına düşemez.
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal BalanceLimit { get; set; } = 0;
+        
         public string? CoverImageUrl { get; set; } // Kapak fotoğrafı
         
         [StringLength(100)]
@@ -63,6 +70,40 @@ namespace Backend.Models
         /// </summary>
         [Timestamp]
         public uint RowVersion { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
+        // SaaS Subscription Features
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Abonelik son kullanma tarihi - Hızlı kontrol için.
+        /// JWT claims içinde saklanır, middleware DB sorgusu yapmadan buradan okur.
+        /// </summary>
+        public DateTime? SubscriptionExpireDate { get; set; }
+
+        /// <summary>
+        /// Aktif abonelik durumu (JWT claims için cache)
+        /// Bu değer Subscription tablosundan senkronize edilir.
+        /// </summary>
+        public SubscriptionStatus SubscriptionStatus { get; set; } = SubscriptionStatus.Trial;
+
+        /// <summary>
+        /// Eczaneye ait abonelikler
+        /// </summary>
+        public ICollection<Subscription> Subscriptions { get; set; } = new List<Subscription>();
+        
+        // 🆕 Per-member discount fields
+        /// <summary>
+        /// Yüzdelik indirim oranı (örn: 10 = %10)
+        /// </summary>
+        [Column(TypeName = "decimal(5,2)")]
+        public decimal? DiscountPercent { get; set; }
+        
+        /// <summary>
+        /// Sabit TL indirim tutarı
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? DiscountAmount { get; set; }
         
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

@@ -283,6 +283,42 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.ToTable("CarrierRegistrationTokens");
                 });
 
+            modelBuilder.Entity("Backend.Models.CarrierShift", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CarrierId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("EndTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("LastLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime?>("LastLocationUpdate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("LastLongitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<DateTime>("StartTime")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CarrierId");
+
+                    b.ToTable("CarrierShifts");
+                });
+
             modelBuilder.Entity("Backend.Models.Cart", b =>
                 {
                     b.Property<int>("Id")
@@ -395,11 +431,20 @@ namespace PharmaDesk.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("CargoPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<int>("CityId")
                         .HasColumnType("integer");
 
+                    b.Property<decimal?>("CustomSubscriptionPrice")
+                        .HasColumnType("decimal(18,2)");
+
                     b.Property<string>("Description")
                         .HasColumnType("text");
+
+                    b.Property<bool>("HasCargoService")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -973,6 +1018,12 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.Property<DateTime>("AddedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsSupplier")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("RequestedQuantity")
+                        .HasColumnType("integer");
+
                     b.HasKey("OfferId", "TargetPharmacyId");
 
                     b.HasIndex("TargetPharmacyId");
@@ -1204,6 +1255,12 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<decimal?>("DiscountAmount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal?>("DiscountPercent")
+                        .HasColumnType("decimal(5,2)");
+
                     b.Property<string>("District")
                         .HasColumnType("text");
 
@@ -1244,6 +1301,12 @@ namespace PharmaDesk.Infrastructure.Migrations
 
                     b.Property<string>("ServicePackage")
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("SubscriptionExpireDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("SubscriptionStatus")
+                        .HasColumnType("integer");
 
                     b.Property<string>("TaxNumber")
                         .HasMaxLength(20)
@@ -1610,6 +1673,132 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.ToTable("StockLocks");
                 });
 
+            modelBuilder.Entity("Backend.Models.Subscription", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("AutoRenew")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("EndDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastPaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("NextPaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("PlanType")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("PricePaid")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PharmacyProfileId");
+
+                    b.HasIndex("Status", "EndDate")
+                        .HasDatabaseName("IX_Subscriptions_Status_EndDate");
+
+                    b.ToTable("Subscriptions");
+                });
+
+            modelBuilder.Entity("Backend.Models.SubscriptionPaymentHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("CardBrand")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("CardLast4")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("GatewayResponseCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTime>("PaymentDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("PeriodEnd")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime>("PeriodStart")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<long>("PharmacyProfileId")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("SubscriptionId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TransactionId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PharmacyProfileId");
+
+                    b.HasIndex("SubscriptionId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.HasIndex("PharmacyProfileId", "PaymentDate")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_SubscriptionPaymentHistories_Pharmacy_Date");
+
+                    b.ToTable("SubscriptionPaymentHistories");
+                });
+
             modelBuilder.Entity("Backend.Models.Transaction", b =>
                 {
                     b.Property<int>("Id")
@@ -1756,6 +1945,17 @@ namespace PharmaDesk.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("CreatedBy");
+                });
+
+            modelBuilder.Entity("Backend.Models.CarrierShift", b =>
+                {
+                    b.HasOne("Backend.Models.Carrier", "Carrier")
+                        .WithMany()
+                        .HasForeignKey("CarrierId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Carrier");
                 });
 
             modelBuilder.Entity("Backend.Models.Cart", b =>
@@ -2148,6 +2348,36 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.Navigation("PharmacyProfile");
                 });
 
+            modelBuilder.Entity("Backend.Models.Subscription", b =>
+                {
+                    b.HasOne("Backend.Models.PharmacyProfile", "PharmacyProfile")
+                        .WithMany("Subscriptions")
+                        .HasForeignKey("PharmacyProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PharmacyProfile");
+                });
+
+            modelBuilder.Entity("Backend.Models.SubscriptionPaymentHistory", b =>
+                {
+                    b.HasOne("Backend.Models.PharmacyProfile", "PharmacyProfile")
+                        .WithMany()
+                        .HasForeignKey("PharmacyProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Backend.Models.Subscription", "Subscription")
+                        .WithMany("PaymentHistories")
+                        .HasForeignKey("SubscriptionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("PharmacyProfile");
+
+                    b.Navigation("Subscription");
+                });
+
             modelBuilder.Entity("Backend.Models.Transaction", b =>
                 {
                     b.HasOne("Backend.Models.PharmacyProfile", "CounterpartyPharmacy")
@@ -2257,6 +2487,13 @@ namespace PharmaDesk.Infrastructure.Migrations
             modelBuilder.Entity("Backend.Models.PharmacyProfile", b =>
                 {
                     b.Navigation("PharmacyGroups");
+
+                    b.Navigation("Subscriptions");
+                });
+
+            modelBuilder.Entity("Backend.Models.Subscription", b =>
+                {
+                    b.Navigation("PaymentHistories");
                 });
 #pragma warning restore 612, 618
         }

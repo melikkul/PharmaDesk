@@ -238,3 +238,70 @@
         font-size: 15px;
     }
 }
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* 🆕 SUBSCRIPTION RESTRICTION BLUR EFFECT                        */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.subscription-restricted-wrapper {
+    position: relative;
+}
+
+.subscription-restricted-content {
+    filter: blur(5px);
+    pointer-events: none;
+    user-select: none;
+    opacity: 0.7;
+    transition: filter 0.3s ease;
+}
+
+.subscription-restriction-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 249, 250, 0.95));
+    padding: 32px 48px;
+    border-radius: 16px;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    border: 1px solid rgba(231, 76, 60, 0.2);
+    max-width: 400px;
+}
+
+.subscription-restriction-overlay .restriction-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.subscription-restriction-overlay h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: var(--negative-color);
+    font-weight: 600;
+}
+
+.subscription-restriction-overlay p {
+    margin: 0 0 20px 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.subscription-restriction-overlay .action-button {
+    display: inline-block;
+    background: linear-gradient(135deg, #E74C3C, #C0392B);
+    color: white;
+    padding: 12px 28px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 14px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.subscription-restriction-overlay .action-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
+}

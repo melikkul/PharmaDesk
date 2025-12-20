@@ -164,6 +164,34 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       setOnlineUsers(new Set(users));
     });
 
+    // 🆕 Listen for subscription status changes (real-time sync from admin panel)
+    newConnection.on("SubscriptionStatusChanged", (data: {
+      status: string;
+      expireDate?: string;
+    }) => {
+      if (!isMounted) return;
+      console.log("[SignalR] Subscription status changed:", data);
+      
+      // Reload the page to get fresh user data with updated subscription
+      // This ensures all components reflect the new subscription status
+      window.location.reload();
+    });
+
+    // 🆕 Listen for subscription updates (balance, discount, pricing changes)
+    newConnection.on("SubscriptionUpdated", (data: {
+      pharmacyId: number | string;
+      type: string;
+    }) => {
+      if (!isMounted) return;
+      console.log("[SignalR] Subscription updated:", data);
+      
+      // Invalidate subscription queries to refetch data
+      queryClient.invalidateQueries({ queryKey: ["subscription"] });
+      
+      // Also trigger a custom event for components that need to manually refresh
+      window.dispatchEvent(new CustomEvent("subscriptionUpdated", { detail: data }));
+    });
+
     // Start connection with abort handling
     const startConnection = async () => {
       if (!isMounted || abortController.signal.aborted) return;

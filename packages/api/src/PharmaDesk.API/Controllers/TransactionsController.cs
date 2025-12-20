@@ -68,6 +68,52 @@ namespace Backend.Controllers
         }
 
         /// <summary>
+        /// Belirli bir işlemi ID ile getirir
+        /// </summary>
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetTransactionById(int id)
+        {
+            var pharmacyId = await GetPharmacyIdFromToken();
+            if (pharmacyId == null)
+            {
+                return Unauthorized(new { message = "Eczane profili bulunamadı" });
+            }
+
+            var transaction = await _context.Transactions
+                .Include(t => t.CounterpartyPharmacy)
+                .Include(t => t.Order)
+                .Include(t => t.Offer)
+                    .ThenInclude(o => o != null ? o.Medication : null)
+                .Where(t => t.Id == id && t.PharmacyProfileId == pharmacyId)
+                .Select(t => new TransactionDto
+                {
+                    Id = t.Id,
+                    Date = t.Date.ToString("dd.MM.yyyy HH:mm"),
+                    Type = MapTransactionType(t.Type),
+                    ProductName = t.Order != null 
+                        ? t.Order.OrderItems.FirstOrDefault() != null 
+                            ? t.Order.OrderItems.First().Medication.Name 
+                            : t.Description
+                        : t.Offer != null && t.Offer.Medication != null
+                            ? t.Offer.Medication.Name
+                            : t.Description,
+                    Counterparty = t.CounterpartyPharmacy != null ? t.CounterpartyPharmacy.PharmacyName : null,
+                    Amount = t.Amount,
+                    Status = MapTransactionStatus(t.Status),
+                    OrderId = t.OrderId,
+                    OfferId = t.OfferId
+                })
+                .FirstOrDefaultAsync();
+
+            if (transaction == null)
+            {
+                return NotFound(new { message = "İşlem bulunamadı" });
+            }
+
+            return Ok(transaction);
+        }
+
+        /// <summary>
         /// Kullanıcının bakiyesini getirir
         /// </summary>
         [HttpGet("balance")]

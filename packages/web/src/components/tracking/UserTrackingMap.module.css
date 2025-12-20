@@ -1,0 +1,385 @@
+.container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+    position: relative;
+}
+
+/* Üst overlay - harita üzerinde */
+.mapOverlay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 1000;
+    pointer-events: none;
+}
+
+.mapOverlay > * {
+    pointer-events: auto;
+}
+
+.lastUpdateText {
+    font-size: 12px;
+    color: #374151;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 6px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.liveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #10b981;
+    background: rgba(255, 255, 255, 0.95);
+    padding: 6px 12px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.liveDot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.6; 
+        transform: scale(1.2);
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* 4. MOBİL UYUMLULUK - Min 300px veya %40 ekran                   */
+/* ═══════════════════════════════════════════════════════════════ */
+.mapContainer {
+    height: 300px;
+    min-height: 300px;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
+@media (min-width: 768px) {
+    .mapContainer {
+        height: 400px;
+    }
+}
+
+@media (min-height: 800px) {
+    .mapContainer {
+        height: 40vh;
+        min-height: 300px;
+        max-height: 500px;
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* 2. MARKER İKONLARI - Özel SVG ikonlar (Next.js 404 yok)         */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Carrier (Kurye) Marker */
+.carrierMarker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.markerIconWrapper {
+    position: relative;
+    width: 56px;
+    height: 56px;
+}
+
+.markerIcon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(79, 70, 229, 0.5);
+    position: absolute;
+    top: 0;
+    left: 4px;
+    animation: carrierBounce 2s ease-in-out infinite;
+    border: 3px solid white;
+}
+
+.markerPulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 56px;
+    height: 56px;
+    background: rgba(79, 70, 229, 0.3);
+    border-radius: 50%;
+    animation: markerPulse 2s ease-out infinite;
+}
+
+@keyframes carrierBounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+
+@keyframes markerPulse {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0;
+    }
+}
+
+/* Pharmacy (Eczane) Marker */
+.pharmacyMarker {
+    background: transparent !important;
+    border: none !important;
+}
+
+.pharmacyIconWrapper {
+    width: 44px;
+    height: 44px;
+    position: relative;
+}
+
+.pharmacyIcon {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #10b981, #059669);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    border: 3px solid white;
+    position: absolute;
+    top: 0;
+    left: 2px;
+}
+
+/* Popup */
+.popup {
+    min-width: 150px;
+    padding: 4px;
+}
+
+.popup strong {
+    display: block;
+    margin-bottom: 4px;
+    color: #1f2937;
+    font-size: 14px;
+}
+
+/* Legend */
+.legend {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px 16px;
+    background: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #374151;
+}
+
+.legendCarrier {
+    font-size: 16px;
+}
+
+.legendPharmacy {
+    font-size: 16px;
+}
+
+/* Loading State */
+.loading {
+    padding: 60px 20px;
+    text-align: center;
+    color: #6b7280;
+    min-height: 300px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #10b981;
+    border-radius: 50%;
+    margin-bottom: 12px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Error State */
+.error {
+    padding: 20px;
+    background: #fef2f2;
+    color: #dc2626;
+    text-align: center;
+    min-height: 100px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Blurred Map Overlay (for RemainingStops > 5) */
+.blurredOverlay {
+    position: relative;
+}
+
+.blurredOverlay .mapContainer {
+    filter: blur(8px);
+    pointer-events: none;
+}
+
+.queueOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.85);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    text-align: center;
+}
+
+.queueOverlay h3 {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    color: #1f2937;
+}
+
+.queueOverlay p {
+    margin: 0 0 16px 0;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+/* Progress Bar */
+.progressContainer {
+    width: 100%;
+    max-width: 300px;
+    height: 8px;
+    background: #e5e7eb;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progressBar {
+    height: 100%;
+    background: linear-gradient(90deg, #10b981, #059669);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/* MAP FOOTER - Header yerine alt bilgi çubuğu                     */
+/* ═══════════════════════════════════════════════════════════════ */
+
+.mapFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 16px;
+    background: #f8fafc;
+    border-top: 1px solid #e5e7eb;
+}
+
+.footerLeft {
+    display: flex;
+    align-items: center;
+}
+
+.footerRight {
+    display: flex;
+    align-items: center;
+}
+
+.lastUpdateText {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+/* Canlı indicator - footer versiyonu */
+.liveIndicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 13px;
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+    padding: 4px 10px;
+    border-radius: 12px;
+}
+
+.liveDot {
+    width: 8px;
+    height: 8px;
+    background: #10b981;
+    border-radius: 50%;
+    animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.6; 
+        transform: scale(1.2);
+    }
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+    .mapFooter {
+        padding: 8px 12px;
+    }
+    
+    .lastUpdateText {
+        font-size: 11px;
+    }
+    
+    .liveIndicator {
+        font-size: 12px;
+        padding: 3px 8px;
+    }
+}

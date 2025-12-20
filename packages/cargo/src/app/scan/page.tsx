@@ -78,51 +78,35 @@ function ScanPageContent() {
         };
     }, []);
 
-    // Check camera permission status
+    // Check camera permission status - simplified to always show button
     const checkCameraPermission = async () => {
+        // Don't check for API availability here - always show the camera button
+        // If camera fails, user will see appropriate error message when they try
+        // This ensures consistent UI across all browsers/contexts
+        
         try {
-            // Check if we're in a secure context (HTTPS or localhost)
-            if (!window.isSecureContext) {
-                console.warn('Camera requires HTTPS');
-                setCameraPermission('unavailable');
-                setShowManualEntry(true);
-                return;
-            }
-
-            // Check for camera support
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                console.warn('Camera API not available');
-                setCameraPermission('unavailable');
-                setShowManualEntry(true);
-                return;
-            }
-
-            // Query permission status if available
             if (navigator.permissions) {
                 try {
                     const result = await navigator.permissions.query({ name: 'camera' as PermissionName });
-                    setCameraPermission(result.state as CameraPermission);
-                    
+                    // Only hide button if explicitly denied
                     if (result.state === 'denied') {
+                        setCameraPermission('denied');
                         setShowManualEntry(true);
-                    }
-                    
-                    // Listen for permission changes
-                    result.addEventListener('change', () => {
+                    } else {
                         setCameraPermission(result.state as CameraPermission);
-                        if (result.state === 'denied') {
-                            setShowManualEntry(true);
-                        }
-                    });
+                    }
                 } catch {
-                    // Permission query not supported, will check on camera start
+                    // Permission query not supported, default to prompt (button visible)
                     setCameraPermission('prompt');
                 }
+            } else {
+                // No permissions API, default to prompt (button visible)
+                setCameraPermission('prompt');
             }
         } catch (error) {
             console.error('Permission check error:', error);
-            setCameraPermission('unavailable');
-            setShowManualEntry(true);
+            // Even on error, keep button visible
+            setCameraPermission('prompt');
         }
     };
 
@@ -397,20 +381,7 @@ function ScanPageContent() {
                 </p>
             </div>
 
-            {/* Permission Warning */}
-            {cameraPermission === 'denied' && (
-                <div className="mb-4 bg-red-500/10 border border-red-500/30 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                        <span className="text-2xl">🚫</span>
-                        <div>
-                            <p className="text-red-400 font-medium">Kamera İzni Gerekli</p>
-                            <p className="text-white/70 text-sm mt-1">
-                                Tarayıcı ayarlarından bu siteye kamera izni verin ve sayfayı yenileyin.
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            )}
+
 
             {/* Scanner Area */}
             <div className="w-full mb-4 flex-1">
@@ -435,18 +406,16 @@ function ScanPageContent() {
                             <h3 className="text-xl font-bold text-white mb-2">QR Kod Tarama</h3>
                             <p className="text-white/70 mb-4">Kamerayı başlatmak için butona tıklayın</p>
                             
-                            {cameraPermission !== 'unavailable' && cameraPermission !== 'denied' && (
-                                <button
-                                    onClick={startCameraScanning}
-                                    className="btn-primary mb-3"
-                                >
-                                    <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    Kamerayı Başlat
-                                </button>
-                            )}
+                            <button
+                                onClick={startCameraScanning}
+                                className="btn-primary mb-3"
+                            >
+                                <svg className="w-5 h-5 inline-block mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Kamerayı Başlat
+                            </button>
                             
                             <button
                                 onClick={() => setShowManualEntry(true)}

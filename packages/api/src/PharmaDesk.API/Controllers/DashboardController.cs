@@ -116,8 +116,9 @@ namespace Backend.Controllers
                 OrderId = t.OrderId
             }).ToList();
 
-            // Recent shipments
+            // Recent shipments (TRANSFERLERİM kartı için)
             var shipments = await _context.Shipments
+                .Include(s => s.Medication)
                 .Where(s => s.SenderPharmacyId == pharmacyId || s.ReceiverPharmacyId == pharmacyId)
                 .OrderByDescending(s => s.CreatedAt)
                 .Take(5)
@@ -125,12 +126,38 @@ namespace Backend.Controllers
                 {
                     s.Id,
                     s.OrderNumber,
-                    s.Status,
-                    s.SenderPharmacyId,
-                    s.ReceiverPharmacyId,
+                    ProductName = s.Medication != null ? s.Medication.Name : "Bilinmeyen Ürün",
+                    s.TrackingNumber,
+                    Status = s.Status.ToString(),
+                    Direction = s.SenderPharmacyId == pharmacyId ? "Giden" : "Gelen",
                     s.CreatedAt
                 })
                 .ToListAsync();
+
+            // Recent orders (SİPARİŞLERİM kartı için)
+            // En son 5 sipariş (hem Gelen hem Giden karışık)
+            var recentOrders = await _context.Orders
+                .Include(o => o.OrderItems)
+                    .ThenInclude(oi => oi.Medication)
+                .Where(o => o.BuyerPharmacyId == pharmacyId.Value || o.SellerPharmacyId == pharmacyId.Value)
+                .OrderByDescending(o => o.CreatedAt)
+                .Take(5)
+                .ToListAsync();
+
+            // Map to DTO after loading to avoid EF translation issues
+            var recentOrdersDto = recentOrders.Select(o => new
+            {
+                o.Id,
+                o.OrderNumber,
+                // Birden fazla ürün varsa virgülle ayır
+                ProductName = o.OrderItems?.Any() == true
+                    ? string.Join(", ", o.OrderItems.Select(oi => oi.Medication?.Name ?? "Bilinmeyen"))
+                    : "Bilinmeyen Ürün",
+                o.TotalAmount,
+                Status = o.Status.ToString(),
+                Direction = o.BuyerPharmacyId == pharmacyId.Value ? "Gelen" : "Giden",
+                o.CreatedAt
+            }).ToList();
 
             return Ok(new
             {
@@ -147,8 +174,9 @@ namespace Backend.Controllers
                 },
                 RecentOffers = recentOffers,
                 BalanceHistory = balanceHistoryDto,
-                Transfers = new List<object>(), // Deprecated, use shipments
-                Shipments = shipments
+                Transfers = shipments, // Kargo transferleri
+                Shipments = shipments, // Eski uyumluluk için
+                RecentOrders = recentOrdersDto // Yeni: Siparişler
             });
         }
         

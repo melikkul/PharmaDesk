@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Backend.Models
 {
@@ -18,5 +19,32 @@ namespace Backend.Models
 
         // Many-to-many relationship with PharmacyProfiles
         public ICollection<PharmacyGroup> PharmacyGroups { get; set; } = new List<PharmacyGroup>();
+
+        // ═══════════════════════════════════════════════════════════════
+        // SaaS Subscription Features
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Grubun kargo hizmetini satın alıp almadığı.
+        /// True ise, bu gruptaki tüm üyelerin aylık abonelik fiyatına
+        /// kargo bedeli eklenir.
+        /// </summary>
+        public bool HasCargoService { get; set; } = false;
+
+        /// <summary>
+        /// 🆕 Özel kargo fiyatı. Varsayılan 2450 TL.
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal CargoPrice { get; set; } = 2450;
+
+        /// <summary>
+        /// Özel abonelik fiyatı (Override/Ezme).
+        /// Eğer bu alan doluysa (Null değilse), bu gruptaki üyeler
+        /// varsayılan 400 TL yerine bu tutarı öder.
+        /// Örn: 350 TL girilirse, üyeler 350 TL öder.
+        /// </summary>
+        [Column(TypeName = "decimal(18,2)")]
+        public decimal? CustomSubscriptionPrice { get; set; }
     }
 }
+

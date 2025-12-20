@@ -13,6 +13,15 @@ const ProfilimPage = () => {
   const { profile, loading } = useProfile('me');
   const { user, token } = useAuth();
   const [bio, setBio] = useState('');
+  
+  // Password change state
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordMessage, setPasswordMessage] = useState<{type: 'success' | 'error', text: string} | null>(null);
+  const [passwordLoading, setPasswordLoading] = useState(false);
 
   useEffect(() => {
     if (profile) {
@@ -33,6 +42,45 @@ const ProfilimPage = () => {
     } catch (error) {
       console.error('Save error:', error);
       alert('Bir hata oluştu.');
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { id, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [id]: value }));
+    // Clear message when user starts typing
+    if (passwordMessage) setPasswordMessage(null);
+  };
+
+  const handlePasswordSave = async () => {
+    if (!token) return;
+    setPasswordMessage(null);
+    
+    // Validation
+    if (!passwordData.currentPassword || !passwordData.newPassword) {
+      setPasswordMessage({ type: 'error', text: 'Lütfen tüm alanları doldurun.' });
+      return;
+    }
+    
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordMessage({ type: 'error', text: 'Yeni şifreler eşleşmiyor.' });
+      return;
+    }
+    
+    if (passwordData.newPassword.length < 6) {
+      setPasswordMessage({ type: 'error', text: 'Şifre en az 6 karakter olmalı.' });
+      return;
+    }
+
+    setPasswordLoading(true);
+    try {
+      await userService.changePassword(token, passwordData.currentPassword, passwordData.newPassword);
+      setPasswordMessage({ type: 'success', text: 'Şifreniz başarıyla güncellendi.' });
+      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      setPasswordMessage({ type: 'error', text: error.message || 'Şifre değiştirilemedi.' });
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
@@ -96,21 +144,58 @@ const ProfilimPage = () => {
       <SettingsCard
         title="Şifre Değiştir"
         description="Güvenliğiniz için belirli aralıklarla şifrenizi değiştirmeniz önerilir."
-        footer={<button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => alert('Şifre değiştirme henüz aktif değil.')}>Şifreyi Güncelle</button>}
+        footer={
+          <button 
+            className={`${styles.btn} ${styles.btnPrimary}`} 
+            onClick={handlePasswordSave}
+            disabled={passwordLoading}
+          >
+            {passwordLoading ? 'Güncelleniyor...' : 'Şifreyi Güncelle'}
+          </button>
+        }
       >
         <div className={styles.formGrid}>
           <div className={styles.formGroup}>
             <label htmlFor="currentPassword">Mevcut Şifre</label>
-            <input type="password" id="currentPassword" />
+            <input 
+              type="password" 
+              id="currentPassword" 
+              value={passwordData.currentPassword}
+              onChange={handlePasswordChange}
+            />
           </div>
           <div className={styles.formGroup}>
             <label htmlFor="newPassword">Yeni Şifre</label>
-            <input type="password" id="newPassword" />
+            <input 
+              type="password" 
+              id="newPassword" 
+              value={passwordData.newPassword}
+              onChange={handlePasswordChange}
+            />
           </div>
-           <div className={styles.formGroup}>
+          <div className={styles.formGroup}>
             <label htmlFor="confirmPassword">Yeni Şifre (Tekrar)</label>
-            <input type="password" id="confirmPassword" />
+            <input 
+              type="password" 
+              id="confirmPassword" 
+              value={passwordData.confirmPassword}
+              onChange={handlePasswordChange}
+            />
           </div>
+          {passwordMessage && (
+            <div 
+              className={`${styles.formGroup} ${styles.fullWidth}`}
+              style={{ 
+                padding: '12px', 
+                borderRadius: '8px',
+                backgroundColor: passwordMessage.type === 'success' ? '#d4edda' : '#f8d7da',
+                color: passwordMessage.type === 'success' ? '#155724' : '#721c24',
+                border: `1px solid ${passwordMessage.type === 'success' ? '#c3e6cb' : '#f5c6cb'}`
+              }}
+            >
+              {passwordMessage.text}
+            </div>
+          )}
         </div>
       </SettingsCard>
     </>

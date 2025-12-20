@@ -17,6 +17,7 @@ const EczaneBilgileriPage = () => {
     gln: '',
     taxNo: '', // Backend'de yok, placeholder kalacak veya eklenecek
     address: '',
+    phoneNumber: '',
     about: ''
   });
 
@@ -26,11 +27,8 @@ const EczaneBilgileriPage = () => {
         pharmacyName: profile.pharmacyName || '',
         gln: profile.gln || '',
         taxNo: '9876543210', // Backend'de yok
-        address: profile.location || '', // location = city + district, address1?
-        // useProfile maps address to location. Let's check useProfile mapping.
-        // mappedProfile.location = city / district.
-        // mappedProfile doesn't expose address1.
-        // We should update useProfile to expose address1 if we want to edit it.
+        address: profile.address || '', // Fixed: Use address field, not location
+        phoneNumber: profile.phone || '',
         about: profile.about || ''
       });
     }
@@ -47,14 +45,9 @@ const EczaneBilgileriPage = () => {
     try {
       await userService.updateProfile(token, {
         pharmacyName: formData.pharmacyName,
-        // GLN is usually read-only or needs specific permission? Let's allow it for now if backend allows.
-        // Backend UpdateMeRequest has PharmacyName, PhoneNumber, City, District, Address1...
-        // It doesn't seem to have GLN in UpdateProfileRequest (checked UserDtos.cs).
-        // So GLN update might not work.
-        // Let's only send what's allowed.
-        // @ts-ignore - address1 mapping
-        address1: formData.address, // Mapping 'address' input to 'Address1'
-        // about: formData.about // Backend doesn't have 'about' yet.
+        // @ts-ignore - address1 mapping for backend DTO
+        address1: formData.address,
+        phoneNumber: formData.phoneNumber,
       });
 
       alert('Bilgiler kaydedildi.');
@@ -111,7 +104,18 @@ const EczaneBilgileriPage = () => {
               rows={3} 
               value={formData.address} 
               onChange={handleChange}
+              placeholder="Tam açık adres..."
             ></textarea>
+          </div>
+          <div className={styles.formGroup}>
+            <label htmlFor="phoneNumber">Telefon Numarası</label>
+            <input 
+              type="tel" 
+              id="phoneNumber" 
+              value={formData.phoneNumber} 
+              onChange={handleChange}
+              placeholder="(05xx) xxx xx xx"
+            />
           </div>
         </div>
       </SettingsCard>

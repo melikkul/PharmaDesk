@@ -11,12 +11,12 @@ COPY package*.json ./
 
 # Configure npm for better network handling
 RUN npm config set fetch-timeout 300000 && \
-    npm config set fetch-retries 3 && \
-    npm config set fetch-retry-mintimeout 10000 && \
-    npm config set fetch-retry-maxtimeout 60000 && \
+    npm config set fetch-retries 5 && \
+    npm config set fetch-retry-mintimeout 20000 && \
+    npm config set fetch-retry-maxtimeout 120000 && \
     npm config set registry https://registry.npmjs.org/
 
-# Install dependencies
+# Install dependencies with clean install
 RUN npm install --legacy-peer-deps
 
 # Expose port (internal port 3002)
@@ -25,6 +25,8 @@ EXPOSE 3002
 # Environment variables for Next.js
 ENV NODE_ENV=development
 ENV NEXT_TELEMETRY_DISABLED=1
+# Skip SWC lockfile patching at runtime (already installed)
+ENV NEXT_IGNORE_INCORRECT_LOCKFILE=true
 
 # Run Next.js in development mode with hot reload
 CMD ["npm", "run", "dev"]
