@@ -8,6 +8,7 @@ import { MessageIcon, NotificationIcon, CartIcon } from './ui/Icons';
 import { useCart } from '../store/CartContext'; 
 import { useNotifications } from '../hooks/useNotifications';
 import { useAuth } from '../store/AuthContext';
+import { useChatContext } from '../store/ChatContext';
 import GroupSwitcher from './GroupSwitcher';
 
 interface HeaderPharmacyData {
@@ -49,7 +50,9 @@ const Header: React.FC<HeaderProps> = ({
   const { unreadCartItemCount } = useCart();
   const { token } = useAuth();
   const { unreadCount: unreadNotificationCount } = useNotifications(token);
-  const unreadMessageCount = 0;
+  // Get unread conversations count from ChatContext (how many chats have unread messages)
+  const { conversations } = useChatContext();
+  const unreadMessageCount = conversations.filter(c => c.unreadCount > 0).length;
 
   const toggleDropdown = useCallback(() => {
     setDropdownOpen(prev => !prev);

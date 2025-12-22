@@ -7,6 +7,9 @@ import { useRouter, usePathname } from 'next/navigation';
 import AdminSidebar from '@/components/AdminSidebar';
 import Header from '@/components/Header';
 
+// SuperAdmin-only routes
+const SUPERADMIN_ONLY_ROUTES = ['/debug-logs', '/messages', '/admins'];
+
 export default function AdminLayout({
   children,
 }: {
@@ -19,8 +22,14 @@ export default function AdminLayout({
   useEffect(() => {
     if (!isLoading && !user) {
       router.replace('/login');
+    } else if (!isLoading && user && user.role !== 'SuperAdmin') {
+      // Check if current route is SuperAdmin-only
+      const isRestrictedRoute = SUPERADMIN_ONLY_ROUTES.some(route => pathname.startsWith(route));
+      if (isRestrictedRoute) {
+        router.replace('/forbidden');
+      }
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, router, pathname]);
 
   if (isLoading || !user) {
     return (

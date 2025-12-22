@@ -259,7 +259,7 @@ namespace Backend.Controllers
         /// Create a new group (Admin only)
         /// </summary>
         [HttpPost]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> CreateGroup([FromBody] CreateGroupDto dto)
         {
             try
@@ -320,7 +320,7 @@ namespace Backend.Controllers
         /// Update group pricing settings (Admin only)
         /// </summary>
         [HttpPut("{id}/pricing")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> UpdateGroupPricing(int id, [FromBody] PharmaDesk.Application.DTOs.GroupPricingDto dto)
         {
             try
@@ -372,7 +372,7 @@ namespace Backend.Controllers
         /// Get group financial summary with member details (Admin only)
         /// </summary>
         [HttpGet("{id}/financial")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<ActionResult<PharmaDesk.Application.DTOs.GroupFinancialSummaryDto>> GetGroupFinancial(int id)
         {
             try
@@ -512,7 +512,7 @@ namespace Backend.Controllers
         /// Get all groups with SaaS info (Admin only)
         /// </summary>
         [HttpGet("admin/all")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> GetAllGroupsAdmin()
         {
             try
@@ -550,7 +550,7 @@ namespace Backend.Controllers
         /// Manage user subscription (Admin only) - extend days, change status
         /// </summary>
         [HttpPut("admin/subscription/{pharmacyId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> ManageUserSubscription(long pharmacyId, [FromBody] AdminSubscriptionUpdateDto dto)
         {
             try
@@ -645,7 +645,7 @@ namespace Backend.Controllers
         /// 🆕 Update member discount (Admin only)
         /// </summary>
         [HttpPut("admin/member-discount/{pharmacyId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> UpdateMemberDiscount(long pharmacyId, [FromBody] MemberDiscountUpdateDto dto)
         {
             try
@@ -702,7 +702,7 @@ namespace Backend.Controllers
         /// 🆕 Add balance to pharmacy (Admin only)
         /// </summary>
         [HttpPost("admin/add-balance/{pharmacyId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> AddBalance(long pharmacyId, [FromBody] AddBalanceDto dto)
         {
             try
@@ -744,7 +744,7 @@ namespace Backend.Controllers
         /// 🆕 Update balance limit for pharmacy (Admin only)
         /// </summary>
         [HttpPut("admin/balance-limit/{pharmacyId}")]
-        [Authorize(Roles = "Admin")]
+        [Authorize(Roles = "Admin,SuperAdmin")]
         public async Task<IActionResult> UpdateBalanceLimit(long pharmacyId, [FromBody] UpdateBalanceLimitDto dto)
         {
             try

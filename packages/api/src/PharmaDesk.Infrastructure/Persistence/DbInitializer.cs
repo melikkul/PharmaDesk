@@ -215,6 +215,30 @@ namespace PharmaDesk.Infrastructure.Persistence
                 {
                     logger.LogWarning(ex, "Could not ensure RefreshTokens table - may already exist");
                 }
+
+                // Ensure Role column exists in Admins table (for RBAC)
+                try
+                {
+                    await pharmacyDb.Database.ExecuteSqlRawAsync(@"
+                        DO $$ 
+                        BEGIN 
+                            IF NOT EXISTS (
+                                SELECT 1 FROM information_schema.columns 
+                                WHERE table_name = 'Admins' 
+                                AND column_name = 'Role'
+                            ) THEN 
+                                ALTER TABLE ""Admins"" 
+                                ADD COLUMN ""Role"" VARCHAR(50) NOT NULL DEFAULT 'Admin';
+                                RAISE NOTICE 'Added Role column to Admins';
+                            END IF;
+                        END $$;
+                    ");
+                    logger.LogInformation("Role column ensured in Admins table.");
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Could not ensure Role column in Admins - may already exist");
+                }
                
                 // Seed data
                 var configuration = services.GetRequiredService<IConfiguration>();
@@ -271,6 +295,7 @@ namespace PharmaDesk.Infrastructure.Persistence
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword),
                     FirstName = adminFirstName,
                     LastName = adminLastName,
+                    Role = "SuperAdmin", // First admin gets SuperAdmin privileges
                     CreatedAt = DateTime.UtcNow
                 };
                 
@@ -280,12 +305,17 @@ namespace PharmaDesk.Infrastructure.Persistence
             }
             else
             {
-                // Update existing admin password
+                // Update existing admin
                 existingAdmin.PasswordHash = BCrypt.Net.BCrypt.HashPassword(adminPassword);
                 existingAdmin.FirstName = adminFirstName;
                 existingAdmin.LastName = adminLastName;
+                // Ensure melik_kul@outlook.com always has SuperAdmin role
+                if (existingAdmin.Email == "melik_kul@outlook.com")
+                {
+                    existingAdmin.Role = "SuperAdmin";
+                }
                 await context.SaveChangesAsync();
-                logger.LogInformation($"Admin account updated: {adminEmail}");
+                logger.LogInformation($"Admin account updated: {adminEmail} (Role: {existingAdmin.Role})");
             }
         }
 

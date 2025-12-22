@@ -5,31 +5,34 @@ import { ChatWindow } from './ChatWindow';
 import styles from './FloatingChatWindow.module.css';
 
 interface FloatingChatWindowProps {
-  otherUserId: string;
+  conversationId: number;
   isMinimized: boolean;
   onMinimize: () => void;
   onClose: () => void;
-  position: { bottom: number; right: number };
+  position: { bottom: number; left?: number; right?: number };
 }
 
 export const FloatingChatWindow: React.FC<FloatingChatWindowProps> = ({
-  otherUserId,
+  conversationId,
   isMinimized,
   onMinimize,
   onClose,
   position
 }) => {
+  const positionStyle: React.CSSProperties = {
+    bottom: `${position.bottom}px`,
+    ...(position.left !== undefined ? { left: `${position.left}px` } : {}),
+    ...(position.right !== undefined ? { right: `${position.right}px` } : {}),
+  };
+
   return (
     <div 
       className={`${styles.floatingWindow} ${isMinimized ? styles.minimized : ''}`}
-      style={{ 
-        bottom: `${position.bottom}px`, 
-        right: `${position.right}px` 
-      }}
+      style={positionStyle}
     >
       <div className={styles.body}>
         <ChatWindow 
-          otherUserId={otherUserId}
+          conversationId={conversationId}
           onMinimize={onMinimize}
           onClose={onClose}
           isMinimized={isMinimized}

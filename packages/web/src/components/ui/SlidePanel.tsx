@@ -9,12 +9,15 @@ interface SlidePanelProps {
   children: React.ReactNode;
   // GÜNCELLENDİ: Prop opsiyonel yapıldı (?)
   onMarkAllRead?: (e: React.MouseEvent<HTMLAnchorElement>) => void;
+  width?: string; // Optional width prop for wider panels
 }
 
-const SlidePanel: React.FC<SlidePanelProps> = ({ title, show, onClose, children, onMarkAllRead }) => (
+const SlidePanel: React.FC<SlidePanelProps> = ({ title, show, onClose, children, onMarkAllRead, width }) => (
     <>
         <div className={`slide-panel-overlay ${show ? 'show' : ''}`} onClick={onClose}></div>
-        <div className={`slide-panel ${show ? 'show' : ''}`}>
+        <div 
+          className={`slide-panel ${show ? 'show' : ''} ${width ? 'slide-panel--wide' : ''}`}
+        >
             <div className="panel-header">
                 <h3>{title}</h3>
                 <div className="panel-actions">

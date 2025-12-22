@@ -3,7 +3,8 @@
    Türkiye Ödeme Sistemleri: iyzico, PayTR, Param, Papara entegrasyon hazır
 ═══════════════════════════════════════════════════════════════════════════ */
 
-:root {
+.container {
+  /* CSS Variables scoped to container */
   --subscription-primary: #6366f1;
   --subscription-primary-dark: #4f46e5;
   --subscription-secondary: #10b981;
@@ -16,9 +17,7 @@
   --subscription-border: #e2e8f0;
   --subscription-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --subscription-shadow-lg: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-}
-
-.container {
+  
   min-height: calc(100vh - 100px);
   background: var(--subscription-bg);
   padding: 2rem 1rem;

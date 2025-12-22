@@ -8,6 +8,34 @@ import axios, { AxiosInstance } from 'axios';
 export interface User {
   name: string;
   email: string;
+  role: string; // "SuperAdmin" | "Admin"
+}
+
+// JWT token payload interface
+interface JwtPayload {
+  [key: string]: unknown;
+  'http://schemas.microsoft.com/ws/2008/06/identity/claims/role'?: string;
+}
+
+// Decode JWT token to extract claims
+function decodeJwt(token: string): JwtPayload | null {
+  try {
+    const parts = token.split('.');
+    if (parts.length !== 3) return null;
+    const payload = parts[1];
+    const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+    return JSON.parse(decoded);
+  } catch {
+    return null;
+  }
+}
+
+// Extract role from JWT token
+function extractRoleFromToken(token: string): string {
+  const payload = decodeJwt(token);
+  if (!payload) return 'Admin';
+  // .NET ClaimTypes.Role uses this URN
+  return (payload['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] as string) || 'Admin';
 }
 
 // Context'in taşıyacağı değerlerin tipini tanımlar.
@@ -82,6 +110,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (storedToken && storedUser) {
         const userData: User = JSON.parse(storedUser);
+        // Ensure role is set from token
+        if (!userData.role) {
+          userData.role = extractRoleFromToken(storedToken);
+        }
         setToken(storedToken);
         setUser(userData);
         api.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
@@ -106,20 +138,24 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const user = response.data.user;
 
       if (accessToken && user) {
+        // Extract role from JWT token
+        const role = extractRoleFromToken(accessToken);
+        const userWithRole: User = { ...user, role };
+        
         if (rememberMe) {
           localStorage.setItem('admin_token', accessToken);
-          localStorage.setItem('admin_user', JSON.stringify(user));
+          localStorage.setItem('admin_user', JSON.stringify(userWithRole));
           sessionStorage.removeItem('admin_token');
           sessionStorage.removeItem('admin_user');
         } else {
           sessionStorage.setItem('admin_token', accessToken);
-          sessionStorage.setItem('admin_user', JSON.stringify(user));
+          sessionStorage.setItem('admin_user', JSON.stringify(userWithRole));
           localStorage.removeItem('admin_token');
           localStorage.removeItem('admin_user');
         }
         
         setToken(accessToken);
-        setUser(user);
+        setUser(userWithRole);
         api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
         router.push('/dashboard');
       } else {

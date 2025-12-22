@@ -142,48 +142,61 @@ export const useDashboardPanels = () => {
       const API_BASE_URL = '';
       
       // Parse pharmacy ID to string (prevents JavaScript precision loss with large Long IDs)
-      const receiverPharmacyId = String(pharmacy.id);
+      const targetPharmacyId = String(pharmacy.id);
       
       console.log('[handleStartChat] Pharmacy object:', pharmacy);
-      console.log('[handleStartChat] pharmacy.id (raw):', pharmacy.id);
-      console.log('[handleStartChat] receiverPharmacyId (string):', receiverPharmacyId);
+      console.log('[handleStartChat] targetPharmacyId:', targetPharmacyId);
       
-      if (!receiverPharmacyId) {
+      if (!targetPharmacyId) {
         console.error('Invalid pharmacy ID:', pharmacy.id);
         alert('Geçersiz eczane ID. Lütfen sayfayı yenileyin.');
         return;
       }
 
-      console.log('[handleStartChat] Making API call with receiverPharmacyId:', receiverPharmacyId);
-
-      const response = await fetch(`${API_BASE_URL}/api/chat/conversations`, { 
+      // Use correct API endpoint: POST /api/chat/conversations/direct/{targetUserId}
+      const response = await fetch(`${API_BASE_URL}/api/chat/conversations/direct/${targetPharmacyId}`, { 
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token && token !== 'cookie-managed' ? { 'Authorization': `Bearer ${token}` } : {})
         },
         credentials: 'include',
-        // Send as STRING to prevent JavaScript precision loss
-        body: JSON.stringify({ receiverPharmacyId: receiverPharmacyId }),
       });
-
 
       console.log('[handleStartChat] Response status:', response.status);
 
       if (response.ok) {
         const conversation = await response.json();
-        console.log('[handleStartChat] Conversation created:', conversation);
+        console.log('[handleStartChat] Conversation created/found:', conversation);
         
-        // Open floating chat window instead of inline panel
-        openFloatingChat(receiverPharmacyId);
+        // Close all panels first
         setShowNotificationsPanel(false);
         setShowCartPanel(false);
+        
+        // Use openFloatingChat to properly open the chat window
+        // This adds to openChats array which triggers FloatingChatWindow render
+        const conversationId = String(conversation.id);
+        console.log('[handleStartChat] Opening floating chat with ID:', conversationId);
+        
+        // Add to openChats if not already there
+        setOpenChats(prev => {
+          if (prev.includes(conversationId)) {
+            console.log('[handleStartChat] Chat already open');
+            return prev;
+          }
+          console.log('[handleStartChat] Adding to openChats');
+          return [...prev, conversationId];
+        });
+        
+        // Close messages panel since we're opening floating window
+        setShowMessagesPanel(false);
+        
+        // Also set active chat user ID for reference
+        setActiveChatUserId(conversationId);
       } else {
         const errorText = await response.text();
         console.warn('Failed to start chat:', response.status, errorText);
         
-        // Only show alert for non-404 errors
-        // 404 means chat feature not implemented yet - fail silently
         if (response.status !== 404) {
           alert(`Sohbet başlatılamadı: ${response.status}`);
         } else {
@@ -192,7 +205,6 @@ export const useDashboardPanels = () => {
       }
     } catch (error) {
       console.warn('Error starting chat:', error);
-      // Don't show alert for network errors - just log
     }
   }, [token]);
 

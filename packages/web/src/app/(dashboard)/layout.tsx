@@ -15,6 +15,7 @@ import NotificationItem from '@/components/notifications/NotificationItem';
 import MessageItem from '@/components/notifications/MessageItem';
 import NotificationModal from '@/components/notifications/NotificationModal';
 import { ChatPanel } from '@/components/chat/ChatPanel';
+import { ChatLayout } from '@/components/chat/ChatLayout';
 import { FloatingChatWindow } from '@/components/chat/FloatingChatWindow';
 import CartPanel from '@/components/cart/CartPanel';
 import SubscriptionBanner from '@/components/subscription/SubscriptionBanner';
@@ -23,13 +24,15 @@ import SubscriptionBanner from '@/components/subscription/SubscriptionBanner';
 import { pharmacyData } from '@/lib/dashboardData';
 
 // GÜNCELLEME: Hook'u ve Context'i import et
-// GÜNCELLEME: Hook'u ve Context'i import et
 import { useDashboardPanels } from '@/hooks/useDashboardPanels';
 import { DashboardContext, useDashboardContext, Notification, Message } from '@/store/DashboardContext';
 import { useAuth } from '@/store/AuthContext';
 import { ChatProvider } from '@/store/ChatContext';
 import { GroupProvider } from '@/store/GroupContext';
 import { Toaster } from 'sonner';
+
+// Client-side log collector for Mission Control
+import '@/services/logCollectorService';
 
 
 // ### OPTİMİZASYON: Bildirim Listesi Ayrı Bileşene Taşındı ve Memoize Edildi ###
@@ -219,9 +222,7 @@ export default function DashboardLayout({
                       show={panelValues.showMessagesPanel}
                       onClose={panelValues.toggleMessagesPanel}
                     >
-                      <ChatPanel 
-                        onSelectUser={panelValues.openFloatingChat}
-                      />
+                      <ChatPanel />
                     </SlidePanel>
 
                     <CartPanel show={panelValues.showCartPanel} onClose={panelValues.toggleCartPanel} />
@@ -231,15 +232,20 @@ export default function DashboardLayout({
                       onClose={panelValues.closeNotificationModal}
                     />
 
-                    {/* Floating Chat Windows */}
-                    {panelValues.openChats.map((chatUserId, index) => (
+                    {/* Floating Chat Windows - shift left when messages panel is open to avoid overlap */}
+                    {panelValues.openChats.map((chatId, index) => (
                       <FloatingChatWindow
-                        key={chatUserId}
-                        otherUserId={chatUserId}
-                        isMinimized={panelValues.minimizedChats.includes(chatUserId)}
-                        onMinimize={() => panelValues.toggleMinimizeChat(chatUserId)}
-                        onClose={() => panelValues.closeChat(chatUserId)}
-                        position={{ bottom: 0, right: 20 + (index * 370) }}
+                        key={chatId}
+                        conversationId={parseInt(chatId, 10) || 0}
+                        isMinimized={panelValues.minimizedChats.includes(chatId)}
+                        onMinimize={() => panelValues.toggleMinimizeChat(chatId)}
+                        onClose={() => panelValues.closeChat(chatId)}
+                        position={{ 
+                          bottom: 0, 
+                          right: panelValues.showMessagesPanel 
+                            ? 420 + (index * 370)  // Shift left when panel is open (400px panel + 20px gap)
+                            : 20 + (index * 370)   // Normal position when panel closed
+                        }}
                       />
                     ))}
                   </div>

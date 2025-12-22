@@ -54,6 +54,7 @@ services:
       - ./packages/api:/app
       - ./ilac_arsivi_with_images.csv:/app/ilac_arsivi_with_images.csv
       - ./images:/app/wwwroot/images
+      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       # Database Configuration (Secrets)

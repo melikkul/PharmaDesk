@@ -35,11 +35,24 @@ try
     builder.Services.AddCorsPolicy();
     builder.Services.AddApplicationServices(builder.Configuration);
     builder.Services.AddHealthChecksConfiguration(builder.Configuration);
+    
+    // Background services
+    builder.Services.AddHostedService<PharmaDesk.API.Services.OnlineUserCleanupService>();
 
     var app = builder.Build();
 
-    // Add Serilog request logging
+    // ═══════════════════════════════════════════════════════════════
+    // Request Pipeline - Order matters!
+    // ═══════════════════════════════════════════════════════════════
+
+    // 1. Correlation ID - Must be FIRST to generate/extract TraceId for all subsequent middleware
+    app.UseMiddleware<PharmaDesk.API.Middleware.CorrelationIdMiddleware>();
+
+    // 2. Serilog request logging (enriched by CorrelationId)
     app.UseSerilogRequestLogging();
+
+    // 3. Request/Response logging with performance metrics (fire-and-forget)
+    app.UseMiddleware<PharmaDesk.API.Middleware.RequestLoggingMiddleware>();
 
     // Initialize database (migrations and seeding)
     await app.Services.InitializeDatabaseAsync();

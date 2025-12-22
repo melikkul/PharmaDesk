@@ -65,6 +65,55 @@ namespace Backend.Controllers
             return Ok(medications);
         }
 
+        /// <summary>
+        /// Get paginated medications list for Admin panel
+        /// </summary>
+        [HttpGet("paged")]
+        public async Task<IActionResult> GetMedicationsPaged(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string? search = null)
+        {
+            var query = _db.Medications.AsNoTracking();
+
+            // Apply search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                var searchLower = search.ToLowerInvariant();
+                query = query.Where(m => 
+                    m.Name.ToLower().Contains(searchLower) || 
+                    (m.Barcode != null && m.Barcode.Contains(search)) ||
+                    (m.Manufacturer != null && m.Manufacturer.ToLower().Contains(searchLower)));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var medications = await query
+                .OrderBy(m => m.Name)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(m => new
+                {
+                    id = m.Id,
+                    name = m.Name,
+                    barcode = m.Barcode,
+                    manufacturer = m.Manufacturer,
+                    basePrice = m.BasePrice,
+                    packageType = m.PackageType,
+                    atc = m.ATC
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                data = medications,
+                totalCount = totalCount,
+                page = page,
+                pageSize = pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+            });
+        }
+
         [HttpGet("{id}")]
         public async Task<ActionResult<MedicationResponse>> GetMedication(int id)
         {

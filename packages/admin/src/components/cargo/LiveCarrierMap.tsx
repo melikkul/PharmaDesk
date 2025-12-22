@@ -99,9 +99,17 @@ export default function LiveCarrierMap() {
                     // Component unmounted during connection
                     connection.stop().catch(() => {});
                 }
-            } catch (err) {
+            } catch (err: any) {
                 if (isMounted) {
-                    console.error('❌ SignalR connection failed:', err);
+                    // Check if this is a negotiation error (HTML response instead of JSON)
+                    if (err?.message?.includes('SyntaxError') || 
+                        err?.message?.includes('Unexpected token') ||
+                        err?.message?.includes('JSON')) {
+                        console.warn('⚠️ SignalR hub not available (backend may not be running or hub not configured)');
+                    } else {
+                        console.error('❌ SignalR connection failed:', err?.message || err);
+                    }
+                    // Don't show error to user - graceful degradation
                 }
             }
         };

@@ -15,7 +15,7 @@ const Sidebar: React.FC<SidebarProps> = ({ onLogout, user }) => {
 
   const menuItems = [
     { icon: '📊', label: 'Dashboard', href: '/dashboard' },
-    { icon: '👥', label: 'Kullanıcılar', href: '/users' },
+    { icon: '👥', label: 'Eczaneler', href: '/users' },
     { icon: '✅', label: 'Onay Bekleyenler', href: '/approvals' },
     { icon: '💊', label: 'İlaç Yönetimi', href: '/drugs' },
     { icon: '📦', label: 'Transferler', href: '/transactions' },

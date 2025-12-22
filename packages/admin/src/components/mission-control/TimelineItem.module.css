@@ -1,0 +1,171 @@
+/* ═══════════════════════════════════════════════════════════════
+   TIMELINE ITEM - Atomic Action Event
+   ═══════════════════════════════════════════════════════════════ */
+
+.timelineItem {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  margin-left: 20px;
+  border-left: 2px solid var(--mc-border, #30363d);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  border-radius: 0 8px 8px 0;
+}
+
+.timelineItem:hover {
+  background: var(--mc-bg-secondary, #161b22);
+}
+
+.timelineItem.selected {
+  background: rgba(88, 166, 255, 0.1);
+  border-left-color: var(--mc-border-active, #58a6ff);
+}
+
+/* Icon Node */
+.iconNode {
+  position: absolute;
+  left: -17px;
+  top: 12px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--mc-bg-tertiary, #21262d);
+  border: 2px solid var(--mc-border, #30363d);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  z-index: 1;
+  transition: all 0.15s ease-out;
+}
+
+.timelineItem:hover .iconNode {
+  transform: scale(1.1);
+}
+
+.timelineItem.selected .iconNode {
+  border-color: var(--mc-border-active, #58a6ff);
+  background: rgba(88, 166, 255, 0.2);
+}
+
+/* Status-based icon colors */
+.iconNode.success { border-color: var(--mc-success, #3fb950); }
+.iconNode.warning { border-color: var(--mc-warning, #d29922); }
+.iconNode.error { border-color: var(--mc-error, #f85149); }
+.iconNode.info { border-color: var(--mc-info, #58a6ff); }
+
+/* Content */
+.content {
+  flex: 1;
+  min-width: 0;
+  padding-left: 8px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mc-text-primary, #f0f6fc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.timestamp {
+  font-size: 11px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  color: var(--mc-text-muted, #6e7681);
+  flex-shrink: 0;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--mc-text-secondary, #8b949e);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: 'Monaco', 'Menlo', monospace;
+}
+
+/* Meta Row */
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.badge.success {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--mc-success, #3fb950);
+}
+
+.badge.warning {
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--mc-warning, #d29922);
+}
+
+.badge.error {
+  background: rgba(248, 81, 73, 0.15);
+  color: var(--mc-error, #f85149);
+}
+
+.badge.info {
+  background: rgba(88, 166, 255, 0.15);
+  color: var(--mc-info, #58a6ff);
+}
+
+.duration {
+  font-size: 11px;
+  color: var(--mc-text-muted, #6e7681);
+}
+
+/* Type-specific styling */
+.typeClick .iconNode { background: rgba(163, 113, 247, 0.2); border-color: #a371f7; }
+.typeNavigation .iconNode { background: rgba(88, 166, 255, 0.2); border-color: #58a6ff; }
+.typeApiRequest .iconNode { background: rgba(63, 185, 80, 0.2); border-color: #3fb950; }
+.typeApiResponse .iconNode { background: rgba(63, 185, 80, 0.2); border-color: #3fb950; }
+.typeError .iconNode { background: rgba(248, 81, 73, 0.2); border-color: #f85149; }
+.typeConsole .iconNode { background: rgba(110, 118, 129, 0.2); border-color: #6e7681; }
+
+/* Animation */
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.timelineItem {
+  animation: slideInLeft 0.3s ease-out forwards;
+}
+
+.timelineItem:nth-child(1) { animation-delay: 0s; }
+.timelineItem:nth-child(2) { animation-delay: 0.05s; }
+.timelineItem:nth-child(3) { animation-delay: 0.1s; }
+.timelineItem:nth-child(4) { animation-delay: 0.15s; }
+.timelineItem:nth-child(5) { animation-delay: 0.2s; }

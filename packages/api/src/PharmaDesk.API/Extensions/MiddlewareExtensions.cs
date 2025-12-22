@@ -83,6 +83,7 @@ namespace PharmaDesk.API.Extensions
             app.MapControllers();
             app.MapHub<PharmaDesk.API.Hubs.NotificationHub>("/hubs/notifications");
             app.MapHub<PharmaDesk.API.Hubs.LocationHub>("/hubs/location");
+            app.MapHub<PharmaDesk.API.Hubs.ChatHub>("/hubs/chat");
 
             return app;
         }

@@ -134,6 +134,61 @@ namespace Backend.Models
         /// </summary>
         [StringLength(2000)]
         public string? ErrorMessage { get; set; }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Full Stack Traceability Fields
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Correlation ID linking frontend and backend logs (X-Correlation-ID)
+        /// </summary>
+        [StringLength(36)]
+        public string? TraceId { get; set; }
+
+        /// <summary>
+        /// Client-side console logs, errors, and events (JSONB)
+        /// Format: [{ level: "log|warn|error", message: string, timestamp: number }]
+        /// </summary>
+        [Column(TypeName = "jsonb")]
+        public string? ClientLogs { get; set; }
+
+        /// <summary>
+        /// Server-side logs during this request (JSONB)
+        /// Format: [{ level: "info|warn|error", message: string, stackTrace?: string }]
+        /// </summary>
+        [Column(TypeName = "jsonb")]
+        public string? ServerLogs { get; set; }
+
+        /// <summary>
+        /// Performance metrics: RequestDuration, DbDuration, MemoryUsed, etc. (JSONB)
+        /// Format: { requestMs: number, dbMs: number, memoryBytes: number }
+        /// </summary>
+        [Column(TypeName = "jsonb")]
+        public string? PerformanceMetrics { get; set; }
+
+        /// <summary>
+        /// Client metadata: Browser, OS, Screen Resolution, etc. (JSONB)
+        /// Format: { userAgent: string, screen: string, language: string, timezone: string }
+        /// </summary>
+        [Column(TypeName = "jsonb")]
+        public string? ClientMetadata { get; set; }
+
+        /// <summary>
+        /// Log type for categorization: Request, Error, ClientError, SystemEvent, etc.
+        /// </summary>
+        [StringLength(50)]
+        public string? LogType { get; set; }
+
+        /// <summary>
+        /// HTTP Status code of the response
+        /// </summary>
+        public int? HttpStatusCode { get; set; }
+
+        /// <summary>
+        /// Session ID for grouping related logs
+        /// </summary>
+        [StringLength(36)]
+        public string? SessionId { get; set; }
     }
 
     /// <summary>

@@ -1,0 +1,186 @@
+/* ═══════════════════════════════════════════════════════════════
+   USER CARD - Live Session Card Component
+   ═══════════════════════════════════════════════════════════════ */
+
+.userCard {
+  background: var(--mc-bg-tertiary, #21262d);
+  border: 1px solid var(--mc-border, #30363d);
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease-out;
+  position: relative;
+  overflow: hidden;
+}
+
+.userCard::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--mc-border, #30363d);
+  transition: background 0.2s ease-out;
+}
+
+.userCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border-color: var(--mc-border-active, #58a6ff);
+}
+
+.userCard:hover::before {
+  background: var(--mc-border-active, #58a6ff);
+}
+
+.userCard.selected {
+  border-color: var(--mc-border-active, #58a6ff);
+  background: rgba(88, 166, 255, 0.1);
+}
+
+.userCard.selected::before {
+  background: var(--mc-border-active, #58a6ff);
+}
+
+.userCard.online::before { background: var(--mc-online, #3fb950); }
+.userCard.idle::before { background: var(--mc-idle, #d29922); }
+.userCard.offline::before { background: var(--mc-offline, #6e7681); }
+
+/* Header Row */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #58a6ff, #a371f7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  flex-shrink: 0;
+}
+
+.userInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--mc-text-primary, #f0f6fc);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pharmacyName {
+  font-size: 11px;
+  color: var(--mc-text-secondary, #8b949e);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Status Badge */
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.statusBadge.online {
+  background: rgba(63, 185, 80, 0.15);
+  color: var(--mc-online, #3fb950);
+}
+
+.statusBadge.idle {
+  background: rgba(210, 153, 34, 0.15);
+  color: var(--mc-idle, #d29922);
+}
+
+.statusBadge.offline {
+  background: rgba(110, 118, 129, 0.15);
+  color: var(--mc-offline, #6e7681);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.statusBadge.online .statusDot {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.8); }
+}
+
+/* Stats Row */
+.statsRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stat {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--mc-bg-secondary, #161b22);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.statIcon {
+  font-size: 12px;
+}
+
+.statValue {
+  font-weight: 600;
+  color: var(--mc-text-primary, #f0f6fc);
+}
+
+.stat.latencyGood .statValue { color: var(--mc-latency-good, #3fb950); }
+.stat.latencyMedium .statValue { color: var(--mc-latency-medium, #d29922); }
+.stat.latencyBad .statValue { color: var(--mc-latency-bad, #f85149); }
+
+.stat.hasErrors .statValue { color: var(--mc-error, #f85149); }
+
+/* Activity Indicator */
+.activityRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--mc-border, #30363d);
+  font-size: 10px;
+  color: var(--mc-text-muted, #6e7681);
+}
+
+.lastActivity {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}

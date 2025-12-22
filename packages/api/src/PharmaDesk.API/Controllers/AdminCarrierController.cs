@@ -10,7 +10,7 @@ namespace Backend.Controllers
     /// </summary>
     [Route("api/admin/carriers")]
     [ApiController]
-    [Authorize(Roles = "Admin,User")]
+    [Authorize(Roles = "Admin,SuperAdmin,User")]
     public class AdminCarrierController : ControllerBase
     {
         private readonly AppDbContext _context;

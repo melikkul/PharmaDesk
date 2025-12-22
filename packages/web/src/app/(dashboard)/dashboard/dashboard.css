@@ -124,6 +124,19 @@
     right: 0;
 }
 
+/* Wide panel variant for chat layout */
+.slide-panel--wide {
+    width: 800px;
+    max-width: 90%;
+}
+
+@media (max-width: 900px) {
+    .slide-panel--wide {
+        width: 100%;
+        max-width: 100%;
+    }
+}
+
 .panel-header {
     display: flex;
     justify-content: space-between;

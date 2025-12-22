@@ -9,7 +9,7 @@ namespace Backend.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "SuperAdmin, Admin")]
     public class AdminController : ControllerBase
     {
         private readonly IdentityDbContext _db;
@@ -26,19 +26,236 @@ namespace Backend.Controllers
         [HttpGet("stats")]
         public async Task<IActionResult> GetStats()
         {
-            var totalPharmacies = await _db.IdentityUsers.CountAsync(u => u.Role == "User");
+            // Count pharmacies from PharmacyProfiles (not IdentityUsers)
+            var totalPharmacies = await _appDb.PharmacyProfiles.CountAsync();
             var totalDrugs = await _appDb.Medications.CountAsync();
-            var pendingApprovals = await _db.IdentityUsers.CountAsync(u => !u.IsApproved);
+            var pendingApprovals = await _db.IdentityUsers.CountAsync(u => !u.IsApproved && u.Role == "User");
+            var totalOffers = await _appDb.Offers.IgnoreQueryFilters().CountAsync();
+            var activeTransfers = await _appDb.Shipments.CountAsync(s => s.Status == ShipmentStatus.InTransit);
+            
+            // Count active users - all approved users with Role=User (regardless of Status)
+            var activeUsers = await _db.IdentityUsers.CountAsync(u => u.Role == "User" && u.IsApproved);
+            
+            // Count groups
+            var totalGroups = await _appDb.Groups.CountAsync();
             
             var stats = new
             {
                 TotalPharmacies = totalPharmacies,
                 TotalDrugs = totalDrugs,
                 PendingApprovals = pendingApprovals,
-                TotalTransactions = 0
+                TotalOffers = totalOffers,
+                ActiveTransfers = activeTransfers,
+                ActiveUsers = activeUsers,
+                TotalGroups = totalGroups
             };
 
             return Ok(stats);
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Admin Offers Endpoint - All offers with IgnoreQueryFilters
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Get all offers in the system (ignoring soft delete filters)
+        /// </summary>
+        [HttpGet("offers")]
+        public async Task<IActionResult> GetAllOffers(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string? search = null,
+            [FromQuery] string? status = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null)
+        {
+            var query = _appDb.Offers
+                .IgnoreQueryFilters() // Include soft-deleted offers
+                .Include(o => o.Medication)
+                .Include(o => o.PharmacyProfile)
+                .AsQueryable();
+
+            // Group filter - get pharmacies in the group
+            if (groupId.HasValue)
+            {
+                var groupPharmacyIds = await _appDb.PharmacyGroups
+                    .Where(pg => pg.GroupId == groupId.Value && pg.IsActive)
+                    .Select(pg => pg.PharmacyProfileId)
+                    .ToListAsync();
+                
+                query = query.Where(o => groupPharmacyIds.Contains(o.PharmacyProfileId));
+            }
+
+            // Apply status filter
+            if (!string.IsNullOrEmpty(status) && Enum.TryParse<OfferStatus>(status, true, out var statusEnum))
+            {
+                query = query.Where(o => o.Status == statusEnum);
+            }
+
+            // Date filters
+            if (startDate.HasValue)
+            {
+                query = query.Where(o => o.CreatedAt >= startDate.Value);
+            }
+            if (endDate.HasValue)
+            {
+                query = query.Where(o => o.CreatedAt <= endDate.Value.AddDays(1)); // Include the entire end day
+            }
+
+            // Apply search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                var searchLower = search.ToLowerInvariant();
+                query = query.Where(o => 
+                    (o.Medication != null && o.Medication.Name.ToLower().Contains(searchLower)) ||
+                    (o.PharmacyProfile != null && o.PharmacyProfile.PharmacyName.ToLower().Contains(searchLower)));
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var offers = await query
+                .OrderByDescending(o => o.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(o => new
+                {
+                    id = o.Id,
+                    medicationName = o.Medication != null ? o.Medication.Name : "Bilinmiyor",
+                    medicationBarcode = o.Medication != null ? o.Medication.Barcode : null,
+                    pharmacyName = o.PharmacyProfile != null ? o.PharmacyProfile.PharmacyName : "Bilinmiyor",
+                    pharmacyId = o.PharmacyProfileId,
+                    quantity = o.Stock,
+                    remainingQuantity = o.Stock - o.SoldQuantity,
+                    unitPrice = o.Price,
+                    totalPrice = o.Price * o.Stock,
+                    status = o.Status.ToString(),
+                    offerType = o.Type.ToString(),
+                    expiryDate = o.ExpirationDate,
+                    createdAt = o.CreatedAt,
+                    isDeleted = o.IsDeleted
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                data = offers,
+                totalCount = totalCount,
+                page = page,
+                pageSize = pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize)
+            });
+        }
+
+        // ═══════════════════════════════════════════════════════════════
+        // Admin Transactions Endpoint - All transactions with summary
+        // ═══════════════════════════════════════════════════════════════
+
+        /// <summary>
+        /// Get all transactions in the system with summary stats
+        /// </summary>
+        [HttpGet("transactions")]
+        public async Task<IActionResult> GetAllTransactions(
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            [FromQuery] string? search = null,
+            [FromQuery] DateTime? startDate = null,
+            [FromQuery] DateTime? endDate = null,
+            [FromQuery] int? groupId = null,
+            [FromQuery] string? type = null,
+            [FromQuery] string? status = null)
+        {
+            var query = _appDb.Transactions
+                .Include(t => t.PharmacyProfile)
+                .Include(t => t.CounterpartyPharmacy)
+                .AsQueryable();
+
+            // Group filter - get pharmacies in the group
+            if (groupId.HasValue)
+            {
+                var groupPharmacyIds = await _appDb.PharmacyGroups
+                    .Where(pg => pg.GroupId == groupId.Value && pg.IsActive)
+                    .Select(pg => pg.PharmacyProfileId)
+                    .ToListAsync();
+                
+                query = query.Where(t => groupPharmacyIds.Contains(t.PharmacyProfileId) || 
+                                         (t.CounterpartyPharmacyId.HasValue && groupPharmacyIds.Contains(t.CounterpartyPharmacyId.Value)));
+            }
+
+            // Type filter
+            if (!string.IsNullOrEmpty(type) && Enum.TryParse<TransactionType>(type, out var typeEnum))
+            {
+                query = query.Where(t => t.Type == typeEnum);
+            }
+
+            // Status filter
+            if (!string.IsNullOrEmpty(status) && Enum.TryParse<TransactionStatus>(status, out var statusEnum))
+            {
+                query = query.Where(t => t.Status == statusEnum);
+            }
+
+            // Date filters
+            if (startDate.HasValue)
+            {
+                query = query.Where(t => t.Date >= startDate.Value);
+            }
+            if (endDate.HasValue)
+            {
+                query = query.Where(t => t.Date <= endDate.Value);
+            }
+
+            // Search filter
+            if (!string.IsNullOrEmpty(search))
+            {
+                var searchLower = search.ToLowerInvariant();
+                query = query.Where(t => 
+                    (t.PharmacyProfile != null && t.PharmacyProfile.PharmacyName.ToLower().Contains(searchLower)) ||
+                    (t.CounterpartyPharmacy != null && t.CounterpartyPharmacy.PharmacyName.ToLower().Contains(searchLower)) ||
+                    (t.Description != null && t.Description.ToLower().Contains(searchLower)));
+            }
+
+            // Summary stats
+            var allTransactions = await _appDb.Transactions.ToListAsync();
+            var today = DateTime.UtcNow.Date;
+            var totalVolume = allTransactions.Sum(t => Math.Abs(t.Amount));
+            var todayCount = allTransactions.Count(t => t.Date.Date == today);
+            var completedCount = allTransactions.Count(t => t.Status == TransactionStatus.Completed);
+            var pendingCount = allTransactions.Count(t => t.Status == TransactionStatus.Pending);
+
+            var totalCount = await query.CountAsync();
+
+            var transactions = await query
+                .OrderByDescending(t => t.Date)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(t => new
+                {
+                    id = t.Id,
+                    date = t.Date.ToString("dd.MM.yyyy HH:mm"),
+                    type = t.Type.ToString(),
+                    description = t.Description,
+                    sender = t.PharmacyProfile != null ? t.PharmacyProfile.PharmacyName : "Sistem",
+                    receiver = t.CounterpartyPharmacy != null ? t.CounterpartyPharmacy.PharmacyName : "-",
+                    amount = t.Amount,
+                    status = t.Status.ToString()
+                })
+                .ToListAsync();
+
+            return Ok(new
+            {
+                data = transactions,
+                totalCount = totalCount,
+                page = page,
+                pageSize = pageSize,
+                totalPages = (int)Math.Ceiling((double)totalCount / pageSize),
+                summary = new
+                {
+                    totalVolume = totalVolume,
+                    todayCount = todayCount,
+                    completedCount = completedCount,
+                    pendingCount = pendingCount
+                }
+            });
         }
 
         // ═══════════════════════════════════════════════════════════════
@@ -152,6 +369,18 @@ namespace Backend.Controllers
             var profiles = await _appDb.PharmacyProfiles.ToListAsync();
             var users = await _db.IdentityUsers.ToListAsync();
             
+            // Get offer counts per pharmacy
+            var offerCounts = await _appDb.Offers
+                .IgnoreQueryFilters()
+                .GroupBy(o => o.PharmacyProfileId)
+                .Select(g => new { PharmacyId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PharmacyId, x => x.Count);
+            
+            // Get balance per pharmacy (sum of transactions)
+            var balances = await _appDb.PharmacyProfiles
+                .Select(p => new { p.Id, p.Balance })
+                .ToDictionaryAsync(x => x.Id, x => x.Balance);
+            
             var pharmacies = profiles.Select(profile =>
             {
                 var user = users.FirstOrDefault(u => u.PharmacyId == profile.Id);
@@ -161,8 +390,8 @@ namespace Backend.Controllers
                     pharmacyname = profile.PharmacyName,
                     email = user?.Email ?? "",
                     phone = profile.PhoneNumber,
-                    balance = 0.0, // Placeholder - would come from transactions
-                    offer_count = 0, // Placeholder - would come from offers count
+                    balance = balances.GetValueOrDefault(profile.Id, 0m),
+                    offer_count = offerCounts.GetValueOrDefault(profile.Id, 0),
                     city = profile.City,
                     district = profile.District
                 };
@@ -464,12 +693,23 @@ namespace Backend.Controllers
             _appDb.PharmacyGroups.RemoveRange(pharmacyGroups);
             Console.WriteLine($"  - Deleted {pharmacyGroups.Count} pharmacy group memberships");
 
-            // Delete Messages (hem gönderen hem alıcı olarak)
-            var messages = await _appDb.Messages
-                .Where(m => m.SenderId == pharmacyId.ToString() || m.ReceiverId == pharmacyId.ToString())
+            // Delete Messages via ConversationParticipants
+            var participantConversationIds = await _appDb.ConversationParticipants
+                .Where(cp => cp.UserId == pharmacyId)
+                .Select(cp => cp.ConversationId)
                 .ToListAsync();
-            _appDb.Messages.RemoveRange(messages);
-            Console.WriteLine($"  - Deleted {messages.Count} messages");
+            
+            var userMessages = await _appDb.Messages
+                .Where(m => m.SenderId == pharmacyId.ToString())
+                .ToListAsync();
+            _appDb.Messages.RemoveRange(userMessages);
+            
+            // Delete ConversationParticipants
+            var conversationParticipants = await _appDb.ConversationParticipants
+                .Where(cp => cp.UserId == pharmacyId)
+                .ToListAsync();
+            _appDb.ConversationParticipants.RemoveRange(conversationParticipants);
+            Console.WriteLine($"  - Deleted {userMessages.Count} messages and {conversationParticipants.Count} conversation participations");
 
             // FINALLY: Delete PharmacyProfile
             var profile = await _appDb.PharmacyProfiles.FindAsync(pharmacyId);
@@ -494,7 +734,8 @@ namespace Backend.Controllers
                     orders = orders.Count,
                     offers = offers.Count,
                     pharmacyGroups = pharmacyGroups.Count,
-                    messages = messages.Count
+                    messages = userMessages.Count,
+                    conversationParticipants = conversationParticipants.Count
                 }
             });
         }

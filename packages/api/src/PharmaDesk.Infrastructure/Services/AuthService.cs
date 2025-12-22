@@ -174,7 +174,7 @@ namespace Backend.Services
                              Email = admin.Email,
                              FirstName = admin.FirstName,
                              LastName = admin.LastName,
-                             Role = "Admin",
+                             Role = admin.Role, // Use actual role: "SuperAdmin" or "Admin"
                              PharmacyId = 0,
                              IsApproved = true // Admins are always approved
                          };

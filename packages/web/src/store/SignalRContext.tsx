@@ -46,9 +46,11 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       return;
     }
 
-    // Use relative URL for Next.js proxy (consistent with authService)
-    // The proxy in next.config.mjs will forward /hubs/* to the backend
-    const apiUrl = "";
+    // Use direct backend URL for SignalR to avoid Next.js proxy issues
+    // The proxy doesn't properly handle SignalR negotiation (returns HTML instead of JSON)
+    const apiUrl = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+      ? 'http://localhost:8081'
+      : '';
 
     let isMounted = true;
     let isConnecting = false;
@@ -212,6 +214,28 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
         setConnectionState("Connected");
         setConnection(newConnection);
         isConnecting = false;
+
+        // Start heartbeat interval (every 15 seconds)
+        const heartbeatInterval = setInterval(() => {
+          if (newConnection.state === signalR.HubConnectionState.Connected) {
+            newConnection.invoke("Heartbeat").catch(() => {
+              // Silently ignore heartbeat errors
+            });
+          }
+        }, 15000);
+
+        // Send heartbeat immediately on tab visibility change
+        const handleVisibilityChange = () => {
+          if (document.visibilityState === "visible" && newConnection.state === signalR.HubConnectionState.Connected) {
+            newConnection.invoke("Heartbeat").catch(() => {});
+          }
+        };
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        // Store cleanup functions for later
+        (newConnection as any)._heartbeatInterval = heartbeatInterval;
+        (newConnection as any)._visibilityHandler = handleVisibilityChange;
+
       } catch (error: any) {
         isConnecting = false;
 
@@ -242,6 +266,17 @@ export const SignalRProvider: React.FC<SignalRProviderProps> = ({ children }) =>
       if (currentConnection) {
         const connectionState = currentConnection.state;
         console.log("[SignalR] Cleanup - connection state:", connectionState);
+
+        // Clear heartbeat interval and visibility handler
+        const heartbeatInterval = (currentConnection as any)._heartbeatInterval;
+        const visibilityHandler = (currentConnection as any)._visibilityHandler;
+        
+        if (heartbeatInterval) {
+          clearInterval(heartbeatInterval);
+        }
+        if (visibilityHandler) {
+          document.removeEventListener("visibilitychange", visibilityHandler);
+        }
 
         // Wait for ongoing connection attempt to finish before stopping
         const cleanup = async () => {

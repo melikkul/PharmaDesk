@@ -72,6 +72,10 @@ namespace Backend.Data
         public DbSet<Subscription> Subscriptions { get; set; } = null!;
         public DbSet<SubscriptionPaymentHistory> SubscriptionPaymentHistories { get; set; } = null!;
 
+        // 🆕 Real-Time Chat Module
+        public DbSet<Conversation> Conversations { get; set; } = null!;
+        public DbSet<ConversationParticipant> ConversationParticipants { get; set; } = null!;
+
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -327,7 +331,40 @@ namespace Backend.Data
             // MESSAGES
             modelBuilder.Entity<Message>(entity =>
             {
-                entity.HasIndex(m => new { m.SenderId, m.ReceiverId });
+                entity.HasIndex(m => new { m.ConversationId, m.SentAt });
+                entity.HasIndex(m => m.SenderId);
+
+                entity.HasOne(m => m.Conversation)
+                    .WithMany(c => c.Messages)
+                    .HasForeignKey(m => m.ConversationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            // 🆕 CONVERSATIONS (Real-Time Chat)
+            modelBuilder.Entity<Conversation>(entity =>
+            {
+                entity.HasIndex(c => c.GroupId);
+                entity.HasIndex(c => c.LastMessageAt)
+                    .IsDescending();
+
+                entity.HasOne(c => c.Group)
+                    .WithMany()
+                    .HasForeignKey(c => c.GroupId)
+                    .OnDelete(DeleteBehavior.SetNull);
+            });
+
+            // 🆕 CONVERSATION PARTICIPANTS
+            modelBuilder.Entity<ConversationParticipant>(entity =>
+            {
+                // Composite primary key
+                entity.HasKey(cp => new { cp.ConversationId, cp.UserId });
+
+                entity.HasIndex(cp => cp.UserId);
+
+                entity.HasOne(cp => cp.Conversation)
+                    .WithMany(c => c.Participants)
+                    .HasForeignKey(cp => cp.ConversationId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // MARKET DEMANDS
@@ -400,7 +437,7 @@ namespace Backend.Data
                     .HasColumnType("jsonb");
             });
 
-            // 🆕 AUDIT LOGS (KVKK/GDPR Compliance)
+            // 🆕 AUDIT LOGS (KVKK/GDPR Compliance + Full Stack Traceability)
             modelBuilder.Entity<AuditLog>(entity =>
             {
                 // Indexes for efficient querying
@@ -415,12 +452,36 @@ namespace Backend.Data
                 entity.HasIndex(a => new { a.UserId, a.Timestamp })
                     .HasDatabaseName("IX_AuditLogs_User_Time");
 
-                // JSONB columns
+                // 🆕 Full Stack Traceability Indexes (Production Performance)
+                entity.HasIndex(a => a.TraceId)
+                    .HasDatabaseName("IX_AuditLogs_TraceId");
+                
+                entity.HasIndex(a => a.SessionId)
+                    .HasDatabaseName("IX_AuditLogs_SessionId");
+                
+                entity.HasIndex(a => a.LogType)
+                    .HasDatabaseName("IX_AuditLogs_LogType");
+                
+                // Composite index for session replay queries (TraceId + Timestamp)
+                entity.HasIndex(a => new { a.TraceId, a.Timestamp })
+                    .HasDatabaseName("IX_AuditLogs_TraceId_Timestamp");
+
+                // JSONB columns (existing)
                 entity.Property(a => a.OldValues)
                     .HasColumnType("jsonb");
                 entity.Property(a => a.NewValues)
                     .HasColumnType("jsonb");
                 entity.Property(a => a.ChangedProperties)
+                    .HasColumnType("jsonb");
+
+                // 🆕 JSONB columns (Full Stack Traceability)
+                entity.Property(a => a.ClientLogs)
+                    .HasColumnType("jsonb");
+                entity.Property(a => a.ServerLogs)
+                    .HasColumnType("jsonb");
+                entity.Property(a => a.PerformanceMetrics)
+                    .HasColumnType("jsonb");
+                entity.Property(a => a.ClientMetadata)
                     .HasColumnType("jsonb");
             });
 

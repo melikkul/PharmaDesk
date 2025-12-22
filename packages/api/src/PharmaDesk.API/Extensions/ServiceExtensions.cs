@@ -150,14 +150,14 @@ namespace PharmaDesk.API.Extensions
         {
             services.AddRateLimiter(options =>
             {
-                // Global rate limit: 1000 requests per minute per IP (increased for testing)
+                // Global rate limit: 5000 requests per minute per IP (high for development)
                 options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
                     RateLimitPartition.GetFixedWindowLimiter(
                         partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
                         factory: _ => new FixedWindowRateLimiterOptions
                         {
                             AutoReplenishment = true,
-                            PermitLimit = 1000,  // Increased from 100 for testing
+                            PermitLimit = 5000,  // High limit for development/testing
                             Window = TimeSpan.FromMinutes(1)
                         }));
 
@@ -219,6 +219,9 @@ namespace PharmaDesk.API.Extensions
             
             // 🆕 Register SubscriptionService (SaaS subscription management)
             services.AddScoped<ISubscriptionService, SubscriptionService>();
+            
+            // 🆕 Register ChatService (Real-Time Chat Module)
+            services.AddScoped<PharmaDesk.Application.Interfaces.IChatService, Backend.Services.ChatService>();
             
             // Add memory cache for barem data caching
             services.AddMemoryCache();

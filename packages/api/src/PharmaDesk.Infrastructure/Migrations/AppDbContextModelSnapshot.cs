@@ -400,6 +400,64 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.ToTable("Cities");
                 });
 
+            modelBuilder.Entity("Backend.Models.Conversation", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int?>("GroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastMessagePreview")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("GroupId");
+
+                    b.HasIndex("LastMessageAt")
+                        .IsDescending();
+
+                    b.ToTable("Conversations");
+                });
+
+            modelBuilder.Entity("Backend.Models.ConversationParticipant", b =>
+                {
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("integer");
+
+                    b.Property<long>("UserId")
+                        .HasColumnType("bigint");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastReadAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("UnreadCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("ConversationId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("ConversationParticipants");
+                });
+
             modelBuilder.Entity("Backend.Models.District", b =>
                 {
                     b.Property<int>("Id")
@@ -787,23 +845,28 @@ namespace PharmaDesk.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("ConversationId")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("IsRead")
                         .HasColumnType("boolean");
-
-                    b.Property<string>("ReceiverId")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.Property<string>("SenderId")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<string>("SenderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTime>("SentAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SenderId", "ReceiverId");
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("ConversationId", "SentAt");
 
                     b.ToTable("Messages");
                 });
@@ -1244,6 +1307,9 @@ namespace PharmaDesk.Infrastructure.Migrations
                         .HasColumnType("text");
 
                     b.Property<decimal>("Balance")
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("BalanceLimit")
                         .HasColumnType("decimal(18,2)");
 
                     b.Property<string>("City")
@@ -1988,6 +2054,27 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.Navigation("Offer");
                 });
 
+            modelBuilder.Entity("Backend.Models.Conversation", b =>
+                {
+                    b.HasOne("Backend.Models.Group", "Group")
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Group");
+                });
+
+            modelBuilder.Entity("Backend.Models.ConversationParticipant", b =>
+                {
+                    b.HasOne("Backend.Models.Conversation", "Conversation")
+                        .WithMany("Participants")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
+                });
+
             modelBuilder.Entity("Backend.Models.District", b =>
                 {
                     b.HasOne("Backend.Models.City", "City")
@@ -2065,6 +2152,17 @@ namespace PharmaDesk.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Medication");
+                });
+
+            modelBuilder.Entity("Backend.Models.Message", b =>
+                {
+                    b.HasOne("Backend.Models.Conversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Conversation");
                 });
 
             modelBuilder.Entity("Backend.Models.Notification", b =>
@@ -2436,6 +2534,13 @@ namespace PharmaDesk.Infrastructure.Migrations
                     b.Navigation("Districts");
 
                     b.Navigation("Groups");
+                });
+
+            modelBuilder.Entity("Backend.Models.Conversation", b =>
+                {
+                    b.Navigation("Messages");
+
+                    b.Navigation("Participants");
                 });
 
             modelBuilder.Entity("Backend.Models.Group", b =>

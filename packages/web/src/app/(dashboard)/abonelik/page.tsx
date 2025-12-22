@@ -175,13 +175,101 @@ export default function AbonelikPage() {
         </div>
         
         <h1 className={styles.heroTitle}>
-          {isActive ? 'Aboneliğinizi Yenileyin' : 'PharmaDesk Premium'}
+          {isActive ? 'Abonelik Durumunuz' : 'PharmaDesk Premium'}
         </h1>
         <p className={styles.heroSubtitle}>
-          Türkiye'nin en kapsamlı eczane yönetim platformuna tam erişim.
-          Güvenli ödeme, anında aktivasyon.
+          {isActive 
+            ? 'Aktif aboneliğiniz aşağıda görüntülenmektedir.'
+            : 'Türkiye\'nin en kapsamlı eczane yönetim platformuna tam erişim.'
+          }
         </p>
       </section>
+
+      {/* 🆕 Active Subscription Card - Only for active users */}
+      {isActive && plan && (
+        <div style={{
+          maxWidth: '800px',
+          margin: '0 auto 2rem',
+          padding: '2rem',
+          background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+          borderRadius: '20px',
+          color: 'white',
+          boxShadow: '0 10px 40px rgba(16, 185, 129, 0.3)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+            <span style={{ fontSize: '2.5rem' }}>✅</span>
+            <div>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>
+                Aktif Aboneliğiniz Var
+              </h2>
+              <p style={{ margin: '0.25rem 0 0', opacity: 0.9 }}>
+                {plan.hasCargoService ? 'Premium + Kargo Hizmeti' : 'Premium Plan'}
+              </p>
+            </div>
+          </div>
+
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', 
+            gap: '1rem',
+            marginBottom: '1.5rem' 
+          }}>
+            <div style={{ background: 'rgba(255,255,255,0.15)', padding: '1rem', borderRadius: '12px' }}>
+              <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Bitiş Tarihi</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                {plan.expireDate ? new Date(plan.expireDate).toLocaleDateString('tr-TR') : '-'}
+              </div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.15)', padding: '1rem', borderRadius: '12px' }}>
+              <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Kalan Süre</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                {plan.daysRemaining ?? 0} gün
+              </div>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.15)', padding: '1rem', borderRadius: '12px' }}>
+              <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Plan Ücreti</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                {calculateTotalPrice().toLocaleString('tr-TR')} ₺/ay
+              </div>
+            </div>
+            {plan.groupNames && plan.groupNames.length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.15)', padding: '1rem', borderRadius: '12px' }}>
+                <div style={{ fontSize: '0.8rem', opacity: 0.8 }}>Grup</div>
+                <div style={{ fontSize: '1.25rem', fontWeight: 700 }}>
+                  {plan.groupNames.join(', ')}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ 
+            padding: '1rem', 
+            background: 'rgba(255,255,255,0.1)', 
+            borderRadius: '10px',
+            fontSize: '0.9rem',
+            textAlign: 'center'
+          }}>
+            💡 Aboneliğiniz bittiğinde otomatik olarak yenileyebilirsiniz.
+          </div>
+        </div>
+      )}
+
+      {/* Renewal Section Header for Active Users */}
+      {isActive && (
+        <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+          <h2 style={{ 
+            fontSize: '1.5rem', 
+            color: '#64748b', 
+            fontWeight: 600,
+            borderTop: '1px solid #e2e8f0',
+            paddingTop: '2rem',
+            maxWidth: '600px',
+            margin: '0 auto'
+          }}>
+            📅 Süre Uzatmak İsterseniz
+          </h2>
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className={styles.mainGrid}>

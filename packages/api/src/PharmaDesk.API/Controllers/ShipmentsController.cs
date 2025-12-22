@@ -10,7 +10,7 @@ namespace Backend.Controllers
     /// </summary>
     [ApiController]
     [Route("api/[controller]")]
-    [Authorize(Roles = "User,Admin,Carrier")]  // Carrier added for scan endpoint access
+    [Authorize(Roles = "User,Admin,SuperAdmin,Carrier")]  // Carrier added for scan endpoint access
     public class ShipmentsController : ControllerBase
     {
         private readonly IShipmentService _shipmentService;

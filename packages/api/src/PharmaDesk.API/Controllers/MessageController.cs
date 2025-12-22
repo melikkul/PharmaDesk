@@ -7,6 +7,10 @@ using System.Security.Claims;
 
 namespace PharmaDesk.API.Controllers
 {
+    /// <summary>
+    /// Legacy controller - Redirects to new ChatController endpoints
+    /// Will be deprecated in favor of ChatController
+    /// </summary>
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
@@ -19,7 +23,10 @@ namespace PharmaDesk.API.Controllers
             _context = context;
         }
 
-        // GET: api/messages/{otherUserId}
+        /// <summary>
+        /// Legacy endpoint - Gets messages with another user
+        /// Now routes through Conversations for compatibility
+        /// </summary>
         [HttpGet("{otherUserId}")]
         public async Task<IActionResult> GetConversation(string otherUserId)
         {
@@ -27,19 +34,33 @@ namespace PharmaDesk.API.Controllers
 
             if (string.IsNullOrEmpty(currentUserId)) return Unauthorized();
 
-            var messages = await _context.Messages
-                .Where(m => (m.SenderId == currentUserId && m.ReceiverId == otherUserId) ||
-                            (m.SenderId == otherUserId && m.ReceiverId == currentUserId))
+            // Find Direct conversation between these two users
+            var conversation = await _context.Conversations
+                .Include(c => c.Messages)
+                .Include(c => c.Participants)
+                .Where(c => c.Type == ConversationType.Direct)
+                .Where(c => c.Participants.Any(p => p.UserId == long.Parse(currentUserId)) &&
+                           c.Participants.Any(p => p.UserId == long.Parse(otherUserId)))
+                .FirstOrDefaultAsync();
+
+            if (conversation == null)
+            {
+                // No conversation exists yet, return empty list
+                return Ok(new List<object>());
+            }
+
+            var messages = conversation.Messages
                 .OrderBy(m => m.SentAt)
-                .Select(m => new 
+                .Select(m => new
                 {
                     m.Id,
                     m.Content,
                     m.SenderId,
+                    m.SenderName,
                     m.SentAt,
                     m.IsRead
                 })
-                .ToListAsync();
+                .ToList();
 
             return Ok(messages);
         }
